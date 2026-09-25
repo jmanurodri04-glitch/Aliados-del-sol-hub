@@ -249,6 +249,7 @@ secuencia         bigint IDENTITY         -- orden determinista cuando dos movim
   - toma `puntos` del catálogo `reglas_puntos` (§5) y rechaza un valor distinto; solo `ajuste_admin` y `canje` llevan `puntos` explícito;
   - calcula `puntos_aplicados` (piso en 0 para `perdido`; rechaza un `redimido` mayor al saldo) bloqueando la fila del aliado;
   - recalcula la caché del aliado. Nunca se escriben a mano `puntos_*`, `calidad_referidos` ni `nivel`.
+- **Cuenta no activa (decisión del equipo):** si el aliado está `suspendido` o `pendiente`, sus movimientos no entran al libro: quedan en `movimientos_retenidos` y se acreditan automáticamente cuando la cuenta vuelve a `activo`, en su orden original y con la fecha de la reactivación (la nota guarda la fecha original). Mientras no esté activo no puede canjear. Los `ajuste_admin` se aplican siempre.
 - El dashboard filtra los ganados y perdidos por semana, mes y trimestre usando `fecha`.
 
 ### 4.8 `eventos`
@@ -693,6 +694,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Los Términos y condiciones aplican a todos los tipos de aliado (§11).
 - El contacto del aliado en Clientify se crea cuando GEENERA aprueba la solicitud, no al registrarse (§3, §8 flujo A).
 - La Política de Tratamiento de Datos debe incluir la transferencia internacional (§11).
+- Un aliado suspendido (o pendiente) no gana ni pierde puntos: se retienen y se acreditan al reactivarse (§4.7).
 
 ## 14. Preguntas abiertas
 

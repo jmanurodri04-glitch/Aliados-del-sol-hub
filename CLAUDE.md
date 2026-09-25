@@ -84,7 +84,7 @@ Formulario propio del Hub. No es de Clientify.
    - crea la fila en `aliados_perfil_organizacion` o en `aliados_perfil_alcance` según el tipo;
    - guarda `autorizacion_datos_at`, `terminos_aceptados_at` y las versiones aceptadas (`terminos_version`, `politica_datos_version`);
    - `rol` y `estado` **nunca** se toman de los metadatos del navegador.
-3. Se sincroniza con Clientify (ver §8, flujo A). El aliado se crea como contacto con la etiqueta **"Aliado del Sol"**, el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **El registro del aliado nunca falla por culpa de Clientify.**
+3. **Cuando GEENERA aprueba la solicitud** (`pendiente → activo`), se sincroniza con Clientify (ver §8, flujo A). No se sincroniza al registrarse, para no llevar al CRM solicitudes que se van a rechazar (decisión del equipo). El aliado se crea como contacto con la etiqueta **"Aliado del Sol"**, el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **Ni el registro ni la aprobación fallan por culpa de Clientify.**
 4. El aliado **confirma su correo** (obligatorio antes del primer login) y **GEENERA aprueba la solicitud** (decisiones del equipo):
    - mientras `estado = 'pendiente'`, el login responde "Tu solicitud está en revisión" y no entra al Hub;
    - un admin la aprueba con `estado = 'activo'`, `aprobado_at` y `aprobado_por` (por SQL hasta que exista el panel admin, fase 9);
@@ -472,9 +472,9 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 
 Autenticación con API key (`Authorization: Token ...`) en `CLIENTIFY_API_KEY`. Consulta la documentación oficial en https://developer.clientify.com/ antes de implementar cada llamada.
 
-### Flujo A — Aliado nuevo → Clientify
+### Flujo A — Aliado aprobado → Clientify
 
-Después del alta en Supabase:
+Cuando GEENERA aprueba al aliado (`estado` pasa de `pendiente` a `activo`), no al registrarse:
 
 1. Crear el contacto con la etiqueta **"Aliado del Sol"**, la etiqueta de tipo y el campo `ID_aliado = codigo_aliado`.
 2. Guardar `clientify_contact_id`.
@@ -640,6 +640,8 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 ## 11. Legal (Colombia, Ley 1581 de 2012 y Decreto 1377 de 2013)
 
 - Autorización explícita en el registro, con la fecha guardada en `autorizacion_datos_at`, y enlace a la política de tratamiento de datos y a los términos del programa de puntos.
+- Los Términos y condiciones son **los mismos para todos los tipos de aliado**, aunque el documento diga "EMI" (decisión del equipo).
+- El footer del sitio ("Términos y condiciones" y "Política de privacidad") abre los mismos PDF vigentes.
 - Los documentos se publican en `assets/legal/` con la versión (fecha) en el nombre del archivo, porque `assets/` se cachea un año: `terminos-aliados-del-sol-2026-02-06.pdf` y `politica-tratamiento-datos-2026-09-25.pdf`. Al publicar una versión nueva se sube un archivo nuevo, se actualiza `JOIN_CONFIG.legal` en la página y las funciones `interno.version_terminos_vigente()` / `interno.version_politica_datos_vigente()` con una migración.
 - **Pendiente:** la política de beneficios (se incluirá en los términos).
 - Declaración del aliado sobre la autorización de los contactos que refiere.
@@ -682,6 +684,9 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Celular internacional con selector de país; regla colombiana cuando el indicativo es +57 (§3).
 - Regional opcional; "¿Cómo llegas a las empresas?" obligatoria para EMI, Linker y Cliente Embajador (§3).
 - Nivel = el menor entre el nivel por puntos y el nivel por calidad (§6.3).
+- Los Términos y condiciones aplican a todos los tipos de aliado (§11).
+- El contacto del aliado en Clientify se crea cuando GEENERA aprueba la solicitud, no al registrarse (§3, §8 flujo A).
+- La Política de Tratamiento de Datos debe incluir la transferencia internacional (§11).
 
 ## 14. Preguntas abiertas
 
@@ -697,5 +702,5 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 5. Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?
 6. Sistema externo de canjes: quién lo opera y cómo se autentica (se asume API key por proveedor).
 7. Envío de la factura a Clientify: adjunto por API o enlace firmado.
-8. Los Términos publicados son los del programa **EMI** (versión "Propuesta 14.04.26"). ¿Aplican a todos los tipos de aliado o habrá versiones por tipo?
-9. Revisión legal de la Política de Tratamiento de Datos: no menciona la transferencia internacional (Supabase en EE. UU., Clientify), las finalidades propias del programa de referidos ni un canal concreto (correo) para consultas y reclamos.
+8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).
+9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.

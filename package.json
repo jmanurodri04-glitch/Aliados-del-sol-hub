@@ -5,7 +5,8 @@
   "description": "Aliados del Sol — programa de aliados de GEENERA. Sitio estático, sin paso de build.",
   "scripts": {
     "dev": "npx --yes serve . -l 4173",
-    "start": "npx --yes serve . -l 4173"
+    "start": "npx --yes serve . -l 4173",
+    "test:db": "npx --yes supabase test db"
   },
   "engines": {
     "node": ">=18"

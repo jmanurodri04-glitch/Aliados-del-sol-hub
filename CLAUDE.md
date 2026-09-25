@@ -47,7 +47,7 @@
 1. **Prefijo por tipo:** `FI` = AdS Financieros · `EM` = AdS EMI · `LK` = AdS Linker · `CE` = AdS Cliente Embajador · `AG` = AdS Agremiaciones.
 2. **Iniciales del nombre completo:** primera letra de cada palabra, en mayúscula y sin tildes (`Á→A`, `Ñ→N`, `Ü→U`).
    - Ejemplo: "Juan José Pérez León" → `JJPL`.
-   - *Propuesta, por confirmar:* ignorar partículas (`de`, `del`, `la`, `las`, `los`, `y`) y usar máximo 4 iniciales.
+   - Se ignoran las partículas (`de`, `del`, `la`, `las`, `los`, `y`) y se usan máximo 4 iniciales (decisión del equipo). Si no queda ninguna letra, se usa `X`.
 3. **Aleatorio:** 8 caracteres del alfabeto sin caracteres confusos: `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (sin `0 O 1 I L`).
 4. **Unicidad:** se genera en la base de datos (función SQL en el trigger de alta). Si hay colisión, se regenera en bucle hasta que sea única, respaldado por el índice `UNIQUE`.
 5. Una vez creado es **inmutable**, aunque el aliado cambie de nombre o de tipo, porque ya está en Clientify y en materiales compartidos.
@@ -663,6 +663,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Con varias oportunidades se usa la más avanzada; `0. lead perdido` = `revision` (§8).
 - Puntos con piso en 0 y **sin memoria**: las penalizaciones no generan deuda (§5.4).
 - Cambios posteriores de un valor definitivo en Clientify se corrigen manualmente con `ajuste_admin` (§5.1).
+- Iniciales de `codigo_aliado`: se ignoran partículas y se usan máximo 4 letras (§2).
 
 ## 14. Preguntas abiertas
 
@@ -674,7 +675,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 **Generales:**
 
 3. Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?
-4. Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?
+4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
 5. Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?
 6. Sistema externo de canjes: quién lo opera y cómo se autentica (se asume API key por proveedor).
 7. Envío de la factura a Clientify: adjunto por API o enlace firmado.

@@ -394,7 +394,13 @@
               </div>
               <div style="display:flex;flex-direction:column;gap:7px;padding:18px 19px;flex:1">
                 <h3 style="margin:0;font-size:17px;font-weight:600;line-height:1.25;letter-spacing:-.01em">{{ b.name }}</h3>
-                <p style="margin:0;font-size:13px;color:var(--mut3,#7C7873);line-height:1.45">{{ b.partner }}</p>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:26px">
+                  <span role="img" aria-label="{{ b.partner }}" style="display:inline-flex;align-items:center;height:20px;flex:none">
+                    <sc-if value="{{ b.hasLogo }}" hint-placeholder-val="{{ true }}"><span style="display:block;width:72px;height:18px;background-image:{{ b.logoUrl }};background-size:contain;background-repeat:no-repeat;background-position:left center;opacity:.8"></span></sc-if>
+                    <sc-if value="{{ b.noLogo }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ beneLogoInk }};opacity:.72">{{ b.partner }}</span></sc-if>
+                  </span>
+                  <sc-if value="{{ b.hasAud }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--mut3,#7C7873)">{{ b.aud }}</span></sc-if>
+                </div>
                 <span style="margin-top:auto;padding-top:12px;font-size:14px;color:var(--t3,#B4B0A9)"><b style="color:var(--y,#FFCA05);font-weight:700">{{ b.ptsLabel }}</b> · {{ b.reqLabel }}</span>
               </div>
             </div>
@@ -632,7 +638,13 @@
               </div>
               <div style="display:flex;flex-direction:column;gap:7px;padding:16px 17px;flex:1">
                 <h3 style="margin:0;font-size:16px;font-weight:600;line-height:1.25;letter-spacing:-.01em">{{ b.name }}</h3>
-                <p style="margin:0;font-size:12.5px;color:var(--mut3,#7C7873);line-height:1.4">{{ b.partner }}</p>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:26px">
+                  <span role="img" aria-label="{{ b.partner }}" style="display:inline-flex;align-items:center;height:20px;flex:none">
+                    <sc-if value="{{ b.hasLogo }}" hint-placeholder-val="{{ true }}"><span style="display:block;width:72px;height:18px;background-image:{{ b.logoUrl }};background-size:contain;background-repeat:no-repeat;background-position:left center;opacity:.8"></span></sc-if>
+                    <sc-if value="{{ b.noLogo }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ beneLogoInk }};opacity:.72">{{ b.partner }}</span></sc-if>
+                  </span>
+                  <sc-if value="{{ b.hasAud }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ b.aud }}</span></sc-if>
+                </div>
                 <span style="margin-top:auto;padding-top:12px;font-size:13.5px;color:var(--t3,#B4B0A9)"><b style="color:var(--y,#FFCA05);font-weight:700">{{ b.ptsLabel }}</b> · {{ b.reqLabel }}</span>
               </div>
             </div>
@@ -1832,7 +1844,13 @@
               </div>
               <div style="display:flex;flex-direction:column;gap:7px;padding:16px 17px;flex:1">
                 <h3 style="margin:0;font-size:16px;font-weight:600;line-height:1.25;letter-spacing:-.01em;color:{{ b.titleColor }}">{{ b.name }}</h3>
-                <p style="margin:0;font-size:12.5px;color:var(--mut3,#7C7873);line-height:1.4">{{ b.partner }}</p>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:26px">
+                  <span role="img" aria-label="{{ b.partner }}" style="display:inline-flex;align-items:center;height:20px;flex:none">
+                    <sc-if value="{{ b.hasLogo }}" hint-placeholder-val="{{ true }}"><span style="display:block;width:72px;height:18px;background-image:{{ b.logoUrl }};background-size:contain;background-repeat:no-repeat;background-position:left center;opacity:.8"></span></sc-if>
+                    <sc-if value="{{ b.noLogo }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ beneLogoInk }};opacity:.72">{{ b.partner }}</span></sc-if>
+                  </span>
+                  <sc-if value="{{ b.hasAud }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ b.aud }}</span></sc-if>
+                </div>
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:13px">
                   <span style="display:flex;flex-direction:column;line-height:1.25">
                     <span style="font-size:15px;font-weight:700;color:{{ b.ptsColor }}">{{ b.ptsLabel }}</span>
@@ -3426,18 +3444,20 @@ const MS = {};
 POINTS_CONFIG.opportunity.forEach(m => { MS[m.id] = m; });
 
 const BENEFITS = [
-  { id: 'b1', name: 'Visita técnica a la planta solar de Guamito', partner: 'GEENERA · Rionegro, Antioquia', cat: 'Experiencias', pts: 120, req: 'Oro', state: 'destacado', img: 'assets/foto-guamito.jpg' },
-  { id: 'b2', name: 'Cena para dos en Carmen', partner: 'Carmen Restaurante · Medellín', cat: 'Gastronomía', pts: 80, req: 'Bronce', state: 'ok', ph: 'foto · mesa restaurante' },
-  { id: 'b3', name: 'Palco corporativo, estadio Atanasio', partner: 'Aliados del Sol · 4 entradas', cat: 'Experiencias', pts: 240, req: 'Oro', state: 'ok', ph: 'foto · palco estadio' },
-  { id: 'b4', name: 'Retiro del Círculo Solar en Guatapé', partner: 'Dos días con el comité de GEENERA', cat: 'Experiencias', pts: 600, req: 'Círculo Solar', state: 'nivel', ph: 'foto · retiro guatapé' },
-  { id: 'b5', name: 'Diplomado en energía y finanzas', partner: 'Universidad EAFIT · 40 horas', cat: 'Formación', pts: 350, req: 'Diamante', state: 'puntos', ph: 'foto · aula ejecutiva' },
-  { id: 'b6', name: 'Auditoría energética de cortesía', partner: 'GEENERA · para un cliente tuyo', cat: 'GEENERA', pts: 150, req: 'Plata', state: 'ok', img: 'assets/foto-paneles.jpg' },
-  { id: 'b7', name: 'Kit de marca personal para aliados', partner: 'Piezas, plantillas y guion de venta', cat: 'Negocios', pts: 60, req: 'Bronce', state: 'usado', ph: 'render · kit de marca' },
-  { id: 'b8', name: 'Bono de $150.000 en domicilios', partner: 'Aliados del Sol', cat: 'Gastronomía', pts: 90, req: 'Bronce', state: 'agotado', ph: 'foto · bono digital' },
-  { id: 'b9', name: 'Sesión 1:1 con el equipo comercial', partner: 'GEENERA · 60 minutos', cat: 'Negocios', pts: 40, req: 'Bronce', state: 'ok', ph: 'foto · sesión de trabajo' },
-  { id: 'b10', name: 'Tres meses de coworking', partner: 'Red de espacios aliados · Medellín y Bogotá', cat: 'Negocios', pts: 280, req: 'Oro', state: 'ok', ph: 'foto · coworking' },
-  { id: 'b11', name: 'Cupo en el Foro de Energía Empresarial', partner: 'GEENERA · noviembre 2026', cat: 'Formación', pts: 180, req: 'Plata', state: 'ok', ph: 'foto · auditorio foro' },
-  { id: 'b12', name: 'Desayuno con el CEO de GEENERA', partner: 'Grupo de 8 aliados del Círculo Solar', cat: 'GEENERA', pts: 450, req: 'Círculo Solar', state: 'nivel', ph: 'foto · desayuno ejecutivo' }
+  { id: 'b1', name: "Café + producto de panadería", partner: "Amasa", aud: '', logo: 'amasa', cat: 'Gastronomía', pts: 80, req: 'Bronce', state: 'destacado', phase: 'Lanzamiento', cond: "Combo cerrado; cupos mensuales.", ph: "foto · amasa" },
+  { id: 'b2', name: "Combo oblea o dulce + bebida", partner: "Dulces El Paragüitas", aud: '', logo: 'dulces-el-paraguitas', cat: 'Gastronomía', pts: 100, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Producto cerrado, fácil de redimir.", ph: "foto · dulces el paragüitas" },
+  { id: 'b3', name: "Caja para compartir en la oficina", partner: "Dulces El Paragüitas", aud: 'Para equipos', logo: 'dulces-el-paraguitas', cat: 'Equipos', pts: 250, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Para tu equipo de trabajo.", ph: "foto · dulces el paragüitas" },
+  { id: 'b4', name: "Coworking por 2 horas", partner: "Greccomotors", aud: '', logo: null, cat: 'Experiencias', pts: 150, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Reserva previa, cupos y horarios definidos.", ph: "foto · greccomotors" },
+  { id: 'b5', name: "5%–10% en categorías o compras seleccionadas", partner: "Más x Menos", aud: '', logo: null, cat: 'Descuentos', pts: 250, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Categorías seleccionadas. No acumulable.", ph: "foto · más x menos" },
+  { id: 'b6', name: "Brunch o menú cerrado para 1", partner: "Mia Nonna", aud: '', logo: 'mia-nonna', cat: 'Experiencias', pts: 300, req: 'Bronce', state: 'destacado', phase: 'Lanzamiento', cond: "Menú cerrado, sin alcohol, sujeto a reserva.", ph: "foto · mia nonna" },
+  { id: 'b7', name: "5%–10% en referencias seleccionadas", partner: "Espumas Santander", aud: '', logo: 'espumas-santander', cat: 'Descuentos', pts: 350, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Con tope; no acumulable.", ph: "foto · espumas santander" },
+  { id: 'b8', name: "Cena o menú cerrado individual", partner: "Zekkei", aud: '', logo: null, cat: 'Experiencias', pts: 500, req: 'Bronce', state: 'destacado', phase: 'Lanzamiento', cond: "Menú cerrado, sin alcohol, reserva previa.", ph: "foto · zekkei" },
+  { id: 'b9', name: "Jugo + snack o producto seleccionado", partner: "Gramaluz Jugos y Frutas", aud: '', logo: 'jugos-y-frutas-de-colombia', cat: 'Gastronomía', pts: 100, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Producto cerrado.", ph: "foto · gramaluz jugos y frutas" },
+  { id: 'b10', name: "Combo o descuento corporativo", partner: "Domino's", aud: 'Para equipos', logo: 'domino-s', cat: 'Gastronomía', pts: 180, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Código corporativo.", ph: "foto · domino's" },
+  { id: 'b11', name: "Descuento en servicio automotriz seleccionado", partner: "Fersautos", aud: '', logo: 'fersautos', cat: 'Descuentos', pts: 300, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Servicio seleccionado.", ph: "foto · fersautos" },
+  { id: 'b12', name: "Descuento en mantenimiento o diagnóstico", partner: "Codiesel", aud: '', logo: 'codiesel', cat: 'Descuentos', pts: 300, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Mano de obra y servicios seleccionados.", ph: "foto · codiesel" },
+  { id: 'b13', name: "Cupón o crédito promocional", partner: "Rappi", aud: '', logo: null, cat: 'Descuentos', pts: 300, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Sujeto a convenio.", ph: "foto · rappi" },
+  { id: 'b14', name: "Tarifa preferencial de alojamiento", partner: "Posada El Peregrino", aud: '', logo: 'posada-del-peregrino', cat: 'Experiencias', pts: 400, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Sujeto a disponibilidad.", ph: "foto · posada el peregrino" }
 ];
 
 class Component extends DCLogic {
@@ -3769,7 +3789,7 @@ class Component extends DCLogic {
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
 
-    const cats = ['Destacados', 'Experiencias', 'Gastronomía', 'Negocios', 'Formación', 'GEENERA'].map(k => ({
+    const cats = ['Destacados', 'Gastronomía', 'Experiencias', 'Descuentos', 'Equipos'].map(k => ({
       label: k, go: () => this.setState({ cat: k }),
       bg: s.cat === k ? 'rgba(255,202,5,.13)' : 'transparent',
       border: s.cat === k ? 'rgba(255,202,5,.4)' : 'var(--w-10,rgba(255,255,255,.1))',
@@ -3786,11 +3806,12 @@ class Component extends DCLogic {
       let action = act;
       if (b.state === 'destacado') { tag = 'Destacado'; tagBg = 'rgba(255,202,5,.2)'; tagColor = 'var(--y,#FFCA05)'; }
       if (b.state === 'usado') { tag = 'Utilizado'; tagBg = 'var(--w-10,rgba(255,255,255,.1))'; tagColor = 'var(--t4,#A8A49E)'; cta = 'Ver detalle'; ctaBg = 'transparent'; ctaColor = 'var(--mut,#9A968F)'; ctaBorder = 'var(--w-14,rgba(255,255,255,.14))'; op = .4; ptsColor = 'var(--mut3,#7C7873)'; titleColor = 'var(--mut,#9A968F)'; action = () => this.ping('Redimido el 12 de junio de 2026.'); }
+      else if (b.state === 'pronto') { tag = 'Próximamente'; tagBg = 'var(--w-10,rgba(255,255,255,.1))'; tagColor = 'var(--t4,#A8A49E)'; cta = 'Avísame'; ctaBg = 'transparent'; ctaColor = 'var(--mut,#9A968F)'; ctaBorder = 'var(--w-14,rgba(255,255,255,.14))'; op = .55; action = () => this.ping('Te avisamos cuando este beneficio esté disponible.'); }
       else if (b.state === 'agotado') { tag = 'Agotado'; tagBg = 'var(--w-10,rgba(255,255,255,.1))'; tagColor = 'var(--t4,#A8A49E)'; cta = 'Avísame'; ctaBg = 'transparent'; ctaColor = 'var(--mut,#9A968F)'; ctaBorder = 'var(--w-14,rgba(255,255,255,.14))'; op = .38; titleColor = 'var(--mut,#9A968F)'; ptsColor = 'var(--mut3,#7C7873)'; action = () => this.ping('Te avisamos cuando vuelva a haber cupos.'); }
       else if (lockedByLevel) { tag = 'Nivel ' + b.req; tagBg = 'var(--w-10,rgba(255,255,255,.1))'; tagColor = 'var(--t4,#A8A49E)'; cta = 'Bloqueado'; ctaBg = 'transparent'; ctaColor = 'var(--mut3,#7C7873)'; ctaBorder = 'var(--w-12,rgba(255,255,255,.12))'; op = .32; titleColor = 'var(--mut,#9A968F)'; ptsColor = 'var(--mut3,#7C7873)'; cursor = 'not-allowed'; action = () => this.ping('Se desbloquea en el nivel ' + b.req + '.'); }
       else if (notEnough) { tag = 'Faltan ' + this.n(b.pts - c.points); tagBg = 'rgba(249,165,26,.16)'; tagColor = 'var(--o,#F9A51A)'; cta = 'Cómo ganar'; ctaBg = 'transparent'; ctaColor = 'var(--o,#F9A51A)'; ctaBorder = 'rgba(249,165,26,.4)'; op = .55; action = () => this.ping('Un Referido Perfecto suma 30 Puntos Sol y la validación de la empresa otros 30.'); }
       return {
-        name: b.name, partner: b.partner, cat: b.cat, ph: b.ph || 'foto · beneficio', imgUrl: b.img ? 'url("' + b.img + '")' : 'none', phOp: b.img ? 0 : 1,
+        name: b.name, partner: b.partner, logoUrl: b.logo ? 'url("assets/beneficio-logo-' + b.logo + '-' + (this.resolvedTheme() === 'light' ? 'negro' : 'blanco') + '.png?v=20260925")' : 'none', hasLogo: !!b.logo, noLogo: !b.logo, aud: b.aud || '', hasAud: !!b.aud, cat: b.cat, ph: b.ph || 'foto · beneficio', imgUrl: b.img ? 'url("' + b.img + '")' : 'none', phOp: b.img ? 0 : 1,
         ptsLabel: this.n(b.pts) + ' pts', reqLabel: 'Nivel ' + b.req, tag, tagBg, tagColor, cta, ctaBg, ctaColor, ctaBorder, ctaCursor: cursor, op, ptsColor, titleColor, act: action
       };
     };
@@ -4044,6 +4065,8 @@ class Component extends DCLogic {
     }));
 
     const themeAttr = this.resolvedTheme();
+    const beneLogoFilter = themeAttr === 'light' ? 'brightness(0)' : 'brightness(0) invert(1)';
+    const beneLogoInk = themeAttr === 'light' ? '#141210' : '#F2F0EC';
     const themeModes = THEME_CONFIG.modes.map(([id, label]) => ({ label, go: () => this.setTheme(id), bg: s.theme === id ? 'rgba(255,202,5,.14)' : 'transparent', color: s.theme === id ? 'var(--y,#FFCA05)' : 'var(--mut3,#7C7873)' }));
     const roleOptions = ROLE_CONFIG.roles.map(r => ({ label: r.label, go: () => this.setRole(r.id), color: r.id === roleCfg.id ? 'var(--y,#FFCA05)' : 'var(--mut3,#7C7873)', fw: r.id === roleCfg.id ? 700 : 400 }));
     const isGestion = roleCfg.dashboard === 'gestion';
@@ -4184,7 +4207,7 @@ class Component extends DCLogic {
     });
 
     return {
-      themeAttr, themeModes, roleOptions,
+      themeAttr, beneLogoFilter, beneLogoInk, themeModes, roleOptions,
       roleLabel: roleCfg.label, roleOrg: roleCfg.org, userInitials: roleCfg.initials,
       isGestion, isAliadoHome: route === 'inicio' && !isGestion, isGestionHome: route === 'inicio' && isGestion,
       canSeeCommission: perms.seeCommission, canSeeForecast: perms.seeDisbursementForecast, canSeeValue: perms.seeProposalValue,
@@ -4339,8 +4362,8 @@ class Component extends DCLogic {
         { t: 'Quien decide es alcanzable: gerencia, operaciones o financiera.' },
         { t: 'Interés real en reducir costo de energía, no solo curiosidad.' }
       ],
-      publicBenefits: BENEFITS.slice(0, 3).map(b => ({ name: b.name, partner: b.partner, cat: b.cat, imgUrl: b.img ? 'url("' + b.img + '")' : 'none', phOp: b.img ? 0 : 1, ph: b.ph || 'foto · beneficio', ptsLabel: this.n(b.pts) + ' pts', reqLabel: 'nivel ' + b.req })),
-      catalogPreview: BENEFITS.slice(0, 6).map(b => ({ name: b.name, partner: b.partner, cat: b.cat, imgUrl: b.img ? 'url("' + b.img + '")' : 'none', phOp: b.img ? 0 : 1, ph: b.ph || 'foto · beneficio', ptsLabel: this.n(b.pts) + ' pts', reqLabel: 'nivel ' + b.req })),
+      publicBenefits: BENEFITS.slice(0, 3).map(b => ({ name: b.name, partner: b.partner, logoUrl: b.logo ? 'url("assets/beneficio-logo-' + b.logo + '-' + (this.resolvedTheme() === 'light' ? 'negro' : 'blanco') + '.png?v=20260925")' : 'none', hasLogo: !!b.logo, noLogo: !b.logo, aud: b.aud || '', hasAud: !!b.aud, cat: b.cat, imgUrl: b.img ? 'url("' + b.img + '")' : 'none', phOp: b.img ? 0 : 1, ph: b.ph || 'foto · beneficio', ptsLabel: this.n(b.pts) + ' pts', reqLabel: 'nivel ' + b.req })),
+      catalogPreview: BENEFITS.slice(0, 6).map(b => ({ name: b.name, partner: b.partner, logoUrl: b.logo ? 'url("assets/beneficio-logo-' + b.logo + '-' + (this.resolvedTheme() === 'light' ? 'negro' : 'blanco') + '.png?v=20260925")' : 'none', hasLogo: !!b.logo, noLogo: !b.logo, aud: b.aud || '', hasAud: !!b.aud, cat: b.cat, imgUrl: b.img ? 'url("' + b.img + '")' : 'none', phOp: b.img ? 0 : 1, ph: b.ph || 'foto · beneficio', ptsLabel: this.n(b.pts) + ' pts', reqLabel: 'nivel ' + b.req })),
       profiles: [
         { t: 'Consultores y contadores', d: 'Ya asesoran a empresas que buscan reducir costos fijos.' },
         { t: 'Gremios y cámaras', d: 'Llevan el programa a sus afiliados con respaldo institucional.' },

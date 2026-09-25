@@ -109,7 +109,7 @@ class Component extends DCLogic {
       const fill = isClose ? 'var(--g,#5FBF8B)' : (done ? '#FFCA05' : 'transparent');
       return {
         n: s.n || String(i + 1).padStart(2, '0'), label: s.label, desc: s.desc, on,
-        state: on ? (current >= 0 && !closed ? 'Etapa actual' : (isClose ? 'Cerrado' : 'En foco')) : (done ? 'Completada' : 'Siguiente'),
+        state: on ? (current >= 0 && !closed ? 'Etapa actual' : (isClose ? 'Cerrado' : '')) : (done ? 'Completada' : 'Siguiente'),
         mark: done && !on ? '✓' : '',
         ring, fill,
         glow: on ? '0 0 0 6px rgba(255,202,5,.14), 0 0 20px rgba(255,202,5,.45)' : 'none',

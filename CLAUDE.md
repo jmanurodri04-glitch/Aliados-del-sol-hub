@@ -15,7 +15,7 @@
 ### Stack y arquitectura técnica
 
 - **Frontend:** se mantiene estático. Supabase se usa en el navegador con `@supabase/supabase-js`, cargado como módulo ES desde CDN (`https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm`). En el navegador solo se usa la URL y la *publishable key*; la seguridad la da RLS.
-- **Backend:** son **Vercel Functions** en la carpeta `/api` de la raíz, con Node.js 18 o superior y ESM. Vercel las detecta sin configuración, también en proyectos estáticos. Ahí viven las claves secretas y toda la integración con Clientify.
+- **Backend:** son **Vercel Functions** en la carpeta `/api` de la raíz, con **Node.js 22** (`engines: 22.x`, lo exige `@supabase/supabase-js` 2.117) y ESM. Vercel las detecta sin configuración, también en proyectos estáticos. Ahí viven las claves secretas y toda la integración con Clientify.
   - Código compartido en `/lib` (por ejemplo `lib/clientify/mapeo.ts`, o `.js` si no se agrega TypeScript).
   - Dependencias de servidor (`@supabase/supabase-js`, etc.) en `package.json`.
 - **Configuración pública por entorno:** como no hay build, el front **no puede leer variables de entorno**. Crea `GET /api/config`, que devuelve `{ supabaseUrl, supabasePublishableKey }` desde `process.env`. Así Preview usa `dev` y Production usa `prod` sin cambiar el código. El front lo consulta una vez al cargar.
@@ -489,6 +489,13 @@ Cuando GEENERA aprueba al aliado (`estado` pasa de `pendiente` a `activo`), no a
 
 Cuando el aliado edita su perfil, también se replica en Clientify.
 
+**Implementación (fase 4):**
+- Cola en la base: `public.clientify_reclamar_aliados(limite)` toma aliados `activo` con `clientify_sync_estado` `pendiente`/`error` cuya espera se cumplió (con préstamo de 10 min y `SKIP LOCKED`); `public.clientify_registrar_resultado(aliado, contact_id, error)` guarda el éxito o programa el reintento (15 min, 30, 1 h… máximo 24 h; columnas `clientify_sync_intentos`, `clientify_sync_proximo_at`, `clientify_sync_at`). Solo `service_role` puede ejecutarlas.
+- Cambiar nombre, correo, celular, regional, tipo, organización o cargo de un aliado ya sincronizado lo vuelve a marcar `pendiente`.
+- `GET|POST /api/cron/clientify-aliados` procesa un lote; se protege con `Authorization: Bearer <CRON_SECRET>`.
+- Código: `lib/clientify/mapeo.js` (nombres de Clientify), `lib/clientify/cliente.js` (HTTP), `lib/clientify/aliados.js` (flujo A). Si ya existe un contacto con el mismo correo (p. ej. un cliente que se vuelve Cliente Embajador), **se vincula sin pisar sus datos**: solo se agregan `ID_aliado` y las etiquetas.
+- Fuera de Production (`VERCEL_ENV` ≠ `production`) se agrega `PRUEBA HUB` y **solo se sincronizan correos con `+prueba`**; los demás quedan en `error` sin llamar a Clientify.
+
 ### Flujo B — Nueva oportunidad (Hub) → Clientify
 
 1. Crear el contacto (y la empresa, si aplica) con el campo personalizado `ID_aliado = codigo_aliado`.
@@ -636,7 +643,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   - El aliado solo puede **leer** sus propias filas (`aliado_id = auth.uid()`).
   - Las **escrituras** de puntos, avance, eventos, canjes y sincronización se hacen solo desde el servidor con `SUPABASE_SECRET_KEY` (nunca en el cliente), o con funciones `SECURITY DEFINER` controladas.
 - Rol `admin` (equipo GEENERA) para validar eventos, registrar baja calidad reiterada, hacer ajustes y resolver conflictos. Las acciones de admin quedan auditadas en `creado_por`.
-- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS`. **Nunca** se escriben en el código ni en commits.
+- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS`, `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo). **Nunca** se escriben en el código ni en commits.
   - **Production** apunta al proyecto `aliados-prod`; **Preview** y **Development** apuntan a `aliados-dev`.
   - `SUPABASE_PUBLISHABLE_KEY` es la *publishable key* (o la *anon key* legacy). `SUPABASE_SECRET_KEY` es la *secret key* (o la *service_role* legacy). **`SUPABASE_SECRET_KEY` solo se usa dentro de `/api`, jamás en el navegador.**
   - En local se usan con `vercel env pull .env.local`. Verifica que `.env*.local` esté en `.gitignore`.
@@ -672,6 +679,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   8. dashboards por tipo;
   9. panel admin y eventos;
   10. endpoint de canjes.
+- **Tests:** `npm run test:db` (pgTAP, base local con `npx supabase start`) y `npm test` (`node --test` de `/lib` y `/api`; las pruebas de integración se omiten si no están `PRUEBAS_SUPABASE_URL`, `PRUEBAS_SUPABASE_SECRET_KEY` y `PRUEBAS_DB_URL`).
 - Incluir tests de las reglas críticas: idempotencia de puntos, límites de nivel, tope mensual de módulos, racha (incluido el reinicio y el bloqueo de 28 días), el cálculo de calidad con `revision` y el saldo con piso en 0 sin memoria (ejemplo +10, −30, +20 = 20).
 
 ## 13. Decisiones tomadas

@@ -8,8 +8,8 @@ select plan(49);
 select tables_are('public', array[
   'aliados', 'aliados_perfil_organizacion', 'aliados_perfil_alcance',
   'empresas', 'facturas', 'avance_empresa', 'movimientos_puntos',
-  'eventos', 'modulos', 'modulos_completados', 'canjes', 'webhook_eventos'
-], 'existen exactamente las 12 tablas del modelo');
+  'eventos', 'modulos', 'modulos_completados', 'canjes', 'webhook_eventos', 'reglas_puntos'
+], 'existen exactamente las 13 tablas del modelo');
 
 select is(
   (select count(*) from pg_tables where schemaname = 'public' and not rowsecurity),
@@ -200,10 +200,11 @@ select throws_ok(
     values ('11111111-1111-1111-1111-111111111111', 'ganado', 30, 30, 'informacion_falsa', 'empresas', 't1', 'sistema')$$,
   '23514', null, 'el motivo debe corresponder al tipo'
 );
-select throws_ok(
-  $$insert into public.movimientos_puntos (aliado_id, tipo, puntos, puntos_aplicados, motivo, vinculo, clave_unica, creado_por)
-    values ('11111111-1111-1111-1111-111111111111', 'ganado', 30, 10, 'empresa_calificada', 'empresas', 't2', 'sistema')$$,
-  '23514', null, 'un ganado siempre se aplica completo'
+insert into public.movimientos_puntos (aliado_id, tipo, puntos, puntos_aplicados, motivo, vinculo, clave_unica, creado_por)
+  values ('11111111-1111-1111-1111-111111111111', 'ganado', 30, 10, 'empresa_calificada', 'empresas', 't2', 'sistema');
+select is(
+  (select puntos_aplicados from public.movimientos_puntos where clave_unica = 't2'),
+  30, 'un ganado siempre se aplica completo (la base ignora el puntos_aplicados recibido)'
 );
 select lives_ok(
   $$insert into public.movimientos_puntos (aliado_id, tipo, puntos, puntos_aplicados, motivo, vinculo, clave_unica, creado_por)
@@ -212,8 +213,8 @@ select lives_ok(
 );
 select throws_ok(
   $$insert into public.movimientos_puntos (aliado_id, tipo, puntos, puntos_aplicados, motivo, vinculo, clave_unica, creado_por)
-    values ('11111111-1111-1111-1111-111111111111', 'perdido', 30, 40, 'informacion_falsa', 'empresas', 't4', 'sistema')$$,
-  '23514', null, 'puntos_aplicados nunca supera el nominal'
+    values ('11111111-1111-1111-1111-111111111111', 'perdido', 40, 40, 'informacion_falsa', 'empresas', 't4', 'sistema')$$,
+  'P0001', null, 'el valor debe coincidir con la regla del motivo (información falsa vale 30)'
 );
 select throws_ok(
   $$insert into public.movimientos_puntos (aliado_id, tipo, puntos, puntos_aplicados, motivo, vinculo, clave_unica, creado_por)

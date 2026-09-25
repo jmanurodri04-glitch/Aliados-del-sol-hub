@@ -240,10 +240,15 @@ clave_unica       text UNIQUE NOT NULL    -- IDEMPOTENCIA (ver §5.1)
 fecha             timestamptz NOT NULL DEFAULT now()
 creado_por        text NOT NULL           -- 'sistema' | 'webhook_clientify' | 'admin:{id}' | 'canjes_api'
 nota              text NULL
+secuencia         bigint IDENTITY         -- orden determinista cuando dos movimientos tienen la misma fecha
 ```
 
 - Es **solo inserción**: no se hacen UPDATE ni DELETE. Las correcciones se registran como un movimiento nuevo con motivo `ajuste_admin`.
 - Cada movimiento dispara el recálculo de `aliados.puntos_nivel`, `puntos_disponibles` y `nivel`.
+- **Cómo registrar un movimiento** (fase 3): se inserta con `ON CONFLICT (clave_unica) DO NOTHING` indicando `aliado_id`, `tipo`, `motivo`, `vinculo`, `vinculo_id`, `clave_unica` y `creado_por`. **La base de datos hace el resto:**
+  - toma `puntos` del catálogo `reglas_puntos` (§5) y rechaza un valor distinto; solo `ajuste_admin` y `canje` llevan `puntos` explícito;
+  - calcula `puntos_aplicados` (piso en 0 para `perdido`; rechaza un `redimido` mayor al saldo) bloqueando la fila del aliado;
+  - recalcula la caché del aliado. Nunca se escriben a mano `puntos_*`, `calidad_referidos` ni `nivel`.
 - El dashboard filtra los ganados y perdidos por semana, mes y trimestre usando `fecha`.
 
 ### 4.8 `eventos`
@@ -387,6 +392,7 @@ Los Puntos Sol **nunca son negativos**, y una penalización recibida con saldo b
 - En la UI, el historial muestra el valor nominal ("−30 · Información falsa") y, si `puntos_aplicados < puntos`, una nota del tipo "se descontaron 10 porque tu saldo era 10".
 - La fecha que cuenta es `movimientos_puntos.fecha`, el momento en que se otorgó.
 - Recalcular en un trigger después de cada `INSERT` en `movimientos_puntos` **y** en un cron diario (00:15 Bogotá), porque `puntos_nivel` baja solo con el paso del tiempo.
+  - Implementado (fase 3): `interno.recalcular_aliado(aliado)` actualiza saldos, calidad y nivel; el cron `recalcular-puntos-diario` de `pg_cron` (`15 5 * * *` UTC = 00:15 Bogotá) llama a `interno.recalcular_todos()`. La calidad también se recalcula al cambiar `avance_empresa` o al borrar una empresa.
 
 ---
 

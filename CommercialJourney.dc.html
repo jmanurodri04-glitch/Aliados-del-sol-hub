@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div ref="{{ rootRef }}" style="font-family:'Titillium Web',system-ui,sans-serif;color:var(--fg,#F2F0EC)">
+  <sc-if value="{{ horizontal }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div style="position:relative;display:grid;grid-template-columns:repeat({{ count }},minmax(0,1fr));gap:0;align-items:start">
+        <div style="position:absolute;left:calc(100% / {{ count }} / 2);right:calc(100% / {{ count }} / 2);top:9px;height:2px;border-radius:2px;background:var(--w-10,rgba(255,255,255,.1))"></div>
+        <div ref="{{ lineRef }}" style="position:absolute;left:calc(100% / {{ count }} / 2);top:9px;height:2px;border-radius:2px;width:0%;background:linear-gradient(90deg,#F9A51A,#FFCA05);box-shadow:0 0 14px rgba(255,202,5,.6);transition:width 420ms cubic-bezier(.22,.61,.36,1)"></div>
+        <sc-for list="{{ stages }}" as="s" hint-placeholder-count="7">
+          <button onClick="{{ s.pick }}" onMouseEnter="{{ s.hover }}" aria-current="{{ s.on }}" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;padding:0 6px;border:none;background:transparent;color:inherit;cursor:pointer;text-align:center;min-width:0">
+            <span style="position:relative;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:2px solid {{ s.ring }};background:{{ s.fill }};box-shadow:{{ s.glow }};transition:all 320ms cubic-bezier(.22,.61,.36,1);font-size:9px;font-weight:700;color:#1A1200">{{ s.mark }}</span>
+            <span style="display:flex;flex-direction:column;align-items:center;gap:5px;opacity:{{ s.alpha }};transform:scale({{ s.scale }});transition:opacity 320ms ease,transform 380ms cubic-bezier(.22,.61,.36,1)">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.16em;color:{{ s.nColor }}">{{ s.n }}</span>
+              <span style="font-size:clamp(12.5px,1.1vw,14.5px);font-weight:600;line-height:1.25;color:{{ s.tColor }};text-wrap:balance">{{ s.label }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="position:relative;min-height:112px;padding:22px clamp(20px,3vw,32px);border:1px solid {{ focus.border }};border-radius:16px;background:{{ focus.bg }};overflow:hidden;transition:border-color 320ms ease,background 320ms ease">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#FFCA05,#F37920);opacity:{{ focus.barAlpha }}"></div>
+        <div ref="{{ focusRef }}" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px clamp(18px,2.6vw,30px);align-items:start;animation:cjIn 320ms cubic-bezier(.22,.61,.36,1) both">
+          <span style="font-size:clamp(34px,4vw,52px);font-weight:700;letter-spacing:-.04em;line-height:.9;color:{{ focus.nColor }}">{{ focus.n }}</span>
+          <span style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <span style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+              <b style="font-size:clamp(18px,1.8vw,22px);font-weight:700;letter-spacing:-.015em">{{ focus.label }}</b>
+              <span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ focus.stateColor }}">{{ focus.state }}</span>
+            </span>
+            <span style="font-size:14.5px;line-height:1.5;color:var(--t3,#B4B0A9);max-width:58ch">{{ focus.desc }}</span>
+            <sc-if value="{{ focus.hasNext }}" hint-placeholder-val="{{ true }}">
+              <span style="font-size:12.5px;color:var(--mut3,#7C7873)">Siguiente: <b style="font-weight:600;color:var(--mut,#9A968F)">{{ focus.next }}</b></span>
+            </sc-if>
+          </span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ vertical }}" hint-placeholder-val="{{ false }}">
+    <div style="position:relative;display:flex;flex-direction:column;gap:0;padding-left:4px">
+      <div style="position:absolute;left:13px;top:10px;bottom:10px;width:2px;border-radius:2px;background:var(--w-10,rgba(255,255,255,.1))"></div>
+      <div style="position:absolute;left:13px;top:10px;width:2px;border-radius:2px;height:{{ vLine }};background:linear-gradient(180deg,#F9A51A,#FFCA05);box-shadow:0 0 14px rgba(255,202,5,.55);transition:height 420ms cubic-bezier(.22,.61,.36,1)"></div>
+      <sc-for list="{{ stages }}" as="s" hint-placeholder-count="7">
+        <button onClick="{{ s.pick }}" style="position:relative;display:grid;grid-template-columns:20px minmax(0,1fr);gap:0 16px;padding:0 0 18px;border:none;background:transparent;color:inherit;cursor:pointer;text-align:left">
+          <span style="width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:2px solid {{ s.ring }};background:{{ s.fill }};box-shadow:{{ s.glow }};font-size:9px;font-weight:700;color:#1A1200;transition:all 320ms ease">{{ s.mark }}</span>
+          <span style="display:flex;flex-direction:column;gap:4px;opacity:{{ s.alpha }};transition:opacity 320ms ease">
+            <span style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.14em;color:{{ s.nColor }}">{{ s.n }}</span>
+              <b style="font-size:15.5px;font-weight:600;color:{{ s.tColor }}">{{ s.label }}</b>
+              <sc-if value="{{ s.on }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--y,#FFCA05)">{{ s.state }}</span></sc-if>
+            </span>
+            <sc-if value="{{ s.on }}" hint-placeholder-val="{{ false }}"><span style="font-size:13.5px;line-height:1.5;color:var(--t3,#B4B0A9)">{{ s.desc }}</span></sc-if>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{ showNoViable }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-top:16px;padding:14px 18px;border:1px solid rgba(201,123,110,.28);border-radius:12px;background:rgba(201,123,110,.06)">
+      <span style="width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(201,123,110,.18);color:#C97B6E;font-size:11px">✕</span>
+      <span style="display:flex;flex-direction:column;gap:3px">
+        <b style="font-size:14px;font-weight:600;color:var(--fg,#F2F0EC)">No viable / no continúa</b>
+        <span style="font-size:13px;line-height:1.5;color:var(--t3,#B4B0A9)">{{ noViableText }}</span>
+      </span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:320},&quot;stages&quot;:{&quot;editor&quot;:null,&quot;default&quot;:[],&quot;tsType&quot;:&quot;{n?:string,label:string,desc:string}[]&quot;},&quot;current&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:-1,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:-1,&quot;max&quot;:8},&quot;closed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;noViable&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showNoViableNote&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;noViableText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;autoplay&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;hoverFocus&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'horizontal'|'vertical'&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;horizontal&quot;,&quot;vertical&quot;]}}">
+/* CommercialJourney — el proceso comercial como recorrido, no como tabla.
+   Props: stages [{n,label,desc}], current (índice de etapa actual; -1 = conceptual),
+   closed, noViable, noViableText, autoplay (público: avanza con el scroll de la sección),
+   mode 'auto' | 'horizontal' | 'vertical'. Un solo sondeo a 40 ms para scroll + responsive. */
+class Component extends DCLogic {
+  state = { focus: null, narrow: typeof window !== 'undefined' && window.innerWidth < 760, p: 0 };
+  ensure() { if (this._poll) return; this._poll = setInterval(() => this.tick(), 40); }
+  componentDidMount() { this.ensure(); }
+  componentWillUnmount() { clearInterval(this._poll); this._poll = null; }
+  tick() {
+    const narrow = window.innerWidth < 760;
+    if (narrow !== this.state.narrow) this.setState({ narrow });
+    if (!this.props.autoplay || this.state.focus != null) return;
+    const el = this.root; if (!el || !document.contains(el)) return;
+    const r = el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > window.innerHeight) return;
+    const p = Math.max(0, Math.min(1, (window.innerHeight * 0.78 - r.top) / (window.innerHeight * 0.55)));
+    const idx = Math.min((this.props.stages || []).length - 1, Math.floor(p * (this.props.stages || []).length));
+    if (idx !== this.state.p) this.setState({ p: idx });
+  }
+  renderVals() {
+    this.ensure();
+    const stages = this.props.stages || [];
+    const count = Math.max(1, stages.length);
+    const closed = !!this.props.closed, noViable = !!this.props.noViable;
+    const current = this.props.current == null ? -1 : Number(this.props.current);
+    const active = this.state.focus != null ? this.state.focus : (current >= 0 ? current : this.state.p);
+    const cursor = current >= 0 ? current : active; /* límite completado */
+    const list = stages.map((s, i) => {
+      const done = closed ? true : i < cursor;
+      const on = i === active;
+      const near = Math.abs(i - active) === 1;
+      const isClose = i === count - 1 && closed;
+      const ring = isClose ? 'var(--g,#5FBF8B)' : (done || on ? 'var(--o,#F9A51A)' : 'var(--w-22,rgba(255,255,255,.22))');
+      const fill = isClose ? 'var(--g,#5FBF8B)' : (done ? '#FFCA05' : 'transparent');
+      return {
+        n: s.n || String(i + 1).padStart(2, '0'), label: s.label, desc: s.desc, on,
+        state: on ? (current >= 0 && !closed ? 'Etapa actual' : (isClose ? 'Cerrado' : '')) : (done ? 'Completada' : 'Siguiente'),
+        mark: done && !on ? '✓' : '',
+        ring, fill,
+        glow: on ? '0 0 0 6px rgba(255,202,5,.14), 0 0 20px rgba(255,202,5,.45)' : 'none',
+        alpha: on ? '1' : (done ? '.78' : (near ? '.68' : '.58')),
+        scale: on ? '1.06' : '1',
+        nColor: on ? 'var(--y,#FFCA05)' : (done ? 'var(--o,#F9A51A)' : 'var(--mut3,#7C7873)'),
+        tColor: on ? 'var(--fg,#F2F0EC)' : (done ? 'var(--t2,#C9C5BE)' : 'var(--mut,#9A968F)'),
+        pick: () => this.setState({ focus: i }),
+        hover: () => { if (this.props.hoverFocus !== false) this.setState({ focus: i }); }
+      };
+    });
+    const f = list[active] || list[0] || {};
+    const isCloseFocus = closed || (active === count - 1 && current === count - 1);
+    const focus = Object.assign({}, f, {
+      hasNext: active < count - 1, next: active < count - 1 ? (stages[active + 1] || {}).label : '',
+      border: isCloseFocus ? 'rgba(95,191,139,.3)' : 'rgba(255,202,5,.22)',
+      bg: isCloseFocus ? 'linear-gradient(160deg,rgba(95,191,139,.07),var(--w-012,rgba(255,255,255,.012)))' : 'linear-gradient(160deg,rgba(255,202,5,.06),var(--w-012,rgba(255,255,255,.012)))',
+      barAlpha: isCloseFocus ? '0' : '1', nColor: isCloseFocus ? 'var(--g,#5FBF8B)' : 'var(--y,#FFCA05)',
+      stateColor: isCloseFocus ? 'var(--g2,#7FD3A6)' : 'var(--y,#FFCA05)'
+    });
+    const progress = count > 1 ? (closed ? 1 : active / (count - 1)) : 1;
+    if (this.line) this.line.style.width = 'calc((100% - 100% / ' + count + ') * ' + progress.toFixed(4) + ')';
+    const mode = this.props.mode || 'auto';
+    const vertical = mode === 'vertical' || (mode === 'auto' && this.state.narrow);
+    return {
+      stages: list, count, focus, horizontal: !vertical, vertical,
+      vLine: 'calc(' + progress.toFixed(4) + ' * (100% - 20px))',
+      showNoViable: noViable || this.props.showNoViableNote === true,
+      noViableText: this.props.noViableText || 'Cuando una oportunidad no continúa lo explicamos con un motivo comprensible, sin revelar información interna. No es una octava etapa: es un cierre distinto y sin penalización.',
+      rootRef: (el) => { this.root = el; }, lineRef: (el) => { this.line = el; if (el) el.style.width = 'calc((100% - 100% / ' + count + ') * ' + progress.toFixed(4) + ')'; }, focusRef: (el) => { this.focusEl = el; }
+    };
+  }
+}
+</script>
+</body>
+</html>

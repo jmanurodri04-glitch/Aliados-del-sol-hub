@@ -1,7 +1,7 @@
 -- Tests de calcular_nivel (CLAUDE.md §6.3): cada límite de puntos y de calidad.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(30);
 
 -- Bronce / Plata: 100 pts y 50 %
 select is(public.calcular_nivel(0, null),     'bronce'::public.nivel, 'sin puntos ni calidad → bronce');
@@ -57,6 +57,17 @@ select ok(
        or public.calcular_nivel(p, least(c + 5, 100)) < public.calcular_nivel(p, c)
   ),
   'el nivel nunca baja al subir puntos o calidad'
+);
+
+-- Regla del equipo: si hay muchos puntos y baja calidad, manda la calidad; si hay buena
+-- calidad y pocos puntos, mandan los puntos. Es decir, el nivel es el menor de los dos.
+select ok(
+  not exists (
+    select 1 from generate_series(0, 1200, 10) p, generate_series(0, 100, 5) c
+    where public.calcular_nivel(p, c)
+       <> least(public.calcular_nivel(p, 100), public.calcular_nivel(1000000, c))
+  ),
+  'el nivel es el menor entre el nivel por puntos y el nivel por calidad'
 );
 
 select * from finish();

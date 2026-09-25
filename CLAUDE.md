@@ -64,28 +64,34 @@ Formulario propio del Hub. No es de Clientify.
 |---|---|---|
 | Nombre completo | Sí | Todos |
 | Email | Sí | Todos |
-| Celular | Sí | Todos |
+| Celular (selector de país; se guarda en formato internacional `+57…`) | Sí | Todos |
 | Regional / ciudad | No | Todos |
 | Tipo de aliado | Sí | Todos: `financiero`, `emi`, `linker`, `cliente_embajador`, `agremiaciones` |
 | Organización | Sí | `financiero`, `agremiaciones` |
 | Cargo | Sí | `financiero`, `agremiaciones` |
 | ¿Cómo llegas a las empresas? | Sí | `emi`, `linker`, `cliente_embajador` |
 | Contraseña + confirmación | Sí | Todos |
+| Aceptación de los Términos y condiciones (checkbox sin marcar por defecto) | Sí | Todos |
 | Autorización de tratamiento de datos (checkbox sin marcar por defecto) | Sí | Todos |
 
 ### Flujo de registro
 
 1. El front llama a `supabase.auth.signUp({ email, password, options: { data: {...campos} } })`.
    - **La contraseña la gestiona exclusivamente Supabase Auth** (hash bcrypt). **Nunca** se guarda en tablas propias ni en logs.
-2. Un trigger `on auth.users insert` → `handle_new_aliado()`:
-   - crea la fila en `aliados` y genera `codigo_aliado`;
+2. Un trigger `on auth.users insert` → `interno.handle_new_aliado()`:
+   - valida los datos en el servidor; si algo falta, **se rechaza todo el registro** (no quedan usuarios de Auth sin aliado);
+   - crea la fila en `aliados` con `estado = 'pendiente'` y genera `codigo_aliado`;
    - crea la fila en `aliados_perfil_organizacion` o en `aliados_perfil_alcance` según el tipo;
-   - guarda `autorizacion_datos_at`.
+   - guarda `autorizacion_datos_at`, `terminos_aceptados_at` y las versiones aceptadas (`terminos_version`, `politica_datos_version`);
+   - `rol` y `estado` **nunca** se toman de los metadatos del navegador.
 3. Se sincroniza con Clientify (ver §8, flujo A). El aliado se crea como contacto con la etiqueta **"Aliado del Sol"**, el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **El registro del aliado nunca falla por culpa de Clientify.**
-4. El aliado puede iniciar sesión con email y contraseña.
-   - *Por confirmar:* ¿se exige verificación de email antes del primer login? (recomendado). ¿GEENERA debe aprobar la solicitud?
+4. El aliado **confirma su correo** (obligatorio antes del primer login) y **GEENERA aprueba la solicitud** (decisiones del equipo):
+   - mientras `estado = 'pendiente'`, el login responde "Tu solicitud está en revisión" y no entra al Hub;
+   - un admin la aprueba con `estado = 'activo'`, `aprobado_at` y `aprobado_por` (por SQL hasta que exista el panel admin, fase 9);
+   - solo las cuentas `activo` entran al Hub. **Todo endpoint de `/api` debe verificar `estado = 'activo'`.**
+5. En el front, toda la lógica de Supabase vive en `js/supabase.js`: la página emite eventos `ads:*` (`ads:join-register`, `ads:login`, `ads:logout`) y el módulo responde (`ads:join-resultado`, `ads:login-resultado`, `ads:sesion`, `ads:aviso`).
 
-Validar en front **y** en servidor: formato de email, celular colombiano, contraseñas iguales y mínimo 8 caracteres, campos condicionales según el tipo.
+Validar en front **y** en servidor: formato de email, celular (formato internacional E.164; si es de Colombia, 10 dígitos que empiezan por 3), contraseñas iguales y mínimo 8 caracteres, campos condicionales según el tipo, aceptación de términos y autorización de datos.
 
 ---
 
@@ -117,7 +123,12 @@ clientify_contact_id    text NULL
 clientify_sync_estado   text NOT NULL DEFAULT 'pendiente'   -- pendiente | ok | error
 clientify_sync_error    text NULL
 autorizacion_datos_at   timestamptz NOT NULL
-estado                  text NOT NULL DEFAULT 'activo'      -- activo | suspendido
+terminos_aceptados_at   timestamptz NOT NULL
+terminos_version        text NOT NULL                       -- versión de los Términos aceptada (fecha de entrada en vigor)
+politica_datos_version  text NOT NULL                       -- versión de la Política de Tratamiento de Datos vigente al autorizar
+estado                  text NOT NULL DEFAULT 'pendiente'   -- pendiente | activo | suspendido
+aprobado_at             timestamptz NULL                    -- cuándo GEENERA aprobó la solicitud
+aprobado_por            uuid NULL FK aliados(id)            -- admin que la aprobó
 rol                     text NOT NULL DEFAULT 'aliado'      -- aliado | admin (equipo GEENERA)
 created_at, updated_at  timestamptz
 ```
@@ -409,6 +420,7 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 | 6 | Bronce | 0 | — (cualquier caso restante) |
 
 - Se asigna el **primer** nivel cuyas dos condiciones se cumplan. Ejemplo: 1000 puntos con 60 % de calidad → **Oro**.
+- Dicho de otra forma (decisión del equipo): el nivel es el **menor** entre el que dan los puntos y el que da la calidad. Con muchos puntos y baja calidad, manda la calidad; con buena calidad y pocos puntos, mandan los puntos. Nadie queda por fuera.
 - Bronce es el nivel por defecto, así que **ningún aliado queda sin nivel.**
 - El nivel **no depende de `puntos_disponibles`**. Mucho saldo con baja calidad o sin actividad reciente puede significar Bronce.
 - Las recompensas canjeables dependen del nivel **actual**.
@@ -628,6 +640,8 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 ## 11. Legal (Colombia, Ley 1581 de 2012 y Decreto 1377 de 2013)
 
 - Autorización explícita en el registro, con la fecha guardada en `autorizacion_datos_at`, y enlace a la política de tratamiento de datos y a los términos del programa de puntos.
+- Los documentos se publican en `assets/legal/` con la versión (fecha) en el nombre del archivo, porque `assets/` se cachea un año: `terminos-aliados-del-sol-2026-02-06.pdf` y `politica-tratamiento-datos-2026-09-25.pdf`. Al publicar una versión nueva se sube un archivo nuevo, se actualiza `JOIN_CONFIG.legal` en la página y las funciones `interno.version_terminos_vigente()` / `interno.version_politica_datos_vigente()` con una migración.
+- **Pendiente:** la política de beneficios (se incluirá en los términos).
 - Declaración del aliado sobre la autorización de los contactos que refiere.
 - Canal para consultar, corregir o eliminar datos, y proceso de borrado de cuenta.
 - Datos alojados en Supabase East US (EE. UU.), lo que implica transferencia internacional; se declara en la política y se valida con el asesor legal (EE. UU. figura entre los países con nivel adecuado según la SIC).
@@ -664,6 +678,10 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Puntos con piso en 0 y **sin memoria**: las penalizaciones no generan deuda (§5.4).
 - Cambios posteriores de un valor definitivo en Clientify se corrigen manualmente con `ajuste_admin` (§5.1).
 - Iniciales de `codigo_aliado`: se ignoran partículas y se usan máximo 4 letras (§2).
+- Registro: verificación de correo obligatoria y aprobación de GEENERA con `estado = 'pendiente'` (§3).
+- Celular internacional con selector de país; regla colombiana cuando el indicativo es +57 (§3).
+- Regional opcional; "¿Cómo llegas a las empresas?" obligatoria para EMI, Linker y Cliente Embajador (§3).
+- Nivel = el menor entre el nivel por puntos y el nivel por calidad (§6.3).
 
 ## 14. Preguntas abiertas
 
@@ -674,8 +692,10 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 
 **Generales:**
 
-3. Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?
+3. ~~Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?~~ Resuelta: sí a ambas (§3).
 4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
 5. Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?
 6. Sistema externo de canjes: quién lo opera y cómo se autentica (se asume API key por proveedor).
 7. Envío de la factura a Clientify: adjunto por API o enlace firmado.
+8. Los Términos publicados son los del programa **EMI** (versión "Propuesta 14.04.26"). ¿Aplican a todos los tipos de aliado o habrá versiones por tipo?
+9. Revisión legal de la Política de Tratamiento de Datos: no menciona la transferencia internacional (Supabase en EE. UU., Clientify), las finalidades propias del programa de referidos ni un canal concreto (correo) para consultas y reclamos.

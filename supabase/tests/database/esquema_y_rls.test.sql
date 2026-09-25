@@ -22,20 +22,25 @@ select enum_has_labels('public', 'nivel',
   'el enum nivel va de menor a mayor');
 
 -- Datos de prueba ---------------------------------------------------------------------
--- A: emi · B: financiero · C: linker admin
+-- A: emi · B: financiero · C: linker admin. Se crean como en el registro real: el trigger
+-- de auth.users genera el aliado, su codigo_aliado y su perfil. Luego se activan.
 
-insert into auth.users (id, email) values
-  ('11111111-1111-1111-1111-111111111111', 'a@prueba.test'),
-  ('22222222-2222-2222-2222-222222222222', 'b@prueba.test'),
-  ('33333333-3333-3333-3333-333333333333', 'c@prueba.test');
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('11111111-1111-1111-1111-111111111111', 'a@prueba.test',
+   '{"nombre_completo": "Ana Alba", "celular": "+573000000001", "tipo_aliado": "emi",
+     "como_llega_empresas": "Red de contactos", "autorizacion_datos": true, "acepta_terminos": true}'),
+  ('22222222-2222-2222-2222-222222222222', 'b@prueba.test',
+   '{"nombre_completo": "Beto Bravo", "celular": "+573000000002", "tipo_aliado": "financiero",
+     "organizacion": "Banco X", "cargo": "Gerente", "autorizacion_datos": true, "acepta_terminos": true}'),
+  ('33333333-3333-3333-3333-333333333333', 'c@prueba.test',
+   '{"nombre_completo": "Cata Cruz", "celular": "+573000000003", "tipo_aliado": "linker",
+     "como_llega_empresas": "Comunidad", "autorizacion_datos": true, "acepta_terminos": true}');
 
-insert into public.aliados (id, codigo_aliado, nombre_completo, correo, celular, tipo_aliado, autorizacion_datos_at, rol) values
-  ('11111111-1111-1111-1111-111111111111', 'EMAA23456789', 'Ana Alba',   'a@prueba.test', '3000000001', 'emi',        now(), 'aliado'),
-  ('22222222-2222-2222-2222-222222222222', 'FIBB23456789', 'Beto Bravo', 'b@prueba.test', '3000000002', 'financiero', now(), 'aliado'),
-  ('33333333-3333-3333-3333-333333333333', 'LKCC23456789', 'Cata Cruz',  'c@prueba.test', '3000000003', 'linker',     now(), 'admin');
+update public.aliados set estado = 'activo';
+update public.aliados set rol = 'admin' where id = '33333333-3333-3333-3333-333333333333';
 
-insert into public.aliados_perfil_organizacion (aliado_id, organizacion, cargo)
-  values ('22222222-2222-2222-2222-222222222222', 'Banco X', 'Gerente');
+create temp table codigos on commit drop as
+  select id, codigo_aliado from public.aliados;
 
 insert into public.empresas (id, aliado_id, origen, empresa, sector, nombre_contacto, telefono, correo, valor_factura, es_perfecto) values
   ('aaaaaaaa-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'hub', 'Empresa A', 'Industria', 'Contacto A', '3100000001', 'ca@empresa.test', 1000000, false),
@@ -60,10 +65,10 @@ insert into public.webhook_eventos (payload) values ('{"prueba": true}');
 
 -- Aliados y perfiles ----------------------------------------------------------------------
 
-select lives_ok(
-  $$insert into public.aliados_perfil_alcance (aliado_id, como_llega_empresas)
-    values ('11111111-1111-1111-1111-111111111111', 'Red de contactos')$$,
-  'emi puede tener perfil de alcance'
+select is(
+  (select como_llega_empresas from public.aliados_perfil_alcance where aliado_id = '11111111-1111-1111-1111-111111111111'),
+  'Red de contactos',
+  'emi tiene perfil de alcance'
 );
 select throws_ok(
   $$insert into public.aliados_perfil_organizacion (aliado_id, organizacion, cargo)
@@ -89,18 +94,18 @@ select lives_ok(
 );
 select is(
   (select codigo_aliado from public.aliados where id = '11111111-1111-1111-1111-111111111111'),
-  'EMAA23456789',
+  (select codigo_aliado from codigos where id = '11111111-1111-1111-1111-111111111111'),
   'cambiar el nombre no cambia el código'
 );
 select throws_ok(
-  $$insert into public.aliados (id, codigo_aliado, nombre_completo, correo, celular, tipo_aliado, autorizacion_datos_at)
-    values ('33333333-3333-3333-3333-333333333333', 'EMA0OIL1', 'X', 'x@prueba.test', '3', 'emi', now())$$,
+  $$insert into public.aliados (id, codigo_aliado, nombre_completo, correo, celular, tipo_aliado, autorizacion_datos_at, terminos_aceptados_at, terminos_version, politica_datos_version)
+    values ('33333333-3333-3333-3333-333333333333', 'EMA0OIL1', 'X', 'x@prueba.test', '3', 'emi', now(), now(), 'v', 'v')$$,
   '23514', null, 'rechaza un codigo_aliado con formato inválido'
 );
 select throws_ok(
-  $$insert into auth.users (id, email) values ('44444444-4444-4444-4444-444444444444', 'd@prueba.test');
-    insert into public.aliados (id, codigo_aliado, nombre_completo, correo, celular, tipo_aliado, autorizacion_datos_at)
-    values ('44444444-4444-4444-4444-444444444444', 'EMDD23456789', 'Dup', 'A@PRUEBA.TEST', '3', 'emi', now())$$,
+  $$insert into auth.users (id, email, raw_user_meta_data) values ('44444444-4444-4444-4444-444444444444', 'A@PRUEBA.TEST',
+    '{"nombre_completo": "Dup", "celular": "+573000000004", "tipo_aliado": "emi",
+      "como_llega_empresas": "Red", "autorizacion_datos": true, "acepta_terminos": true}')$$,
   '23505', null, 'el correo es único sin distinguir mayúsculas'
 );
 
@@ -241,7 +246,7 @@ select throws_ok(
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "11111111-1111-1111-1111-111111111111", "role": "authenticated"}', true);
 
-select results_eq('select codigo_aliado from public.aliados', array['EMAA23456789'], 'A solo ve su propia fila de aliados');
+select results_eq('select id from public.aliados', array['11111111-1111-1111-1111-111111111111'::uuid], 'A solo ve su propia fila de aliados');
 select is((select count(*) from public.empresas), 1::bigint, 'A solo ve sus empresas');
 select is((select count(*) from public.avance_empresa), 1::bigint, 'A solo ve el avance de sus empresas');
 select is(

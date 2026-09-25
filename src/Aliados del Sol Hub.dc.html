@@ -938,13 +938,29 @@
           </div>
           </div>
           </sc-if>
+          <sc-if value="{{ joinIsRegister }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--w-07,rgba(255,255,255,.07))">
+            <sc-for list="{{ joinLegal }}" as="lg" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <button role="checkbox" aria-checked="{{ lg.on }}" aria-label="{{ lg.aria }}" onClick="{{ lg.toggle }}" style="flex:0 0 auto;width:20px;height:20px;margin-top:1px;display:grid;place-items:center;padding:0;border:1.5px solid {{ lg.ring }};border-radius:5px;background:{{ lg.box }};color:#1A1200;font-size:13px;font-weight:800;line-height:1;cursor:pointer">{{ lg.mark }}</button>
+                  <span style="font-size:13px;line-height:1.5;color:var(--t3,#B4B0A9)">{{ lg.pre }}<a href="{{ lg.href }}" target="_blank" rel="noopener" style="color:var(--y,#FFCA05);text-decoration:underline;text-underline-offset:2px">{{ lg.link }}</a>{{ lg.post }}<span style="color:var(--o,#F9A51A)"> *</span></span>
+                </div>
+                <sc-if value="{{ lg.hasErr }}" hint-placeholder-val="{{ false }}"><span style="padding-left:30px;font-size:12px;color:#C97B6E">{{ lg.err }}</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+          <sc-if value="{{ joinHasError }}" hint-placeholder-val="{{ false }}">
+          <p role="alert" style="margin:0;padding:11px 14px;border:1px solid rgba(201,123,110,.4);border-radius:10px;background:rgba(201,123,110,.08);color:#C97B6E;font-size:13.5px;line-height:1.5">{{ joinError }}</p>
+          </sc-if>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:4px">
             <span style="font-size:12.5px;color:var(--mut4,#6B6762);max-width:40ch;line-height:1.45">{{ joinHint }}</span>
             <sc-if value="{{ joinNoType }}" hint-placeholder-val="{{ true }}">
               <button disabled="{{ true }}" style="padding:13px 22px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:11px;background:var(--w-03,rgba(255,255,255,.03));color:var(--mut3,#7C7873);font-size:15px;font-weight:700;font-family:inherit;cursor:not-allowed">Elige tu tipo de aliado</button>
             </sc-if>
             <sc-if value="{{ joinIsRegister }}" hint-placeholder-val="{{ false }}">
-              <button onClick="{{ joinSubmit }}" disabled="{{ joinDisabled }}" style="padding:13px 22px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15px;font-weight:700;font-family:inherit;cursor:{{ joinCursor }};opacity:{{ joinOpacity }};transition:transform 160ms ease,opacity 200ms ease" style-hover="transform:translateY(-1px)">Enviar solicitud →</button>
+              <button onClick="{{ joinSubmit }}" disabled="{{ joinDisabled }}" style="padding:13px 22px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15px;font-weight:700;font-family:inherit;cursor:{{ joinCursor }};opacity:{{ joinOpacity }};transition:transform 160ms ease,opacity 200ms ease" style-hover="transform:translateY(-1px)">{{ joinSendLabel }}</button>
             </sc-if>
             
           </div>
@@ -2489,7 +2505,7 @@
                 </button>
               </div>
             </sc-for>
-            <button onClick="{{ goLogin }}" style="align-self:flex-start;margin-top:6px;padding:9px 15px;border:1px solid rgba(201,123,110,.4);border-radius:9px;background:rgba(201,123,110,.08);color:#C97B6E;font-size:13.5px;font-weight:600;cursor:pointer">Cerrar sesión</button>
+            <button onClick="{{ cerrarSesion }}" style="align-self:flex-start;margin-top:6px;padding:9px 15px;border:1px solid rgba(201,123,110,.4);border-radius:9px;background:rgba(201,123,110,.08);color:#C97B6E;font-size:13.5px;font-weight:600;cursor:pointer">Cerrar sesión</button>
           </div>
         </div>
       </section>
@@ -2684,13 +2700,16 @@
     <div style="display:flex;flex-direction:column;gap:14px">
       <label style="display:flex;flex-direction:column;gap:7px">
         <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut3,#7C7873)">Correo</span>
-        <input value="juan.rodriguez@demo.co" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none">
+        <input type="email" value="{{ loginEmail }}" onChange="{{ onLoginEmail }}" onKeyDown="{{ onLoginKey }}" placeholder="tu@correo.com" autocomplete="email" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none" style-focus="border-color:rgba(255,202,5,.5)">
       </label>
       <label style="display:flex;flex-direction:column;gap:7px">
         <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut3,#7C7873)">Contraseña</span>
-        <input type="password" value="demodemo" placeholder="Opcional si usas enlace mágico" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none">
+        <input type="password" value="{{ loginPass }}" onChange="{{ onLoginPass }}" onKeyDown="{{ onLoginKey }}" placeholder="Tu contraseña" autocomplete="current-password" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none" style-focus="border-color:rgba(255,202,5,.5)">
       </label>
-      <button onClick="{{ goInicio }}" style="margin-top:6px;padding:14px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:700;cursor:pointer;transition:transform 160ms ease" style-hover="transform:translateY(-1px)">Entrar al Hub</button>
+      <sc-if value="{{ loginHasMsg }}" hint-placeholder-val="{{ false }}">
+      <p role="alert" style="margin:0;padding:11px 14px;border:1px solid {{ loginMsgBorder }};border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:{{ loginMsgColor }};font-size:13.5px;line-height:1.5">{{ loginMsg }}</p>
+      </sc-if>
+      <button onClick="{{ loginSubmit }}" style="margin-top:6px;padding:14px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:700;cursor:{{ loginCursor }};transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ loginSendLabel }}</button>
       <button onClick="{{ goInicio }}" style="padding:12px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:11px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer">Entrar con código de invitación</button>
       <button onClick="{{ goHome }}" style="align-self:flex-start;margin-top:2px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Volver al sitio público</button>
     </div>
@@ -3133,14 +3152,16 @@ const fmtPhone = (raw, cid) => { const c = phoneCountry(cid); let n = String(raw
   const out = []; let i = 0; c.groups.forEach((g, k) => { const last = k === c.groups.length - 1; const part = last ? n.slice(i) : n.slice(i, i + g); if (part) out.push(part); i += g; }); return out.join(' '); };
 const JOIN_CONFIG = {
   chatbotWhatsapp: '573114949705',
+  /* Documentos que se aceptan al registrarse. La versión va en el nombre del archivo y la base de datos guarda cuál se aceptó. */
+  legal: { terminosUrl: 'assets/legal/terminos-aliados-del-sol-2026-02-06.pdf', politicaDatosUrl: 'assets/legal/politica-tratamiento-datos-2026-09-25.pdf' },
   base: [
     { id: 'name', k: 'Nombre completo', ph: 'Nombre y apellido', req: true, ac: 'name', span: '1 / -1' },
     { id: 'email', k: 'Correo', ph: 'tu@correo.com', req: true, type: 'email', ac: 'email' },
-    { id: 'regional', k: 'Regional', ph: 'Santander, Antioquia…', req: true },
+    { id: 'regional', k: 'Regional', ph: 'Santander, Antioquia…', req: false },
     { id: 'phone', k: 'Celular', req: true, type: 'tel', ac: 'tel-national', im: 'numeric', prefix: true, span: '1 / -1' }
   ],
   fields: {
-    reach: { id: 'reach', k: '¿Cómo llegas a las personas?', ph: 'Red de contactos, consultoría, comunidad…', req: false, span: '1 / -1' },
+    reach: { id: 'reach', k: '¿Cómo llegas a las empresas?', ph: 'Red de contactos, consultoría, comunidad…', req: true, span: '1 / -1' },
     org: { id: 'org', k: 'Organización / entidad', ph: 'Nombre de la entidad', req: true, ac: 'organization' },
     cargo: { id: 'cargo', k: 'Cargo', ph: 'Tu cargo en la entidad', req: true, ac: 'organization-title' },
     pass: { id: 'pass', k: 'Contraseña', ph: 'Mínimo 8 caracteres', req: true, type: 'password', ac: 'new-password' },
@@ -3153,7 +3174,7 @@ const JOIN_CONFIG = {
     { id: 'embajador', label: 'AdS Cliente Embajador', org: false, reach: true, action: 'register' },
     { id: 'gremial', label: 'AdS Agremiaciones', org: true, reach: false, action: 'register' }
   ],
-  stepsRegister: [['Solicitud y cuenta', 'Datos y contraseña en un solo paso.'], ['Validación GEENERA', 'Revisamos tu perfil.'], ['Activación', 'Te avisamos por correo cuando tu cuenta esté activa.'], ['Perfil, código y enlace único', 'Tu enlace captura automáticamente quién refirió.'], ['Hub', 'Oportunidades, Puntos Sol, niveles y beneficios.']],
+  stepsRegister: [['Solicitud y cuenta', 'Datos y contraseña en un solo paso.'], ['Confirma tu correo', 'Abre el enlace que te enviamos.'], ['Validación GEENERA', 'Revisamos tu perfil.'], ['Activación', 'Te avisamos por correo cuando tu cuenta esté activa.'], ['Perfil, código y enlace único', 'Tu enlace captura automáticamente quién refirió.'], ['Hub', 'Oportunidades, Puntos Sol, niveles y beneficios.']],
   stepsWa: [['Datos básicos', 'Nombre, contacto, regional y tipo.'], ['Conversación por WhatsApp', 'Nuestro asistente continúa con tus datos.'], ['Validación GEENERA', 'El equipo de Alianzas revisa tu perfil.'], ['Activación', 'Recibes tu perfil, código y enlace único.'], ['Hub', 'Oportunidades, Puntos Sol, niveles y beneficios.']]
 };
 const waLink = (kind) => SUPPORT_CONFIG.base + SUPPORT_CONFIG.whatsapp + '&text=' + encodeURIComponent(SUPPORT_CONFIG.msgs[kind] || SUPPORT_CONFIG.msgs.programa);
@@ -3451,36 +3472,55 @@ class Component extends DCLogic {
     } };
   }
   joinSet(k, v) { this.setState(st => ({ joinData: Object.assign({}, st.joinData, { [k]: v }) })); }
+  /* Login con Supabase Auth: se emite ads:login y el resultado llega por ads:login-resultado (js/supabase.js). */
+  loginSubmit() {
+    const s = this.state; if (s.loginSending) return;
+    const email = (s.loginEmail || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !s.loginPass) { this.setState({ loginMsg: 'Escribe tu correo y tu contraseña.', loginTono: 'error' }); return; }
+    this.setState({ loginSending: true, loginMsg: '' });
+    window.dispatchEvent(new CustomEvent('ads:login', { detail: { email, password: s.loginPass } }));
+  }
   joinVals(s) {
     const d = s.joinData || {}; const t = JOIN_CONFIG.types.find(x => x.id === d.type); const tr = !!s.joinTried;
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email || ''); const pc = phoneCountry(d.country); const phoneDigits = (d.phone || '').replace(/\D/g, ''); const phoneStartOk = !pc.start || pc.start.indexOf(phoneDigits[0]) >= 0; const phoneOk = phoneStartOk && phoneDigits.length >= pc.len[0] && phoneDigits.length <= pc.len[1];
     const errs = {
       name: !(d.name || '').trim() ? 'Campo obligatorio' : '', email: !emailOk ? 'Correo no válido' : '', phone: !phoneDigits ? 'Campo obligatorio' : !phoneStartOk ? 'En ' + pc.name + ' el celular empieza por ' + pc.start.split('').join(' o ') : phoneDigits.length < pc.len[0] ? 'Faltan ' + (pc.len[0] - phoneDigits.length) + ' dígitos' : '', regional: !(d.regional || '').trim() ? 'Campo obligatorio' : '',
-      org: !(d.org || '').trim() ? 'Campo obligatorio' : '', cargo: !(d.cargo || '').trim() ? 'Campo obligatorio' : '',
+      org: !(d.org || '').trim() ? 'Campo obligatorio' : '', cargo: !(d.cargo || '').trim() ? 'Campo obligatorio' : '', reach: !(d.reach || '').trim() ? 'Campo obligatorio' : '',
+      terminos: d.terminos ? '' : 'Debes aceptar los términos y condiciones', datos: d.datos ? '' : 'Debes autorizar el tratamiento de tus datos',
       pass: (d.pass || '').length < 8 ? 'Mínimo 8 caracteres' : '', pass2: d.pass2 !== d.pass || !d.pass2 ? 'Las contraseñas no coinciden' : ''
     };
     const mk = f0 => { const f = f0.id === 'phone' ? Object.assign({}, f0, { ph: fmtPhone('3001234567890', pc.id).replace(/\d/g, '0') }) : f0; const v = d[f.id] || ''; const e = f.req ? errs[f.id] : ''; const show = !!e && (tr || (f.id === 'pass2' && !!v)); return { k: f.k, ph: f.ph, span: f.span || 'span 1', type: f.type || 'text', ac: f.ac || 'off', req: f.req ? ' *' : ' · opcional', value: v, hasPrefix: !!f.prefix, im: f.im || 'text', max: f.prefix ? pc.len[1] + pc.groups.length : 200, country: pc.id, onCountry: ev => { const c = ev.target.value; this.setState(st => ({ joinData: Object.assign({}, st.joinData, { country: c, phone: fmtPhone(st.joinData && st.joinData.phone, c) }) })); }, onChange: ev => this.joinSet(f.id, f.id === 'phone' ? fmtPhone(ev.target.value, pc.id) : ev.target.value), hasErr: show, err: e }; };
     const extraDefs = !t ? [] : [].concat(t.reach ? [JOIN_CONFIG.fields.reach] : [], t.org ? [JOIN_CONFIG.fields.org, JOIN_CONFIG.fields.cargo] : [], t.action === 'register' ? [JOIN_CONFIG.fields.pass, JOIN_CONFIG.fields.pass2] : []);
-    const reqIds = ['name', 'email', 'phone', 'regional'].concat(extraDefs.filter(f => f.req).map(f => f.id));
+    const isRegister = !!t && t.action === 'register';
+    const reqIds = ['name', 'email', 'phone'].concat(extraDefs.filter(f => f.req).map(f => f.id), isRegister ? ['terminos', 'datos'] : []);
     const valid = !!t && reqIds.every(id => !errs[id]);
     const payload = () => ({ name: d.name, email: d.email, phone: '+' + pc.dial + phoneDigits, phone_country: pc.id, regional: d.regional, ally_type: t.id, ally_type_label: t.label, organization: d.org || null, role_title: d.cargo || null, reach: d.reach || null, source: 'hub_quiero_ser_aliado' });
     const stepsFor = t && t.action === 'wa' ? JOIN_CONFIG.stepsWa : JOIN_CONFIG.stepsRegister;
     const guard = fn => () => { if (!valid) { this.setState({ joinTried: true }); return; } fn(); };
+    /* Casillas legales (Ley 1581): sin marcar por defecto; el enlace abre el documento en otra pestaña. */
+    const legalItem = (id, pre, link, href, post) => { const on = !!d[id]; const e = errs[id]; return { pre, link, href, post, on: on ? 'true' : 'false', mark: on ? '✓' : '', aria: pre + link + post,
+      toggle: () => this.joinSet(id, !on), box: on ? 'rgba(255,202,5,.9)' : 'transparent', ring: on ? 'rgba(255,202,5,.9)' : (tr && e ? '#C97B6E' : 'var(--w-22,rgba(255,255,255,.22))'), hasErr: tr && !!e, err: e }; };
     return {
       joinBaseFields: JOIN_CONFIG.base.map(mk), joinCountries: PHONE_COUNTRIES.map(c => ({ id: c.id, label: c.id + ' +' + c.dial + ' · ' + c.name })),
       joinTypeOpts: JOIN_CONFIG.types.map(o => { const on = d.type === o.id; return { label: o.label, on: on ? 'true' : 'false', pick: () => this.joinSet('type', o.id), border: on ? 'rgba(255,202,5,.6)' : 'var(--w-12,rgba(255,255,255,.12))', bg: on ? 'rgba(255,202,5,.12)' : 'var(--w-03,rgba(255,255,255,.03))', color: on ? 'var(--y,#FFCA05)' : 'var(--t2,#C9C5BE)' }; }),
       joinHasExtra: extraDefs.length > 0, joinExtraFields: extraDefs.map(mk),
       joinNoType: !t, joinIsRegister: !!t && t.action === 'register', joinIsWa: !!t && t.action === 'wa',
-      joinDisabled: false, joinCursor: valid ? 'pointer' : 'not-allowed', joinOpacity: valid ? 1 : 0.45,
-      joinHint: !t ? 'Completa tus datos y elige tu tipo de aliado para continuar.' : t.action === 'register' ? 'Creas tu cuenta ahora. GEENERA valida tu perfil antes de activarla.' : 'Te conectamos con nuestro asistente en WhatsApp, que ya recibe los datos de este formulario.',
+      joinDisabled: !!s.joinSending, joinCursor: valid && !s.joinSending ? 'pointer' : 'not-allowed', joinOpacity: valid && !s.joinSending ? 1 : 0.45,
+      joinHint: !t ? 'Completa tus datos y elige tu tipo de aliado para continuar.' : t.action === 'register' ? 'Creas tu cuenta ahora. Confirmas tu correo y GEENERA valida tu perfil antes de activarla.' : 'Te conectamos con nuestro asistente en WhatsApp, que ya recibe los datos de este formulario.',
       joinSteps: stepsFor.map((x, i, a) => ({ t: x[0], d: x[1], mark: i === 0 ? '●' : '', ring: i === 0 ? 'var(--o,#F9A51A)' : 'var(--w-22,rgba(255,255,255,.22))', fill: 'transparent', color: i === 0 ? 'var(--fg,#F2F0EC)' : 'var(--t3,#B4B0A9)', line: i < a.length - 1 ? 'var(--w-10,rgba(255,255,255,.1))' : 'transparent' })),
-      joinSubmit: guard(() => { const p = Object.assign(payload(), { password: d.pass }); window.dispatchEvent(new CustomEvent('ads:join-register', { detail: p })); this.setState({ joinSent: true, joinSentKind: 'register' }); }),
+      joinLegal: isRegister ? [
+        legalItem('terminos', 'Acepto los ', 'Términos y condiciones', JOIN_CONFIG.legal.terminosUrl, ' del programa Aliados del Sol.'),
+        legalItem('datos', 'Autorizo a GEENERA el tratamiento de mis datos personales según su ', 'Política de Tratamiento de Datos Personales', JOIN_CONFIG.legal.politicaDatosUrl, ' (Ley 1581 de 2012).')
+      ] : [],
+      joinHasError: !!s.joinError, joinError: s.joinError || '', joinSendLabel: s.joinSending ? 'Enviando…' : 'Enviar solicitud →',
+      /* El resultado llega por el evento ads:join-resultado (js/supabase.js). */
+      joinSubmit: guard(() => { if (s.joinSending) return; const p = Object.assign(payload(), { password: d.pass, acepta_terminos: !!d.terminos, autorizacion_datos: !!d.datos }); this.setState({ joinSending: true, joinError: '' }); window.dispatchEvent(new CustomEvent('ads:join-register', { detail: p })); }),
       joinWaSubmit: guard(() => { const p = payload(); window.dispatchEvent(new CustomEvent('ads:join-whatsapp', { detail: p }));
         const msg = 'Hola, quiero ser ' + t.label + '.\nNombre: ' + p.name + '\nCorreo: ' + p.email + '\nCelular: ' + p.phone + '\nRegional: ' + p.regional + (p.organization ? '\nOrganización: ' + p.organization + '\nCargo: ' + p.role_title : '') + (p.reach ? '\nCómo llego a las personas: ' + p.reach : '');
         window.open(SUPPORT_CONFIG.base + JOIN_CONFIG.chatbotWhatsapp + '&text=' + encodeURIComponent(msg), '_blank', 'noopener'); this.setState({ joinSent: true, joinSentKind: 'wa' }); })
     };
   }
-  state = { compact: false, menuOpen: false, theme: 'system', sysDark: true, role: 'referidor', period: 'Semestre', series: 'cop', customize: false, widgets: null, acaRoute: null, acaCourse: null, acaLesson: 0, quizPick: -1, acaView: 'course', joinType: null, joinSent: false, chPick: -1, chDraft: {}, chDone: {}, diagOpen: false, diagStep: 0, diagAnswers: [], diagResult: null, lessonDone: null, route: 'home', selId: 'o1', filter: 'Todas', cat: 'Destacados', listState: 'data', newOpen: false, step: 1, done: false, levelUp: false, toast: '', copied: false, settings: [true, true, false, true], faqOpen: 0 };
+  state = { compact: false, menuOpen: false, theme: 'system', sysDark: true, role: 'referidor', period: 'Semestre', series: 'cop', customize: false, widgets: null, acaRoute: null, acaCourse: null, acaLesson: 0, quizPick: -1, acaView: 'course', joinType: null, joinSent: false, joinSending: false, joinError: '', loginEmail: '', loginPass: '', loginSending: false, loginMsg: '', loginTono: 'error', sesion: null, chPick: -1, chDraft: {}, chDone: {}, diagOpen: false, diagStep: 0, diagAnswers: [], diagResult: null, lessonDone: null, route: 'home', selId: 'o1', filter: 'Todas', cat: 'Destacados', listState: 'data', newOpen: false, step: 1, done: false, levelUp: false, toast: '', copied: false, settings: [true, true, false, true], faqOpen: 0 };
 
   scrollTo(el, offset) {
     if (!el || typeof window === 'undefined') return;
@@ -3550,8 +3590,19 @@ class Component extends DCLogic {
       if (h > 260 && h < 4000) this.formEl.style.height = Math.ceil(h) + 'px';
     };
     window.addEventListener('message', this._formMsg);
+    /* Resultados de Supabase Auth (js/supabase.js). */
+    this._adsAuth = (e) => {
+      const d = e.detail || {};
+      if (e.type === 'ads:join-resultado') this.setState(d.ok ? { joinSending: false, joinSent: true, joinSentKind: 'register', joinConfirmar: d.confirmarCorreo !== false, joinError: '' } : { joinSending: false, joinError: d.mensaje || '' });
+      else if (e.type === 'ads:login-resultado') { if (d.ok) { this.setState({ loginSending: false, loginMsg: '', loginPass: '', sesion: d.aliado || null }); this.go('inicio'); } else this.setState({ loginSending: false, loginMsg: d.mensaje || '', loginTono: 'error', loginPass: '' }); }
+      else if (e.type === 'ads:sesion') this.setState({ sesion: d.activa ? (d.aliado || null) : null });
+      else if (e.type === 'ads:aviso') { this.setState({ loginMsg: d.mensaje || '', loginTono: d.tono || 'info' }); if (d.ruta) this.go(d.ruta); }
+    };
+    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso'];
+    this._adsEventos.forEach(n => window.addEventListener(n, this._adsAuth));
+    window.dispatchEvent(new CustomEvent('ads:consultar-sesion'));
   }
-  componentWillUnmount() { if (this._formMsg) window.removeEventListener('message', this._formMsg); if (this.measure) window.removeEventListener('resize', this.measure); clearTimeout(this._tt); clearTimeout(this._ct); clearInterval(this._motion); this._motion = null; clearInterval(this._hdrPoll); }
+  componentWillUnmount() { if (this._adsAuth) this._adsEventos.forEach(n => window.removeEventListener(n, this._adsAuth)); if (this._formMsg) window.removeEventListener('message', this._formMsg); if (this.measure) window.removeEventListener('resize', this.measure); clearTimeout(this._tt); clearTimeout(this._ct); clearInterval(this._motion); this._motion = null; clearInterval(this._hdrPoll); }
 
   /* Motor de movimiento estructural: un solo sondeo (40 ms) revela, cuenta y
      hace scrub de elementos marcados con data-reveal / data-count / data-scrub.
@@ -4205,11 +4256,11 @@ class Component extends DCLogic {
       logoWall,
       isApp: HUB.indexOf(route) >= 0, isLogin: route === 'login', isJoin: route === 'join',
       isPublicContext: PUB.indexOf(route) >= 0,
-      goJoin: () => this.setState({ route: 'join', joinType: null, joinOpen: false, joinData: {}, joinTried: false, joinSent: false, newOpen: false, menuOpen: false }),
+      goJoin: () => this.setState({ route: 'join', joinType: null, joinOpen: false, joinData: {}, joinTried: false, joinSent: false, joinSending: false, joinError: '', newOpen: false, menuOpen: false }),
       allyTypes: ALLY_TYPE_CONFIG.map((a, i) => ({ id: a.id, name: a.name, kicker: a.kicker, who: a.who, desc: a.desc, tone: a.tone, toneGlow: a.tone + '55', delay: (i * 70) + 'ms',
         flowLabel: a.flow === 'org' ? 'Ingreso por convenio' : 'Solicitud individual', flowColor: a.flow === 'org' ? 'var(--mut3,#7C7873)' : 'var(--o,#F9A51A)',
         border: s.joinType === a.id ? 'rgba(255,202,5,.42)' : 'var(--w-07,rgba(255,255,255,.07))', bg: s.joinType === a.id ? 'rgba(255,202,5,.06)' : 'var(--w-022,rgba(255,255,255,.022))',
-        pick: () => this.setState({ joinOpen: true, joinData: {}, joinTried: false, joinSent: false }) })),
+        pick: () => this.setState({ joinOpen: true, joinData: {}, joinTried: false, joinSent: false, joinSending: false, joinError: '' }) })),
       perfectFieldsPub: POINTS_CONFIG.perfectFields.map((t, i) => ({ t, delay: (i * 50) + 'ms' })),
       joinPick: !s.joinOpen && !s.joinSent,
       joinFormOpen: !!s.joinOpen && !s.joinSent,
@@ -4218,9 +4269,9 @@ class Component extends DCLogic {
       joinOrg: !!s.joinType && !s.joinSent && (ALLY_TYPE_CONFIG.find(a => a.id === s.joinType) || {}).flow === 'org',
       joinSent: s.joinSent, joinTypeName: (ALLY_TYPE_CONFIG.find(a => a.id === s.joinType) || {}).name || '',
       joinBack: () => this.setState({ joinOpen: false, joinTried: false }),
-      joinStart: () => this.setState({ joinOpen: true, joinData: {}, joinTried: false, joinSent: false }),
+      joinStart: () => this.setState({ joinOpen: true, joinData: {}, joinTried: false, joinSent: false, joinSending: false, joinError: '' }),
       joinWa: waLink('programa'),
-      joinSentNote: s.joinSentKind === 'wa' ? 'Abrimos WhatsApp con tus datos. Nuestro asistente continúa la conversación y el equipo de Alianzas valida tu perfil.' : 'Tu cuenta quedó creada. GEENERA valida tu perfil y te avisa por correo cuando esté activa para ingresar con tu correo y contraseña.',
+      joinSentNote: s.joinSentKind === 'wa' ? 'Abrimos WhatsApp con tus datos. Nuestro asistente continúa la conversación y el equipo de Alianzas valida tu perfil.' : s.joinConfirmar ? 'Te enviamos un correo para confirmar tu dirección: abre el enlace para continuar. Después GEENERA valida tu perfil y te avisa por correo cuando tu cuenta esté activa.' : 'Tu cuenta quedó creada. GEENERA valida tu perfil y te avisa por correo cuando esté activa para ingresar con tu correo y contraseña.',
       referralExample: ORGANIZATION_CONFIG.referralLink.base + 'JR7K2M',
       joinFields: [ { k: 'Nombre', ph: 'Nombre y apellido', span: 'span 1' }, { k: 'Correo', ph: 'tu@correo.com', span: 'span 1' }, { k: 'Celular', ph: '+57', span: 'span 1' }, { k: 'Regional / ciudad', ph: 'Medellín, Antioquia', span: 'span 1' }, { k: '¿Cómo llegas a empresas?', ph: 'Red de contactos, consultoría, gremio…', span: '1 / -1' } ],
       joinOrgFields: [ { k: 'Organización', ph: 'Nombre de la entidad o gremio', span: '1 / -1' }, { k: 'Contacto', ph: 'Nombre y cargo', span: 'span 1' }, { k: 'Correo corporativo', ph: 'nombre@entidad.com', span: 'span 1' }, { k: 'Regional', ph: 'Cobertura', span: '1 / -1' } ],
@@ -4439,7 +4490,15 @@ class Component extends DCLogic {
       copyLabel: s.copied ? 'Copiado' : 'Copiar',
       copyLink: () => { this.setState({ copied: true }); this.ping('Enlace copiado al portapapeles.'); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: false }), 2200); },
       goInicio: () => this.go('inicio'), goOportunidades: () => this.go('oportunidades'), goBeneficios: () => this.go('beneficios'),
-      goPerfil: () => this.go('perfil'), goComisiones: () => this.go('comisiones'), goLogin: () => this.go('login'),
+      goPerfil: () => this.go('perfil'), goComisiones: () => this.go('comisiones'), goLogin: () => this.go(s.sesion ? 'inicio' : 'login'),
+      cerrarSesion: () => { window.dispatchEvent(new CustomEvent('ads:logout')); this.setState({ sesion: null, loginMsg: '', loginPass: '' }); this.go('login'); },
+      loginEmail: s.loginEmail, loginPass: s.loginPass,
+      onLoginEmail: ev => this.setState({ loginEmail: ev.target.value, loginMsg: '' }), onLoginPass: ev => this.setState({ loginPass: ev.target.value, loginMsg: '' }),
+      onLoginKey: ev => { if (ev.key === 'Enter') this.loginSubmit(); }, loginSubmit: () => this.loginSubmit(),
+      loginSendLabel: s.loginSending ? 'Entrando…' : 'Entrar al Hub', loginCursor: s.loginSending ? 'wait' : 'pointer',
+      loginHasMsg: !!s.loginMsg, loginMsg: s.loginMsg || '',
+      loginMsgColor: s.loginTono === 'error' ? '#C97B6E' : s.loginTono === 'ok' ? 'var(--y,#FFCA05)' : 'var(--t2,#C9C5BE)',
+      loginMsgBorder: s.loginTono === 'error' ? 'rgba(201,123,110,.4)' : s.loginTono === 'ok' ? 'rgba(255,202,5,.35)' : 'var(--w-12,rgba(255,255,255,.12))',
       goHerramientas: () => this.go('herramientas'), goAcademy: () => this.go('academy'),
       goSoporte: () => window.open(waLink('programa'), '_blank', 'noopener'),
       stickyHeaderOffset: s.hdrH || UI_CONFIG.stickyHeaderOffset

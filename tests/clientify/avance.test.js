@@ -1,11 +1,22 @@
 // Derivación del avance (CLAUDE.md §8): una prueba por fila de las tablas A, B y C, y la lectura de Clientify.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { derivarAvance, elegirOportunidad, normalizarTexto, numeroDeFase } from '../../lib/clientify/avance.js';
-import { esEmbudoReferidos, interpretarWebhook, leerContacto, leerOportunidad } from '../../lib/clientify/mapeo.js';
+import {
+  construirCatalogoFases, derivarAvance, elegirOportunidad, hitosDeOportunidad, normalizarTexto, numeroDeFase
+} from '../../lib/clientify/avance.js';
+import { interpretarWebhook, leerContacto, leerOportunidad } from '../../lib/clientify/mapeo.js';
+import { FASES_CLIENTIFY, oportunidadEnFase } from './fases.fixture.js';
 
+const catalogo = construirCatalogoFases(FASES_CLIENTIFY);
 const contacto = (status, etiquetas = []) => ({ status, etiquetas, leadScoring: null });
-const op = (fase, estado = 'abierta') => ({ id: '9', fase, estado, valor: null });
+const ESTADO_API = { abierta: 'Open', perdida: 'Lost', ganada: 'Won' };
+/** Oportunidad leída de la API en una fase real del catálogo, con sus hitos calculados. */
+const op = (fase, estado = 'abierta', embudo = 'GEENERA AUTOCONSUMO', extra = {}) => {
+  const o = leerOportunidad(oportunidadEnFase(embudo, fase, { status_desc: ESTADO_API[estado], ...extra }));
+  o.hitos = hitosDeOportunidad(o, catalogo);
+  return o;
+};
+const hitos = (o) => { const r = v({ contacto: contacto('in-deal'), oportunidad: o }); return [r.oportunidad_tecnica, r.propuesta_comercial, r.negocio_cerrado]; };
 const v = (datos, actual) => derivarAvance(datos, actual).variables;
 
 test('A. Status del contacto → calificado (cada fila)', () => {
@@ -49,43 +60,76 @@ test('A. Status desconocido → revision y aviso, nunca puntos', () => {
   assert.match(r.avisos[0], /Status de contacto desconocido: "9. Otro estado"/);
 });
 
-test('B. Fase de la oportunidad → avance comercial (mayor o igual)', () => {
+test('B. GEENERA AUTOCONSUMO: cada fase → avance comercial (mayor o igual)', () => {
   const tabla = [
-    ['1. Diseña tu proyecto', 'revision', 'revision', 'revision'],
-    ['2. Agendamiento visita técnica', 'revision', 'revision', 'revision'],
+    ['1. Diseña Tu Proyecto', 'revision', 'revision', 'revision'],
+    ['2. Agendamiento Visita Tecnica', 'revision', 'revision', 'revision'],
     ['3. Diseño', 'si', 'revision', 'revision'],
     ['4. Modelamiento de PPA', 'si', 'revision', 'revision'],
     ['5. Asignación de presentación', 'si', 'revision', 'revision'],
-    ['6. Presentación de oferta', 'si', 'si', 'revision'],
-    ['7. Interesado No ahora', 'si', 'si', 'revision'],
+    ['6. Presentación de Oferta', 'si', 'si', 'revision'],
+    ['7. Interesado no ahora', 'si', 'si', 'revision'],
     ['9. Financiación', 'si', 'si', 'revision'],
     ['10. Contrato', 'si', 'si', 'si']
   ];
-  for (const [fase, tecnica, propuesta, cierre] of tabla) {
-    const r = v({ contacto: contacto('4. en oportunidad'), oportunidad: op(fase) });
-    assert.deepEqual([r.oportunidad_tecnica, r.propuesta_comercial, r.negocio_cerrado], [tecnica, propuesta, cierre], fase);
+  for (const [fase, tecnica, propuesta, cierre] of tabla) assert.deepEqual(hitos(op(fase)), [tecnica, propuesta, cierre], fase);
+});
+
+test('B. todos los embudos de proyectos cuentan, con su propio orden de fases', () => {
+  // OFF GRID: el diseño es la fase 2 y existe una 8.
+  assert.deepEqual(hitos(op('1. Oportunidad', 'abierta', 'GEENERA OFF GRID')), ['revision', 'revision', 'revision']);
+  assert.deepEqual(hitos(op('2. Diseño', 'abierta', 'GEENERA OFF GRID')), ['si', 'revision', 'revision']);
+  assert.deepEqual(hitos(op('3. Capex', 'abierta', 'GEENERA OFF GRID')), ['si', 'revision', 'revision']);
+  assert.deepEqual(hitos(op('8. Actualización de Oferta', 'abierta', 'GEENERA OFF GRID')), ['si', 'si', 'revision']);
+  assert.deepEqual(hitos(op('10. Contrato', 'abierta', 'GEENERA OFF GRID')), ['si', 'si', 'si']);
+  // MINIGRANJAS: fases sin número.
+  assert.deepEqual(hitos(op('Identificación de Negocio', 'abierta', 'GEENERA MINIGRANJAS')), ['revision', 'revision', 'revision']);
+  assert.deepEqual(hitos(op('Asignación de presentación de oferta', 'abierta', 'GEENERA MINIGRANJAS')), ['si', 'revision', 'revision']);
+  assert.deepEqual(hitos(op('Presentación de oferta', 'abierta', 'GEENERA MINIGRANJAS')), ['si', 'si', 'revision']);
+  assert.deepEqual(hitos(op('Contrato', 'abierta', 'GEENERA MINIGRANJAS')), ['si', 'si', 'si']);
+  // Care: "Interesado NO ahora" va después de Financiación y antes de Contrato.
+  assert.deepEqual(hitos(op('Capex', 'abierta', 'GEENERA_Care')), ['si', 'revision', 'revision']);
+  assert.deepEqual(hitos(op('Interesado NO ahora', 'abierta', 'GEENERA_Care')), ['si', 'si', 'revision']);
+  assert.deepEqual(hitos(op('Contrato', 'abierta', 'GEENERA_Care')), ['si', 'si', 'si']);
+});
+
+test('B. un embudo sin fases de proyecto (eventos, por defecto) no da puntos de avance', () => {
+  for (const [embudo, fase] of [['GEENERA_ADS', 'Cierre'], ['Por defecto', 'Propuesta presentada']]) {
+    const r = derivarAvance({ contacto: contacto('in-deal'), oportunidad: op(fase, 'abierta', embudo) });
+    assert.deepEqual([r.variables.oportunidad_tecnica, r.variables.propuesta_comercial, r.variables.negocio_cerrado],
+      ['revision', 'revision', 'revision'], embudo);
+    assert.deepEqual(r.avisos, [], 'la fase existe: no es un aviso');
   }
 });
 
-test('B. evaluación técnica = no si no calificó o si se perdió antes de la fase 3', () => {
+test('B. evaluación técnica = no si no calificó o si se perdió antes del diseño', () => {
   assert.equal(v({ contacto: contacto('0. lead no calificado') }).oportunidad_tecnica, 'no');
-  assert.equal(v({ contacto: contacto('3. lead caliente'), oportunidad: op('2. Agendamiento visita técnica', 'perdida') }).oportunidad_tecnica, 'no');
-  assert.equal(v({ contacto: contacto('3. lead caliente'), oportunidad: op('4. Modelamiento de PPA', 'perdida') }).oportunidad_tecnica, 'si',
-    'perdida después de la fase 3: ya tuvo evaluación técnica');
-  assert.equal(v({ contacto: contacto('3. lead caliente') }).oportunidad_tecnica, 'revision', 'sin oportunidad: en revisión');
+  assert.equal(v({ contacto: contacto('hot-lead'), oportunidad: op('2. Agendamiento Visita Tecnica', 'perdida') }).oportunidad_tecnica, 'no');
+  assert.equal(v({ contacto: contacto('hot-lead'), oportunidad: op('4. Modelamiento de PPA', 'perdida') }).oportunidad_tecnica, 'si',
+    'perdida después del diseño: ya tuvo evaluación técnica');
+  assert.equal(v({ contacto: contacto('hot-lead'), oportunidad: op('Identificación de Negocio', 'perdida', 'GEENERA MINIGRANJAS') }).oportunidad_tecnica, 'no');
+  assert.equal(v({ contacto: contacto('hot-lead') }).oportunidad_tecnica, 'revision', 'sin oportunidad: en revisión');
 });
 
-test('B. fase desconocida (la 8 no existe) → revision y aviso', () => {
-  const r = derivarAvance({ contacto: contacto('4. en oportunidad'), oportunidad: op('8. Fase inventada') });
+test('B. fase que no está en el catálogo → revision y aviso', () => {
+  const o = leerOportunidad({ id: 3, pipeline_stage: 'https://api.clientify.net/v1/deals/pipelines/stages/999999/',
+    pipeline_stage_desc: '8. Fase inventada', status_desc: 'Open' });
+  o.hitos = hitosDeOportunidad(o, catalogo);
+  const r = derivarAvance({ contacto: contacto('in-deal'), oportunidad: o });
   assert.deepEqual([r.variables.oportunidad_tecnica, r.variables.propuesta_comercial], ['revision', 'revision']);
-  assert.match(r.avisos[0], /Fase de oportunidad desconocida/);
+  assert.match(r.avisos[0], /Fase de oportunidad desconocida: "8. Fase inventada"/);
   assert.equal(r.crudos.fase_oportunidad_num, 8, 'el dato crudo se guarda igual');
   assert.equal(numeroDeFase('Sin número'), null);
 });
 
-test('B. con varias oportunidades se usa la más avanzada', () => {
-  const elegida = elegirOportunidad([op('3. Diseño'), { ...op('10. Contrato'), id: 'x' }, op('6. Presentación de oferta'), op('sin fase')]);
+test('B. con varias oportunidades se usa la más avanzada (aunque sean de embudos distintos)', () => {
+  const elegida = elegirOportunidad([
+    { ...op('3. Diseño'), id: 'a' }, { ...op('Contrato', 'abierta', 'GEENERA MINIGRANJAS'), id: 'x' },
+    { ...op('6. Presentación de Oferta'), id: 'b' }, { id: 'sin', hitos: null }
+  ]);
   assert.equal(elegida.id, 'x');
+  assert.equal(elegirOportunidad([{ ...op('3. Diseño'), id: 'a' }, { ...op('4. Modelamiento de PPA'), id: 'b' }]).id, 'b',
+    'mismos hitos: la fase posterior');
   assert.equal(elegirOportunidad([]), null);
 });
 
@@ -108,18 +152,24 @@ test('C. fuera del perfil: si solo con no calificado y perfecto', () => {
     'usa el perfecto vigente del Hub (referido del Hub)');
 });
 
-test('C. información falsa: sin el nombre de la etiqueta confirmado queda en revisión', () => {
-  assert.equal(v({ contacto: contacto('3. lead caliente', ['Información falsa']) }).informacion_falsa, 'revision');
+test('C. información falsa: cualquiera de las tres etiquetas', () => {
+  for (const e of ['fraude', 'no existe', 'información de contacto errónea', 'Informacion de contacto erronea']) {
+    assert.equal(v({ contacto: contacto('hot-lead', ['otra', e]) }).informacion_falsa, 'si', e);
+  }
+  assert.equal(v({ contacto: contacto('hot-lead', ['Información falsa', 'no existe x']) }).informacion_falsa, 'revision');
 });
 
-test('D. datos crudos para dashboards; los campos sin confirmar no se tocan', () => {
-  const r = derivarAvance({ contacto: { ...contacto('4. en oportunidad'), leadScoring: 80 },
-    oportunidad: { id: '5', fase: '6. Presentación de oferta', estado: 'abierta', valor: 250000000 } });
+test('D. datos crudos para dashboards: valor, Importe (valor cotizado) y potencia', () => {
+  const o = op('6. Presentación de Oferta', 'abierta', 'GEENERA AUTOCONSUMO',
+    { amount: '250000000.00', custom_fields: [{ id: 1, field: 'Potencia (kWp)', value: '120.5' }] });
+  const r = derivarAvance({ contacto: { ...contacto('in-deal'), leadScoring: 80 }, oportunidad: o });
   assert.deepEqual(r.crudos, {
-    estado_contacto_clientify: '4. en oportunidad', lead_scoring: 80, fase_oportunidad: '6. Presentación de oferta',
-    fase_oportunidad_num: 6, estado_oportunidad: 'abierta', valor_oportunidad: 250000000
+    estado_contacto_clientify: 'in-deal', lead_scoring: 80, fase_oportunidad: '6. Presentación de Oferta',
+    fase_oportunidad_num: 6, estado_oportunidad: 'abierta', valor_oportunidad: 250000000,
+    valor_cotizado: 250000000, potencia_instalada_kwp: 120.5
   });
-  assert.ok(!('valor_cotizado' in r.crudos) && !('potencia_instalada_kwp' in r.crudos));
+  const sinScoring = derivarAvance({ contacto: contacto('in-deal') });
+  assert.ok(!('lead_scoring' in sinScoring.crudos), 'el lead scoring no viene en la API: no se borra lo guardado');
 });
 
 test('lectura de contactos y oportunidades de la API', () => {
@@ -143,17 +193,16 @@ test('lectura de contactos y oportunidades de la API', () => {
   assert.equal(leerOportunidad({ status: 2 }).estado, null, 'sin status_desc no se adivina');
 });
 
-test('solo cuentan las oportunidades de los embudos del programa', () => {
-  assert.equal(esEmbudoReferidos({ embudo: 'GEENERA AUTOCONSUMO' }), true);
-  assert.equal(esEmbudoReferidos({ embudo: 'geenera autoconsumo ' }), true);
-  assert.equal(esEmbudoReferidos({ embudo: 'GEENERA OFF GRID' }), false);
-  assert.equal(esEmbudoReferidos({ embudo: null }), false);
-});
-
 test('datos del contacto para leads del formulario público', () => {
   const c = leerContacto({ id: 8, emails: ['a@x.test'], addresses: [{ city: 'Girón' }],
     custom_fields: [{ field: 'Valor pagado en factura (COP / mes)', value: '3500000' }, { field: 'Subsector Economico', value: 'Avícolas' }] });
   assert.deepEqual([c.correo, c.ciudad, c.valorFactura, c.subsector], ['a@x.test', 'Girón', 3500000, 'Avícolas']);
+});
+
+test('interpretación del webhook real de Clientify (confirmado con los primeros eventos)', () => {
+  assert.deepEqual(interpretarWebhook({ hook: { id: 1, event: 'deal.saved', target: 'https://x/api/webhooks/clientify' },
+    data: { id: 987654, pipeline_stage: 'https://api.clientify.net/v1/deals/pipelines/stages/159064/' } }),
+  { entidad: 'oportunidad', entidadId: '987654', accion: 'deal.saved' });
 });
 
 test('interpretación del webhook', () => {

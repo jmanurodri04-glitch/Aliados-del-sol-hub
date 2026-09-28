@@ -43,7 +43,7 @@ test('separa el nombre en nombre y apellidos sin perder palabras', () => {
 
 test('en Production: etiqueta "Aliado del Sol", etiqueta del tipo e ID_aliado; nunca el id interno', () => {
   const contacto = construirContacto(ALIADO, 'production');
-  assert.deepEqual(contacto.tags, ['Aliado del Sol', 'AdS EMI']);
+  assert.deepEqual(contacto.tags, ['aliados del sol', 'AdS EMI']);
   assert.deepEqual(contacto.custom_fields, [{ field: 'ID_aliado', value: 'EMJJPL7K4MQ9TX' }]);
   assert.equal(contacto.email, ALIADO.correo);
   assert.equal(contacto.phone, '+573001234567');
@@ -51,9 +51,11 @@ test('en Production: etiqueta "Aliado del Sol", etiqueta del tipo e ID_aliado; n
 });
 
 test('fuera de Production agrega la etiqueta PRUEBA HUB', () => {
-  assert.deepEqual(construirContacto(ALIADO, 'preview').tags, ['Aliado del Sol', 'AdS EMI', 'PRUEBA HUB']);
+  assert.deepEqual(construirContacto(ALIADO, 'preview').tags, ['aliados del sol', 'AdS EMI', 'PRUEBA HUB']);
   assert.deepEqual(construirContacto({ ...ALIADO, tipo_aliado: 'agremiaciones', cargo: 'Directora' }, 'development').tags,
-    ['Aliado del Sol', 'AdS Agremiaciones', 'PRUEBA HUB']);
+    ['aliados del sol', 'AdS Agremiaciones', 'PRUEBA HUB']);
+  assert.deepEqual(construirContacto({ ...ALIADO, tipo_aliado: 'cliente_embajador' }, 'production').tags,
+    ['aliado del sol hub', 'AdS Cliente Embajador'], 'Cliente Embajador lleva "aliado del sol hub"');
   assert.equal(construirContacto({ ...ALIADO, cargo: 'Directora' }, 'production').title, 'Directora');
 });
 
@@ -74,14 +76,14 @@ test('contacto que ya existía (p. ej. un cliente): se vincula sin pisar sus dat
   const clientify = clientifyFalso({ existente: { id: 555, email: ALIADO.correo } });
   const r = await sincronizarAliado(ALIADO, { clientify, entorno: 'preview' });
   assert.deepEqual(r, { contactId: '555', accion: 'vinculado' });
-  assert.deepEqual(clientify.llamadas, ['buscar', 'actualizar', 'etiqueta:Aliado del Sol', 'etiqueta:AdS EMI', 'etiqueta:PRUEBA HUB']);
+  assert.deepEqual(clientify.llamadas, ['buscar', 'actualizar', 'etiqueta:aliados del sol', 'etiqueta:AdS EMI', 'etiqueta:PRUEBA HUB']);
 });
 
 test('aliado ya sincronizado que editó su perfil: se actualiza el mismo contacto', async () => {
   const clientify = clientifyFalso();
   const r = await sincronizarAliado({ ...ALIADO, clientify_contact_id: '777' }, { clientify, entorno: 'production' });
   assert.deepEqual(r, { contactId: '777', accion: 'actualizado' });
-  assert.deepEqual(clientify.llamadas, ['actualizar', 'etiqueta:Aliado del Sol', 'etiqueta:AdS EMI']);
+  assert.deepEqual(clientify.llamadas, ['actualizar', 'etiqueta:aliados del sol', 'etiqueta:AdS EMI']);
 });
 
 test('si el contacto guardado ya no existe en Clientify (404), se busca o se crea de nuevo', async () => {

@@ -113,7 +113,7 @@ test('procesa la cola: crea, vincula, registra errores y respeta las reglas del 
 
   // Nuevo: contacto creado con etiquetas (incluida PRUEBA HUB) e ID_aliado.
   const creacion = pedidas.find((p) => p.metodo === 'POST' && p.url === '/v1/contacts/' && p.cuerpo.email === ALIADOS.nuevo.correo);
-  assert.deepEqual(creacion.cuerpo.tags, ['Aliado del Sol', 'AdS EMI', 'PRUEBA HUB']);
+  assert.deepEqual(creacion.cuerpo.tags, ['aliados del sol', 'AdS EMI', 'PRUEBA HUB']);
   assert.deepEqual(creacion.cuerpo.custom_fields, [{ field: 'ID_aliado', value: codigo(ALIADOS.nuevo) }]);
   assert.equal(creacion.auth, 'Token clave-de-prueba');
   assert.equal(fila(ALIADOS.nuevo, "clientify_sync_estado || '|' || clientify_contact_id"), 'ok|1001');
@@ -123,7 +123,7 @@ test('procesa la cola: crea, vincula, registra errores y respeta las reglas del 
   const vinculo = pedidas.find((p) => p.metodo === 'PATCH' && p.url === '/v1/contacts/4242/');
   assert.deepEqual(vinculo.cuerpo, { custom_fields: [{ field: 'ID_aliado', value: codigo(ALIADOS.existente) }] });
   assert.deepEqual(pedidas.filter((p) => p.url === '/v1/contacts/4242/tags/').map((p) => p.cuerpo.name),
-    ['Aliado del Sol', 'AdS Cliente Embajador', 'PRUEBA HUB']);
+    ['aliado del sol hub', 'AdS Cliente Embajador', 'PRUEBA HUB']);
   assert.equal(fila(ALIADOS.existente, "clientify_sync_estado || '|' || clientify_contact_id"), 'ok|4242');
 
   // Falla de Clientify: queda en error con reintento programado.

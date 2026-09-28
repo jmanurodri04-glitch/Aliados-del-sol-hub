@@ -2,7 +2,7 @@
 -- conflictos, retención, conciliación y depuración (CLAUDE.md §4.7, §5, §5.1, §7.1, §8).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(54);
+select plan(56);
 
 create function pg_temp.aliado(id uuid, email text, celular text, estado text)
 returns void language sql as $$
@@ -64,6 +64,12 @@ select public.clientify_resultado_entidad('oportunidad', '201', now(), null, 'Fa
 select is((select count(*) from public.clientify_cola_entidades where entidad_id = '201'), 0::bigint, 'al terminar sale de la cola');
 select row_eq($$select procesado_at is not null, error from public.webhook_eventos where entidad_id = '201'$$,
   row(true, 'Fase desconocida: "8. Otra"'::text), 'el aviso queda en el evento procesado');
+
+-- Un evento de algo ajeno al programa ("ignorado") no se guarda: se borra su payload.
+select public.webhook_clientify_recibir('{"correo": "ajeno@x.test"}', 'oportunidad', '299', 'deal.updated', 0);
+select public.clientify_resultado_entidad('oportunidad', '299', now(), null, null, true);
+select row_eq($$select payload, procesado_at is not null from public.webhook_eventos where entidad_id = '299'$$,
+  row('{"descartado": true}'::jsonb, true), 'lo ignorado se procesa y su payload se borra');
 
 -- Si llegó otro evento mientras se procesaba, la fila se conserva.
 select public.clientify_encolar_entidad('oportunidad', '202', 0);
@@ -215,8 +221,10 @@ select is((select schedule from cron.job where jobname = 'sincronizar-clientify-
 select is((select schedule from cron.job where jobname = 'depurar-webhooks-clientify'), '30 8 1 * *',
   'la depuración corre el día 1 de cada mes');
 
-select is((select command from cron.job where jobname = 'escanear-oportunidades-clientify' and schedule = '7 * * * *'),
-  $$select interno.invocar_cron_hub('clientify-oportunidades')$$, 'el escaneo de oportunidades corre cada hora');
+select is((select command from cron.job where jobname = 'conciliar-clientify' and schedule = '7 * * * *'),
+  $$select interno.invocar_cron_hub('clientify-conciliacion')$$, 'la conciliación corre cada hora');
+select is((select count(*) from cron.job where jobname = 'escanear-oportunidades-clientify'), 0::bigint,
+  'el escaneo suelto se reemplazó por la conciliación horaria');
 
 select * from finish();
 rollback;

@@ -84,7 +84,7 @@ Formulario propio del Hub. No es de Clientify.
    - crea la fila en `aliados_perfil_organizacion` o en `aliados_perfil_alcance` según el tipo;
    - guarda `autorizacion_datos_at`, `terminos_aceptados_at` y las versiones aceptadas (`terminos_version`, `politica_datos_version`);
    - `rol` y `estado` **nunca** se toman de los metadatos del navegador.
-3. **Cuando GEENERA aprueba la solicitud** (`pendiente → activo`), se sincroniza con Clientify (ver §8, flujo A). No se sincroniza al registrarse, para no llevar al CRM solicitudes que se van a rechazar (decisión del equipo). El aliado se crea como contacto con la etiqueta **"Aliado del Sol"**, el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **Ni el registro ni la aprobación fallan por culpa de Clientify.**
+3. **Cuando GEENERA aprueba la solicitud** (`pendiente → activo`), se sincroniza con Clientify (ver §8, flujo A). No se sincroniza al registrarse, para no llevar al CRM solicitudes que se van a rechazar (decisión del equipo). El aliado se crea como contacto con la etiqueta de aliado (**"aliados del sol"**, o **"aliado del sol hub"** si es Cliente Embajador), el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **Ni el registro ni la aprobación fallan por culpa de Clientify.**
 4. El aliado **confirma su correo** (obligatorio antes del primer login) y **GEENERA aprueba la solicitud** (decisiones del equipo):
    - mientras `estado = 'pendiente'`, el login responde "Tu solicitud está en revisión" y no entra al Hub;
    - un admin la aprueba con `estado = 'activo'`, `aprobado_at` y `aprobado_por` (por SQL hasta que exista el panel admin, fase 9);
@@ -310,6 +310,7 @@ entidad ('contacto' | 'oportunidad'), entidad_id, accion        -- fase 6
 
 - `error` guarda también los **avisos** de un evento procesado (Status o fase desconocidos, `ID_aliado` inexistente, conflictos).
 - El payload crudo se vacía a los **90 días** (`interno.depurar_webhooks_clientify()`, cron `depurar-webhooks-clientify` el día 1 de cada mes) porque trae datos personales (decisión del equipo).
+- Los eventos de contactos u oportunidades **ajenos al programa** (resultado "ignorado") se vacían **al procesarlos** (`{"descartado": true}`): Clientify envía los cambios de todas sus oportunidades y no se guardan datos que no son del programa (decisión del equipo).
 
 **Tablas de la fase 6:**
 - `clientify_cola_entidades` (PK `entidad, entidad_id`): contactos y oportunidades por reprocesar; varios eventos de la misma entidad quedan en una sola fila. Solo el servidor.
@@ -505,7 +506,7 @@ Autenticación con API key (`Authorization: Token ...`) en `CLIENTIFY_API_KEY`. 
 
 Cuando GEENERA aprueba al aliado (`estado` pasa de `pendiente` a `activo`), no al registrarse:
 
-1. Crear el contacto con la etiqueta **"Aliado del Sol"**, la etiqueta de tipo y el campo `ID_aliado = codigo_aliado`.
+1. Crear el contacto con la etiqueta de aliado (**"aliados del sol"**; **"aliado del sol hub"** si el tipo es Cliente Embajador, decisión del equipo), la etiqueta de tipo y el campo `ID_aliado = codigo_aliado`.
 2. Guardar `clientify_contact_id`.
 3. Si falla, dejar `pendiente` y reintentar con un cron cada 15 min con backoff.
 
@@ -543,6 +544,8 @@ Cuando el aliado edita su perfil, también se replica en Clientify.
 ### Flujo C — Clientify → Supabase (webhook)
 
 - Configuración en Clientify: *Configuración > Integraciones > Webhooks*, eventos de crear, actualizar y eliminar para **contactos y oportunidades**.
+  - **Estado real:** solo el webhook de **oportunidades** apunta al Hub. El de contactos alimenta un flujo de **n8n** y no se cambia (decisión del equipo). Por eso los cambios de Status y etiquetas de los referidos llegan con la conciliación horaria o con cualquier evento de su oportunidad, y un lead del formulario público se descubre cuando se le crea una oportunidad (ver "Pendiente" en la implementación).
+  - Formato confirmado con los primeros eventos: `{ "hook": { "id", "event": "deal.saved", "target" }, "data": { "id", … } }`.
 - Destino: `POST /api/webhooks/clientify?token=<CLIENTIFY_WEBHOOK_SECRET>`.
 
 Pasos:
@@ -562,12 +565,13 @@ Pasos:
 - `POST /api/webhooks/clientify?token=…` valida `CLIENTIFY_WEBHOOK_SECRET` en tiempo constante, interpreta el evento (`interpretarWebhook` en `mapeo.js`) y llama a `public.webhook_clientify_recibir`, que guarda el evento y encola la entidad. Responde 200 sin procesar (500 si no pudo guardar, para que Clientify reintente). Un contacto **creado** espera 2 minutos.
 - El cron (cada 2 min) toma la cola (`clientify_reclamar_entidades`, préstamo de 5 min y `SKIP LOCKED`) y, por entidad (`lib/clientify/webhook.js`):
   1. vuelve a consultar el contacto (una oportunidad se resuelve a su contacto) y las oportunidades candidatas: la del evento (o del escaneo) y la ya guardada en `clientify_deal_id`. Se queda con las vinculadas a ese contacto y de un embudo del programa, y usa la más avanzada. **La API no filtra oportunidades por contacto** (`/deals/?contact=` devuelve todas, confirmado con el diagnóstico);
-  2. resuelve la empresa por `clientify_contact_id`; si no existe y el contacto tiene `ID_aliado`, es un lead del formulario (§7.1). Se ignoran sin error los aliados (etiqueta "Aliado del Sol" o `aliados.clientify_contact_id`) y los contactos sin `ID_aliado`. Fuera de Production se ignoran los correos sin `+prueba`; en Production, los contactos con `PRUEBA HUB`;
+  2. resuelve la empresa por `clientify_contact_id`; si no existe y el contacto tiene `ID_aliado`, es un lead del formulario (§7.1). Se ignoran sin error los aliados (etiquetas "aliados del sol" o "aliado del sol hub", o `aliados.clientify_contact_id`) y los contactos sin `ID_aliado`. Fuera de Production se ignoran los correos sin `+prueba`; en Production, los contactos con `PRUEBA HUB`;
   3. deriva con `derivarAvance` (`lib/clientify/avance.js`) y aplica con `public.aplicar_avance_clientify(empresa, crudos, variables, deal_id)`, que en una transacción guarda los datos crudos, pasa de `revision` a definitivo, registra conflictos y luego inserta los movimientos en el orden de esta sección.
   4. `clientify_resultado_entidad` cierra los eventos (con sus avisos) o programa el reintento (2 min, 4, 8… máximo 6 h).
-- **Escaneo de oportunidades (cada hora, minuto 7):** el job `escanear-oportunidades-clientify` llama a `/api/cron/clientify-oportunidades`, que recorre todas las oportunidades de los embudos del programa (páginas de 100) y encola las de contactos referidos que son nuevas, más avanzadas que la guardada o cuya fase o estado cambió. Así el avance comercial llega aunque el webhook de oportunidades no esté disponible en Clientify (máximo 1 h de retraso).
-- **Conciliación:** `/api/cron/clientify-conciliacion` encola los contactos de las empresas que siguen en curso (`negocio_cerrado <> 'si'`) con `public.clientify_encolar_conciliacion()` hace el escaneo de oportunidades y procesa las colas. *Pendiente:* recorrer también los contactos modificados en Clientify en las últimas 48 h, si la API permite filtrar por fecha (lo dirá el diagnóstico).
-- **Diagnóstico:** `/api/cron/clientify-diagnostico` (con `CRON_SECRET`) devuelve solo nombres y estructura, sin datos personales: campos personalizados, etiquetas, embudos, fases, los valores de Status en uso, la forma de contactos y oportunidades, si el filtro `?contact=` funciona y la estructura de los últimos webhooks. Sirve para confirmar el mapeo y responder §14 (preguntas 1 y 2). Se llama con `select interno.invocar_cron_hub('clientify-diagnostico');`.
+- **Conciliación (cada hora, minuto 7, job `conciliar-clientify`, y a las 02:00 por Vercel Cron):** `/api/cron/clientify-conciliacion` encola los contactos de las empresas que siguen en curso (`negocio_cerrado <> 'si'`) con `public.clientify_encolar_conciliacion()`, **escanea todas las oportunidades** (páginas de 100) y encola las de contactos referidos que son nuevas con más hitos que los alcanzados o que son la guardada y cambiaron de fase o estado, y procesa las colas. Así los cambios del contacto llegan con máximo 1 h de retraso aunque su webhook no apunte al Hub.
+- *Pendiente:* un lead del formulario público que nunca tenga oportunidad no se descubre (su contacto no llega por webhook). Opciones: que el flujo de n8n reenvíe el evento de contacto a `/api/webhooks/clientify` (recomendado) o un escaneo de contactos por fecha de modificación si la API lo permite.
+- Lo ignorado (contactos u oportunidades ajenos al programa) se procesa sin error y su payload se borra (`clientify_resultado_entidad(..., p_descartar => true)`).
+- **Diagnóstico:** `/api/cron/clientify-diagnostico` (con `CRON_SECRET`) devuelve solo nombres y estructura, sin datos personales: campos personalizados, etiquetas (paginadas), embudos, fases, los valores de Status en uso, la forma de contactos y oportunidades y la estructura de los últimos webhooks. Sirve para confirmar el mapeo y responder §14 (preguntas 1 y 2). Se llama con `select interno.invocar_cron_hub('clientify-diagnostico');`.
 
 **Conciliación nocturna** (Vercel Cron, 02:00 Bogotá; ver la implementación arriba): recorre los contactos y oportunidades modificados en Clientify en las últimas 48 h y reaplica el mismo proceso, que es idempotente. Así se cubren webhooks perdidos.
 
@@ -609,7 +613,15 @@ Comparar los textos normalizados (minúsculas, sin tildes, `trim`). El mapeo viv
 
 **B. Fase de la oportunidad → avance comercial**
 
-Solo cuentan las oportunidades del embudo **GEENERA AUTOCONSUMO** (`EMBUDOS_REFERIDOS` en `mapeo.js`): las fases de abajo son las suyas. Clientify tiene 6 embudos y otros numeran distinto (en GEENERA OFF GRID la 3 es "Capex" y existe una 8); *pendiente de decisión del equipo si otros embudos deben contar*. El estado de la oportunidad se lee de `status_desc`: Open → abierta, Won → ganada, Lost y Expired → perdida.
+**Cuentan todos los embudos de proyectos** (decisión del equipo): GEENERA AUTOCONSUMO, OFF GRID, MINIGRANJAS, Care y los que se creen. Cada embudo numera distinto (en OFF GRID el diseño es la 2 y existe una 8; MINIGRANJAS y Care no tienen número), así que los hitos se identifican por el **nombre de la fase** (sin el número) y la **posición** de la fase dentro de su embudo, con el catálogo `/deals/pipelines/stages/` (`HITOS_FASE` en `mapeo.js`, `construirCatalogoFases` y `hitosDeOportunidad` en `avance.js`):
+
+| Hito | Fase (por nombre) | Regla |
+|---|---|---|
+| `oportunidad_tecnica` | "Diseño" | la fase de la oportunidad está en la posición de "Diseño" o después |
+| `propuesta_comercial` | "Presentación de oferta" | ídem |
+| `negocio_cerrado` | "Contrato" | ídem |
+
+Un embudo sin esas fases (p. ej. GEENERA_ADS, de eventos, o "Por defecto") no genera puntos de avance. Una fase que no está en el catálogo → `revision` y aviso. Las filas de abajo son las de GEENERA AUTOCONSUMO. El estado de la oportunidad se lee de `status_desc`: Open → abierta, Won → ganada, Lost y Expired → perdida.
 
 **Fases del pipeline** (la 8 no existe):
 
@@ -629,12 +641,12 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
 
 | Variable | Regla | Puntos |
 |---|---|---|
-| `oportunidad_tecnica` | `si` si `fase_num >= 3` ("3. Diseño"). `no` si `calificado = no`, o si la oportunidad se pierde antes de la fase 3. En otro caso, `revision`. | +30 al pasar a `si` |
-| `propuesta_comercial` | `si` si `fase_num >= 6` ("6. Presentación de oferta"). En otro caso, `revision`. | +50 |
-| `negocio_cerrado` | `si` si `fase_num >= 10` ("10. Contrato"). En otro caso, `revision`. | +150 |
+| `oportunidad_tecnica` | `si` si la fase es "Diseño" o posterior (en AUTOCONSUMO, `fase_num >= 3`). `no` si `calificado = no`, o si la oportunidad se pierde antes del diseño. En otro caso, `revision`. | +30 al pasar a `si` |
+| `propuesta_comercial` | `si` si la fase es "Presentación de oferta" o posterior (en AUTOCONSUMO, `>= 6`). En otro caso, `revision`. | +50 |
+| `negocio_cerrado` | `si` si la fase es "Contrato" (en AUTOCONSUMO, la 10). En otro caso, `revision`. | +150 |
 
 - Si pasan varias fases de golpe (por ejemplo de 2 a 6), se otorgan en el mismo proceso todos los movimientos pendientes (+30 y +50), cada uno con su clave única.
-- Si una empresa referida tiene **varias oportunidades**, se usa **siempre la más avanzada**, la de mayor `fase_num` (decisión del equipo). `clientify_deal_id` guarda la de esa oportunidad.
+- Si una empresa referida tiene **varias oportunidades**, se usa **siempre la más avanzada** (decisión del equipo): la que alcanzó más hitos y, a igualdad, la de fase posterior, aunque sean de embudos distintos. `clientify_deal_id` guarda la de esa oportunidad.
 
 **C. Variables derivadas**
 
@@ -643,7 +655,7 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
 | `integridad_informacion` | `no` si `calificado = no`; `si` si `calificado = si`; `revision` en otro caso |
 | `perfecto` | Etiqueta `Referido perfecto` → `si`; `Referido imperfecto` → `no`; sin etiqueta → `revision` |
 | `fuera_perfil` | `si` si `calificado = no` **y** `perfecto = si`; `no` si `calificado` es definitivo y no se cumple lo anterior; `revision` en otro caso (ver §5, aclaraciones) |
-| `informacion_falsa` | `si` si el contacto tiene la etiqueta de información falsa (*nombre exacto de la etiqueta pendiente*); `revision` si no la tiene |
+| `informacion_falsa` | `si` si el contacto tiene **cualquiera** de las etiquetas "fraude", "no existe" o "información de contacto errónea" (decisión del equipo: se aplican a casos distintos); `revision` si no tiene ninguna |
 
 **D. Datos numéricos para dashboards**
 
@@ -651,8 +663,8 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
 |---|---|
 | `lead_scoring` | Lead scoring nativo del contacto |
 | `potencia_instalada_kwp` | Campo personalizado de la oportunidad **"Potencia (kWp)"** (confirmado con el diagnóstico) |
-| `valor_oportunidad` | `amount` nativo de la oportunidad |
-| `valor_cotizado` | Campo de la oportunidad (*pendiente: ¿"Posibilidad de negocio ($)" u otro?*) |
+| `valor_oportunidad` | `amount` nativo de la oportunidad (*pendiente: confirmar qué es el "pipeline originado"*) |
+| `valor_cotizado` | **"Importe"** de la oportunidad, que en la API es el campo nativo `amount` (confirmado por el equipo) |
 | `estado_oportunidad` | Estado nativo de la oportunidad: abierta, ganada o perdida |
 
 **Reglas de implementación:**
@@ -669,7 +681,7 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
   5. recalcular la calidad, los saldos y el nivel.
 - **Valor efectivo en las derivadas:** `fuera_perfil`, `integridad_informacion` y `oportunidad_tecnica = no` usan el valor vigente del Hub si ya es definitivo (p. ej. el `perfecto` de un referido del Hub); si no, el de Clientify. Con `calificado = no` y `perfecto` aún en `revision`, `fuera_perfil` queda en `revision`.
 - **Confirmado con el diagnóstico (fase 6):** estructura de contactos y oportunidades, códigos de Status, `status_desc`, `pipeline_desc`, `pipeline_stage_desc`, `amount`, `custom_fields` como `{field, value}`, etiquetas en minúscula (se comparan sin distinguir mayúsculas) y los campos del contacto que usa el formulario público ("Valor pagado en factura (COP / mes)", "Subsector Economico", ciudad en `addresses`). El lead scoring no viene en la API de contactos.
-- **Pendientes en `mapeo.js`:** `ETIQUETA_INFORMACION_FALSA` y `CAMPO_VALOR_COTIZADO` valen `null` (mientras tanto `informacion_falsa` queda en `revision` y el valor cotizado no se toca); el formato del webhook se confirma con el primer evento real.
+- **Pendiente:** confirmar la fuente del `valor_oportunidad` ("pipeline originado"); hoy es el mismo `amount` que el valor cotizado.
 - **Racha:** la fase 6 ya guarda `fecha_calificado`; la actualización de la racha llega en la fase 7 y se reconstruirá desde esas fechas.
 
 ---
@@ -760,15 +772,22 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Un lead del formulario público de un aliado `pendiente` o `suspendido` se registra y sus puntos quedan retenidos hasta la reactivación (§7.1).
 - El payload crudo de los webhooks se conserva 90 días (§4.11).
 - Un cambio de Clientify sobre un valor definitivo queda en `avance_conflictos` para un admin; no cambia puntos ni calidad (§5.1, §8).
+- Cuentan todos los embudos de proyectos; los hitos se reconocen por el nombre de la fase ("Diseño", "Presentación de oferta", "Contrato") y su posición en el embudo (§8).
+- Información falsa: cualquiera de las etiquetas "fraude", "no existe" o "información de contacto errónea" (§8).
+- Valor cotizado = "Importe" de la oportunidad (`amount`) (§8).
+- Etiqueta de aliado: "aliado del sol hub" para Cliente Embajador y "aliados del sol" para los demás (§8, flujo A).
+- Los eventos de webhook ajenos al programa se borran al procesarlos (§4.11).
+- El webhook de contactos de Clientify sigue en n8n; al Hub solo llega el de oportunidades, y la conciliación corre cada hora (§8, flujo C).
 
 ## 14. Preguntas abiertas
 
 **Necesarias antes de la fase del webhook** (no bloquean las fases 1 a 5):
 
-1. Nombre exacto de la **etiqueta de información falsa** en Clientify. (Se puede ver con `/api/cron/clientify-diagnostico`; va en `ETIQUETA_INFORMACION_FALSA` de `mapeo.js`.)
-2. ~~Campo "Potencia" y valor de la oportunidad~~ Resuelto con el diagnóstico: "Potencia (kWp)" de la oportunidad y `amount`. **Sigue pendiente el valor cotizado** (¿"Posibilidad de negocio ($)"?; va en `CAMPO_VALOR_COTIZADO`).
-10. ¿Solo cuenta el embudo **GEENERA AUTOCONSUMO** o también OFF GRID, MINIGRANJAS o Care (con otra numeración de fases)?
-11. Etiqueta oficial de los aliados en Clientify: existen "aliados del sol" y "aliado del sol hub"; el flujo A usa "Aliado del Sol".
+1. ~~Etiqueta de información falsa~~ Resuelta: "fraude", "no existe" e "información de contacto errónea" (§8).
+2. ~~Campo "Potencia" y valores~~ Resuelta: "Potencia (kWp)" de la oportunidad y valor cotizado = "Importe" (`amount`). **Pendiente:** ¿qué campo es el "pipeline originado" (`valor_oportunidad`)?
+10. ~~¿Qué embudos cuentan?~~ Resuelta: todos los de proyectos (§8).
+11. ~~Etiqueta de aliado~~ Resuelta: "aliado del sol hub" (Cliente Embajador) y "aliados del sol" (§8, flujo A).
+12. Leads del formulario público sin oportunidad: ¿el flujo de n8n puede reenviar el evento de contacto al Hub (§8, flujo C)?
 
 **Generales:**
 

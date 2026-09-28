@@ -9,6 +9,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { execFileSync } from 'node:child_process';
+import { FASES_CLIENTIFY, oportunidadEnFase } from '../clientify/fases.fixture.js';
 
 const { PRUEBAS_SUPABASE_URL, PRUEBAS_SUPABASE_SECRET_KEY, PRUEBAS_DB_URL } = process.env;
 const omitir = !(PRUEBAS_SUPABASE_URL && PRUEBAS_SUPABASE_SECRET_KEY && PRUEBAS_DB_URL)
@@ -38,6 +39,7 @@ function iniciarClientifyFalso() {
       if ((m = url.pathname.match(/^\/v1\/deals\/(\d+)\/$/))) {
         return clientify.oportunidades[m[1]] ? json(200, clientify.oportunidades[m[1]]) : json(404, { detail: 'No encontrado' });
       }
+      if (url.pathname === '/v1/deals/pipelines/stages/') return json(200, { count: FASES_CLIENTIFY.length, next: null, results: FASES_CLIENTIFY });
       if (url.pathname === '/v1/deals/') {
         // Como la API real: ignora ?contact= y pagina de a `page_size`.
         const todas = Object.values(clientify.oportunidades);
@@ -81,10 +83,9 @@ const contacto = (id, extra = {}) => ({
   company_name: 'Empresa ' + id, status: 'cold-lead', tags: ['referido perfecto'],
   custom_fields: [{ field: 'ID_aliado', value: codigo }], ...extra
 });
-const oportunidad = (id, contacto, fase, monto, extra = {}) => ({
-  id, contact: `https://api.clientify.net/v1/contacts/${contacto}/`, pipeline_desc: 'GEENERA AUTOCONSUMO',
-  pipeline_stage_desc: fase, status: 1, status_desc: 'Open', amount: `${monto}.00`, custom_fields: [], ...extra
-});
+// Oportunidad en una fase real del catálogo de Clientify (embudo AUTOCONSUMO salvo que se indique otro).
+const oportunidad = (id, contacto, fase, monto, { embudo = 'GEENERA AUTOCONSUMO', ...extra } = {}) =>
+  oportunidadEnFase(embudo, fase, { id, contact: `https://api.clientify.net/v1/contacts/${contacto}/`, amount: `${monto}.00`, ...extra });
 const empresa = (contactId, columnas) => sql(`select ${columnas} from public.empresas e join public.avance_empresa a on a.empresa_id = e.id
   where e.clientify_contact_id = '${contactId}'`);
 const motivos = (contactId) => sql(`select string_agg(m.motivo, ',' order by m.secuencia) from public.movimientos_puntos m
@@ -187,13 +188,16 @@ test('un Status desconocido queda como aviso y no da puntos; un retroceso es un 
 
 test('se ignoran aliados, contactos sin +prueba en Preview y contactos ajenos al programa', { skip: omitir }, async () => {
   clientify.contactos['5002'] = contacto('5002', { emails: [{ email: 'real@lead.test' }] });
-  clientify.contactos['5003'] = contacto('5003', { tags: ['aliado del sol'] });
+  clientify.contactos['5003'] = contacto('5003', { tags: ['aliados del sol'] });
   clientify.contactos['5004'] = contacto('5004', { custom_fields: [] });
-  for (const id of [5002, 5003, 5004]) await webhook({ event: 'contact.updated', data: { id } });
+  clientify.contactos['5005'] = contacto('5005', { tags: ['Aliado del Sol Hub'] });
+  for (const id of [5002, 5003, 5004, 5005]) await webhook({ event: 'contact.updated', data: { id } });
   const { cuerpo } = await cron();
-  assert.deepEqual(cuerpo.entidades.detalle.map((d) => d.resultado), ['ignorado', 'ignorado', 'ignorado']);
-  assert.equal(sql("select count(*) from public.empresas where clientify_contact_id in ('5002', '5003', '5004')"), '0');
+  assert.deepEqual(cuerpo.entidades.detalle.map((d) => d.resultado), ['ignorado', 'ignorado', 'ignorado', 'ignorado']);
+  assert.equal(sql("select count(*) from public.empresas where clientify_contact_id in ('5002', '5003', '5004', '5005')"), '0');
   assert.match(sql("select error from public.webhook_eventos where entidad_id = '5002'"), /Entorno de pruebas/);
+  assert.equal(sql("select count(*) from public.webhook_eventos where entidad_id in ('5002', '5003', '5004', '5005') and payload <> '{\"descartado\": true}'"), '0',
+    'de lo ignorado no se guardan datos personales');
 });
 
 test('si Clientify falla, el evento se reintenta más tarde', { skip: omitir }, async () => {
@@ -215,23 +219,24 @@ test('la conciliación vuelve a encolar los referidos en curso', { skip: omitir 
   assert.equal(cuerpo.escaneo.encoladas, 0, 'la conciliación también escanea oportunidades');
 });
 
-test('el escaneo horario encuentra oportunidades nuevas y solo cuenta el embudo del programa', { skip: omitir }, async () => {
+test('la conciliación horaria escanea todos los embudos: solo las fases de proyecto dan puntos', { skip: omitir }, async () => {
   sql('delete from public.clientify_cola_entidades');
-  // Otro embudo con fase 10 (no cuenta) y una oportunidad nueva del programa en fase 10 (sí cuenta).
-  clientify.oportunidades['6003'] = oportunidad(6003, 5001, '10. Contrato', 900, { pipeline_desc: 'GEENERA OFF GRID' });
+  // Una oportunidad de eventos (GEENERA_ADS) en "Cierre" no es un proyecto; más de 100 oportunidades de otros contactos.
+  clientify.oportunidades['6003'] = oportunidad(6003, 5001, 'Cierre', 900, { embudo: 'GEENERA_ADS' });
   for (let i = 0; i < 130; i++) clientify.oportunidades[String(7000 + i)] = oportunidad(7000 + i, 8000 + i, '3. Diseño', 1);
-  const { status, cuerpo } = await cron('clientify-oportunidades');
+  const { status, cuerpo } = await cron('clientify-conciliacion');
   assert.equal(status, 200);
-  assert.equal(cuerpo.escaneo.encoladas, 0, 'nada cambió en el embudo del programa');
-  assert.equal(cuerpo.escaneo.revisadas, Object.values(clientify.oportunidades).filter((o) => o.pipeline_desc === 'GEENERA AUTOCONSUMO').length,
-    'recorre todas las páginas');
+  assert.equal(cuerpo.escaneo.encoladas, 0, 'nada avanzó en un embudo de proyectos');
+  assert.equal(cuerpo.escaneo.revisadas, Object.keys(clientify.oportunidades).length, 'recorre todas las páginas y todos los embudos');
 
-  clientify.oportunidades['6004'] = oportunidad(6004, 5001, '10. Contrato', 250000000, { status_desc: 'Won' });
-  const r = await cron('clientify-oportunidades');
+  // Nueva oportunidad en OFF GRID, ya en Contrato y ganada: cuenta (todos los embudos de proyectos cuentan).
+  clientify.oportunidades['6004'] = oportunidad(6004, 5001, '10. Contrato', 250000000, { embudo: 'GEENERA OFF GRID', status_desc: 'Won' });
+  const r = await cron('clientify-conciliacion');
   assert.equal(r.cuerpo.escaneo.encoladas, 1);
-  assert.deepEqual(r.cuerpo.entidades.detalle.map((d) => [d.id, d.movimientos]), [['6004', ['negocio_cerrado']]]);
-  assert.equal(empresa('5001', "e.clientify_deal_id || '|' || a.negocio_cerrado || '|' || a.estado_oportunidad"), '6004|si|ganada');
-  assert.equal((await cron('clientify-oportunidades')).cuerpo.escaneo.encoladas, 0, 'sin cambios no se vuelve a encolar');
+  assert.deepEqual(r.cuerpo.entidades.detalle.find((d) => d.id === '6004').movimientos, ['negocio_cerrado']);
+  assert.equal(empresa('5001', "e.clientify_deal_id || '|' || a.negocio_cerrado || '|' || a.estado_oportunidad || '|' || a.valor_cotizado"),
+    '6004|si|ganada|250000000');
+  assert.equal((await cron('clientify-conciliacion')).cuerpo.escaneo.encoladas, 0, 'sin cambios no se vuelve a encolar');
 });
 
 test('el diagnóstico devuelve nombres y estructura, sin datos personales', { skip: omitir }, async () => {

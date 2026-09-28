@@ -2,13 +2,15 @@
 // Production apunta a aliados-prod; Preview y Development, a aliados-dev.
 // Solo expone la URL y la publishable key: la seguridad la da RLS. Nunca la secret key.
 
+import { urlDeSupabase } from '../lib/supabase-servidor.js';
+
 export default function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).json({ error: 'Método no permitido' });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = urlDeSupabase(process.env.SUPABASE_URL);
   const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !supabasePublishableKey) {

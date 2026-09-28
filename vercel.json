@@ -7,6 +7,12 @@
       "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/clientify-aliados",
+      "schedule": "0 7 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

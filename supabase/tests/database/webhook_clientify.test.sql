@@ -2,7 +2,7 @@
 -- conflictos, retención, conciliación y depuración (CLAUDE.md §4.7, §5, §5.1, §7.1, §8).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(56);
+select plan(62);
 
 create function pg_temp.aliado(id uuid, email text, celular text, estado text)
 returns void language sql as $$
@@ -107,6 +107,10 @@ select is(pg_temp.empresa_de('103'), 'e6000000-0000-0000-0000-0000000000e6'::uui
 select is(pg_temp.motivos('e6000000-0000-0000-0000-0000000000e6'), array['registro_valido', 'referido_imperfecto'],
   'no se otorga un segundo registro válido');
 
+-- El propio aliado (su correo) no es un referido, aunque el formulario lo marque como tal.
+select throws_like($$select public.clientify_registrar_lead(pg_temp.codigo('a6000000-0000-0000-0000-0000000000a6'), '106',
+  pg_temp.lead('106', 'A@wh.test'))$$, 'autorreferido:%', 'un aliado no puede referirse a sí mismo por el formulario');
+
 -- Aliado suspendido: la empresa se crea y los puntos quedan retenidos (§4.7).
 select public.clientify_registrar_lead(pg_temp.codigo('c6000000-0000-0000-0000-0000000000c6'), '104', pg_temp.lead('104', 's@lead.test'));
 select row_eq($$select (select count(*) from public.movimientos_retenidos where vinculo_id = pg_temp.empresa_de('104')::text),
@@ -185,6 +189,23 @@ select is((select count(*) from public.movimientos_retenidos where vinculo_id = 
 
 select throws_like($$select public.aplicar_avance_clientify('00000000-0000-0000-0000-000000000000', '{}', '{}')$$,
   'empresa_inexistente:%', 'una empresa inexistente se rechaza');
+
+-- Valores del escaneo (cotizado, pipeline originado, potencia) --------------------------------------------
+
+select is(public.clientify_actualizar_valores(
+  '[{"contact_id": "101", "valor_cotizado": 480, "valor_oportunidad": 250, "potencia_instalada_kwp": 12.5}]', false), 1,
+  'se guardan los valores del referido');
+select row_eq($$select valor_cotizado, valor_oportunidad, potencia_instalada_kwp from public.avance_empresa where empresa_id = pg_temp.empresa_de('101')$$,
+  row(480::numeric, 250::numeric, 12.5::numeric), 'cotizado, pipeline originado y potencia');
+select is(public.clientify_actualizar_valores(
+  '[{"contact_id": "101", "valor_cotizado": 480, "valor_oportunidad": 250, "potencia_instalada_kwp": 12.5}]', false), 0,
+  'sin cambios no se reescribe nada');
+select public.clientify_actualizar_valores('[]', false);
+select is((select valor_cotizado from public.avance_empresa where empresa_id = pg_temp.empresa_de('101')), 480::numeric,
+  'un escaneo incompleto no borra valores');
+select public.clientify_actualizar_valores('[]', true);
+select is((select valor_cotizado from public.avance_empresa where empresa_id = pg_temp.empresa_de('101')), null,
+  'un escaneo completo sin oportunidades del referido deja los valores vacíos');
 
 -- Conciliación ------------------------------------------------------------------------------------------
 

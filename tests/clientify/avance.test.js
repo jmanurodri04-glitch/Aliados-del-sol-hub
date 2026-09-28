@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  construirCatalogoFases, derivarAvance, elegirOportunidad, hitosDeOportunidad, normalizarTexto, numeroDeFase
+  construirCatalogoFases, derivarAvance, elegirOportunidad, hitosDeOportunidad, normalizarTexto, numeroDeFase,
+  valoresDelReferido
 } from '../../lib/clientify/avance.js';
 import { interpretarWebhook, leerContacto, leerOportunidad } from '../../lib/clientify/mapeo.js';
 import { FASES_CLIENTIFY, oportunidadEnFase } from './fases.fixture.js';
@@ -159,17 +160,29 @@ test('C. información falsa: cualquiera de las tres etiquetas', () => {
   assert.equal(v({ contacto: contacto('hot-lead', ['Información falsa', 'no existe x']) }).informacion_falsa, 'revision');
 });
 
-test('D. datos crudos para dashboards: valor, Importe (valor cotizado) y potencia', () => {
-  const o = op('6. Presentación de Oferta', 'abierta', 'GEENERA AUTOCONSUMO',
-    { amount: '250000000.00', custom_fields: [{ id: 1, field: 'Potencia (kWp)', value: '120.5' }] });
+test('D. un evento guarda fase y estado; los valores del referido los suma el escaneo', () => {
+  const o = op('6. Presentación de Oferta', 'abierta', 'GEENERA AUTOCONSUMO', { amount: '250000000.00' });
   const r = derivarAvance({ contacto: { ...contacto('in-deal'), leadScoring: 80 }, oportunidad: o });
   assert.deepEqual(r.crudos, {
     estado_contacto_clientify: 'in-deal', lead_scoring: 80, fase_oportunidad: '6. Presentación de Oferta',
-    fase_oportunidad_num: 6, estado_oportunidad: 'abierta', valor_oportunidad: 250000000,
-    valor_cotizado: 250000000, potencia_instalada_kwp: 120.5
+    fase_oportunidad_num: 6, estado_oportunidad: 'abierta'
   });
   const sinScoring = derivarAvance({ contacto: contacto('in-deal') });
   assert.ok(!('lead_scoring' in sinScoring.crudos), 'el lead scoring no viene en la API: no se borra lo guardado');
+});
+
+test('D. valor cotizado = todas las oportunidades; pipeline originado y potencia = las que se cierran', () => {
+  const potencia = (kwp) => ({ custom_fields: [{ id: 1, field: 'Potencia (kWp)', value: String(kwp) }] });
+  const lista = [
+    op('3. Diseño', 'abierta', 'GEENERA AUTOCONSUMO', { amount: '100.00', ...potencia(10) }),
+    op('6. Presentación de Oferta', 'perdida', 'GEENERA AUTOCONSUMO', { amount: '200.00', ...potencia(20) }),
+    op('Contrato', 'abierta', 'GEENERA MINIGRANJAS', { amount: '300.00', ...potencia(30) }),
+    op('9. Financiación', 'ganada', 'GEENERA AUTOCONSUMO', { amount: '400.00', ...potencia(40) })
+  ];
+  assert.deepEqual(valoresDelReferido(lista), { valor_cotizado: 1000, valor_oportunidad: 700, potencia_instalada_kwp: 70 });
+  assert.deepEqual(valoresDelReferido(lista.slice(0, 2)), { valor_cotizado: 300, valor_oportunidad: null, potencia_instalada_kwp: null },
+    'sin cierres no hay pipeline originado');
+  assert.deepEqual(valoresDelReferido([]), { valor_cotizado: null, valor_oportunidad: null, potencia_instalada_kwp: null });
 });
 
 test('lectura de contactos y oportunidades de la API', () => {

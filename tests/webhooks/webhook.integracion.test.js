@@ -123,6 +123,9 @@ test('el webhook exige el token y responde enseguida', { skip: omitir }, async (
   assert.equal((await webhook({ data: { id: 1 } }, { token: null })).status, 401);
   assert.equal((await webhook({ data: { id: 1 } }, { token: 'otro' })).status, 401);
   assert.equal((await webhook(null, { metodo: 'GET' })).status, 200, 'verificación de la URL');
+  const { default: handler } = await import('../../api/webhooks/clientify.js');
+  const conEncabezado = await new Promise((r) => handler({ method: 'GET', query: {}, headers: { 'x-webhook-token': TOKEN } }, respuesta(r)));
+  assert.equal(conEncabezado.status, 200, 'el token también se acepta en el encabezado x-webhook-token (n8n)');
   assert.equal(pedidas.length, 0, 'recibir un evento no llama a Clientify');
 });
 
@@ -156,8 +159,8 @@ test('la oportunidad avanza de golpe a la fase 6: calificado, evaluación técni
   const { cuerpo } = await cron();
   assert.deepEqual(cuerpo.entidades.detalle[0].movimientos, ['empresa_calificada', 'evaluacion_tecnica', 'propuesta_comercial']);
   assert.equal(motivos('5001'), 'registro_valido,referido_perfecto,empresa_calificada,evaluacion_tecnica,propuesta_comercial');
-  assert.equal(empresa('5001', "e.clientify_deal_id || '|' || a.fase_oportunidad_num || '|' || a.valor_oportunidad || '|' || a.negocio_cerrado || '|' || (a.fecha_calificado is not null)"),
-    '6002|6|180000000|revision|true', 'usa la oportunidad más avanzada del contacto (no la de otro contacto)');
+  assert.equal(empresa('5001', "e.clientify_deal_id || '|' || a.fase_oportunidad_num || '|' || a.negocio_cerrado || '|' || (a.fecha_calificado is not null) || '|' || coalesce(a.valor_cotizado::text, '-')"),
+    '6002|6|revision|true|-', 'usa la oportunidad más avanzada del contacto; los valores los suma el escaneo');
   assert.equal(sql(`select puntos_disponibles from public.aliados where id = '${ALIADO.id}'`), '140');
 });
 
@@ -186,18 +189,30 @@ test('un Status desconocido queda como aviso y no da puntos; un retroceso es un 
   assert.equal(sql(`select puntos_disponibles from public.aliados where id = '${ALIADO.id}'`), '140');
 });
 
-test('se ignoran aliados, contactos sin +prueba en Preview y contactos ajenos al programa', { skip: omitir }, async () => {
+test('se ignoran el contacto del aliado, contactos sin +prueba en Preview y contactos ajenos al programa', { skip: omitir }, async () => {
   clientify.contactos['5002'] = contacto('5002', { emails: [{ email: 'real@lead.test' }] });
-  clientify.contactos['5003'] = contacto('5003', { tags: ['aliados del sol'] });
+  clientify.contactos['4999'] = contacto('4999', { tags: ['aliados del sol', 'AdS Linker'] }); // el contacto del aliado (flujo A)
   clientify.contactos['5004'] = contacto('5004', { custom_fields: [] });
-  clientify.contactos['5005'] = contacto('5005', { tags: ['Aliado del Sol Hub'] });
-  for (const id of [5002, 5003, 5004, 5005]) await webhook({ event: 'contact.updated', data: { id } });
+  for (const id of [5002, 4999, 5004]) await webhook({ event: 'contact.updated', data: { id } });
   const { cuerpo } = await cron();
-  assert.deepEqual(cuerpo.entidades.detalle.map((d) => d.resultado), ['ignorado', 'ignorado', 'ignorado', 'ignorado']);
-  assert.equal(sql("select count(*) from public.empresas where clientify_contact_id in ('5002', '5003', '5004', '5005')"), '0');
+  assert.deepEqual(cuerpo.entidades.detalle.map((d) => d.resultado), ['ignorado', 'ignorado', 'ignorado']);
+  assert.equal(sql("select count(*) from public.empresas where clientify_contact_id in ('5002', '4999', '5004')"), '0');
   assert.match(sql("select error from public.webhook_eventos where entidad_id = '5002'"), /Entorno de pruebas/);
-  assert.equal(sql("select count(*) from public.webhook_eventos where entidad_id in ('5002', '5003', '5004', '5005') and payload <> '{\"descartado\": true}'"), '0',
+  assert.equal(sql("select count(*) from public.webhook_eventos where entidad_id in ('5002', '4999', '5004') and payload <> '{\"descartado\": true}'"), '0',
     'de lo ignorado no se guardan datos personales');
+});
+
+test('un referido del formulario con la etiqueta "aliado del sol hub" sí cuenta; el propio aliado no', { skip: omitir }, async () => {
+  // El formulario público "Refiere tu negocio" pone esa etiqueta en el REFERIDO.
+  clientify.contactos['5005'] = contacto('5005', { tags: ['aliado del sol hub', 'referido imperfecto'] });
+  clientify.contactos['5006'] = contacto('5006', { emails: [{ email: ALIADO.correo }], tags: ['aliado del sol hub'] });
+  for (const id of [5005, 5006]) await webhook({ hook: { event: 'contact.created' }, data: { id } });
+  ahora();
+  const { cuerpo } = await cron();
+  assert.deepEqual(cuerpo.entidades.detalle.map((d) => [d.id, d.resultado]), [['5005', 'actualizado'], ['5006', 'rechazado']]);
+  assert.equal(motivos('5005'), 'registro_valido,referido_imperfecto', '+10 por registro y −5 por la etiqueta de imperfecto');
+  assert.match(sql("select error from public.webhook_eventos where entidad_id = '5006'"), /autorreferido/);
+  assert.equal(sql("select count(*) from public.empresas where clientify_contact_id = '5006'"), '0');
 });
 
 test('si Clientify falla, el evento se reintenta más tarde', { skip: omitir }, async () => {
@@ -234,8 +249,10 @@ test('la conciliación horaria escanea todos los embudos: solo las fases de proy
   const r = await cron('clientify-conciliacion');
   assert.equal(r.cuerpo.escaneo.encoladas, 1);
   assert.deepEqual(r.cuerpo.entidades.detalle.find((d) => d.id === '6004').movimientos, ['negocio_cerrado']);
-  assert.equal(empresa('5001', "e.clientify_deal_id || '|' || a.negocio_cerrado || '|' || a.estado_oportunidad || '|' || a.valor_cotizado"),
-    '6004|si|ganada|250000000');
+  assert.equal(empresa('5001', "e.clientify_deal_id || '|' || a.negocio_cerrado || '|' || a.estado_oportunidad"), '6004|si|ganada');
+  // Cotizado: todas las oportunidades de proyectos (50 + 180 + 250 millones; la de eventos no cuenta).
+  // Pipeline originado: solo la que se cerró (250 millones).
+  assert.equal(empresa('5001', "a.valor_cotizado || '|' || a.valor_oportunidad"), '480000000|250000000');
   assert.equal((await cron('clientify-conciliacion')).cuerpo.escaneo.encoladas, 0, 'sin cambios no se vuelve a encolar');
 });
 

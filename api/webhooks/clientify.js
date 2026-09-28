@@ -1,4 +1,5 @@
 // POST /api/webhooks/clientify?token=<CLIENTIFY_WEBHOOK_SECRET> — webhook de Clientify (CLAUDE.md §8, flujo C).
+// El token también se acepta en el encabezado `x-webhook-token` (para n8n, que lo guarda como credencial).
 //
 // Solo valida el token, guarda el evento crudo y encola el contacto u oportunidad: responde 200 enseguida.
 // El proceso real (volver a consultar Clientify, derivar y otorgar puntos) lo hace el cron cada 2 minutos.
@@ -22,7 +23,8 @@ export default async function handler(req, res) {
   const secreto = process.env.CLIENTIFY_WEBHOOK_SECRET;
   if (!secreto) return res.status(500).json({ error: 'Falta configurar CLIENTIFY_WEBHOOK_SECRET' });
 
-  const token = (req.query && req.query.token) || new URL(req.url || '/', 'http://x').searchParams.get('token');
+  const token = (req.query && req.query.token) || new URL(req.url || '/', 'http://x').searchParams.get('token')
+    || (req.headers && req.headers['x-webhook-token']);
   if (!igualesSeguro(Array.isArray(token) ? token[0] : token, secreto)) return res.status(401).json({ error: 'No autorizado' });
 
   // Algunas plataformas verifican la URL con GET antes de activar el webhook.

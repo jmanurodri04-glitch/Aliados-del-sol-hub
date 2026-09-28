@@ -5,11 +5,14 @@
   "functions": {
     "api/cron/*.js": {
       "maxDuration": 60
+    },
+    "api/oportunidades/*.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
     {
-      "path": "/api/cron/clientify-aliados",
+      "path": "/api/cron/clientify",
       "schedule": "0 7 * * *"
     }
   ],

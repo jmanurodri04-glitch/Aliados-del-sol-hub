@@ -171,9 +171,13 @@ es_perfecto            boolean NOT NULL             -- calculado al guardar (ver
 clientify_contact_id   text NULL
 clientify_company_id   text NULL
 clientify_deal_id      text NULL
-clientify_sync_estado  text NOT NULL DEFAULT 'pendiente'
+clientify_sync_estado  text NOT NULL DEFAULT 'pendiente'   -- pendiente | ok | error (cola del flujo B)
+clientify_sync_error, clientify_sync_intentos, clientify_sync_proximo_at, clientify_sync_at   -- reintentos del flujo B
+autorizacion_contacto_at timestamptz NULL           -- declaración Ley 1581 del aliado; obligatoria si origen = 'hub'
 created_at, updated_at timestamptz
 ```
+
+Un contacto solo puede referirse **una vez** en todo el programa: índice único `lower(correo)` (gana el primer aliado).
 
 **Referido perfecto:** los **10 campos** completos: empresa, sector, subsector, ciudad, nombre_contacto, cargo, telefono, correo, valor_factura y **factura adjunta**. `observaciones` no cuenta. Si falta alguno, `es_perfecto = false` (imperfecto).
 
@@ -189,9 +193,10 @@ nombre_archivo   text NOT NULL
 fecha_carga      timestamptz NOT NULL DEFAULT now()
 validacion       text NOT NULL DEFAULT 'pendiente'   -- pendiente | revisado
 aprobado         estado_triple NOT NULL DEFAULT 'revision'
+clientify_subida_at timestamptz NULL     -- cuándo se adjuntó a la empresa en Clientify
 ```
 
-El bucket de Storage es **privado** y se accede con URLs firmadas de corta duración. Límite sugerido: 10 MB; tipos PDF, JPG y PNG.
+El bucket de Storage es **privado** y se accede con URLs firmadas de corta duración. Límite: 10 MB; tipos PDF, JPG y PNG (lo impone el bucket). No tiene políticas: el navegador sube con una URL firmada de un solo uso y solo el servidor lee.
 
 ### 4.6 `avance_empresa` (espejo del avance en Clientify), 1:1 con `empresas`
 
@@ -473,6 +478,12 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 5. Envía a Clientify (§8, flujo B).
 6. Responde al front.
 
+**Implementación (fase 5):**
+- `POST /api/oportunidades/factura` `{ nombre_archivo, tipo, tamano }` valida tipo y tamaño y devuelve `{ empresa_id, ruta, token }`: una URL firmada de subida de un solo uso en `{aliado_id}/{empresa_id}/{archivo}`. El navegador sube directo a Storage (`uploadToSignedUrl`) porque Vercel limita el cuerpo de las funciones a 4,5 MB.
+- `POST /api/oportunidades` `{ empresa_id, datos, factura? }` toma el aliado del token (`lib/sesion.js`, exige `activo`) y llama a `public.registrar_oportunidad`, que en **una transacción** bloquea al aliado, aplica el **límite de 20 referidos por hora**, valida campos (correo, teléfono E.164 con la regla de Colombia, valor > 0, declaración Ley 1581), rechaza el **autorreferido** (mismo correo o celular del aliado) y los **duplicados**, verifica que la factura exista en el bucket dentro de la carpeta del aliado y de esa empresa, calcula `es_perfecto`, inserta `empresas`, `facturas` y `avance_empresa` y otorga los puntos. Los errores llevan un prefijo estable (`aliado_no_activo`, `limite_referidos`, `referido_duplicado`, `autorreferido`, `oportunidad_invalida`, `factura_invalida`) que el endpoint traduce a 403/429/409/422. Si el registro falla, se borra la factura subida.
+- Después intenta el flujo B en el momento (mejor esfuerzo); si Clientify falla, queda en la cola. Responde `201 { es_perfecto, movimientos, puntos_disponibles, puntos_nivel, nivel, clientify: 'ok' | 'pendiente' }`.
+- En el front, el formulario "Referir" emite `ads:referral { datos, archivo }` y `js/supabase.js` responde `ads:referral-resultado`; la pantalla final muestra los puntos que confirmó el servidor.
+
 ---
 
 ## 8. Integración con Clientify
@@ -492,17 +503,25 @@ Cuando el aliado edita su perfil, también se replica en Clientify.
 **Implementación (fase 4):**
 - Cola en la base: `public.clientify_reclamar_aliados(limite)` toma aliados `activo` con `clientify_sync_estado` `pendiente`/`error` cuya espera se cumplió (con préstamo de 10 min y `SKIP LOCKED`); `public.clientify_registrar_resultado(aliado, contact_id, error)` guarda el éxito o programa el reintento (15 min, 30, 1 h… máximo 24 h; columnas `clientify_sync_intentos`, `clientify_sync_proximo_at`, `clientify_sync_at`). Solo `service_role` puede ejecutarlas.
 - Cambiar nombre, correo, celular, regional, tipo, organización o cargo de un aliado ya sincronizado lo vuelve a marcar `pendiente`.
-- `GET|POST /api/cron/clientify-aliados` procesa un lote; se protege con `Authorization: Bearer <CRON_SECRET>`.
+- `GET|POST /api/cron/clientify` procesa un lote de aliados (flujo A) y otro de oportunidades (flujo B) en un presupuesto de 40 s; se protege con `Authorization: Bearer <CRON_SECRET>`. `/api/cron/clientify-aliados` queda como alias para no romper la URL ya guardada en el Vault (se recomienda actualizar `clientify_sync_url` a `/api/cron/clientify`).
 - **Programación (independiente del plan de Vercel):** el job `sincronizar-clientify-aliados` de `pg_cron` llama al endpoint **cada 15 minutos** con `pg_net`, usando la URL y el `CRON_SECRET` guardados en el **Vault** de cada proyecto de Supabase (`clientify_sync_url`, `cron_secret` y, si el despliegue tiene Deployment Protection, `vercel_bypass_secret`). Sin esos secretos el job no hace nada. Además, `vercel.json` declara un Vercel Cron **diario** (`0 7 * * *` UTC = 02:00 Bogotá) como respaldo, compatible con el plan Hobby. Con Vercel Pro se podría pasar el cron de Vercel a cada 15 min y retirar el de Supabase.
-- Código: `lib/clientify/mapeo.js` (nombres de Clientify), `lib/clientify/cliente.js` (HTTP), `lib/clientify/aliados.js` (flujo A). Si ya existe un contacto con el mismo correo (p. ej. un cliente que se vuelve Cliente Embajador), **se vincula sin pisar sus datos**: solo se agregan `ID_aliado` y las etiquetas.
+- Código: `lib/clientify/mapeo.js` (nombres de Clientify), `lib/clientify/cliente.js` (HTTP), `lib/clientify/aliados.js` (flujo A), `lib/clientify/empresas.js` (flujo B) y `lib/clientify/cola.js` (procesamiento de ambas colas). Si ya existe un contacto con el mismo correo (p. ej. un cliente que se vuelve Cliente Embajador), **se vincula sin pisar sus datos**: solo se agregan `ID_aliado` y las etiquetas.
 - Fuera de Production (`VERCEL_ENV` ≠ `production`) se agrega `PRUEBA HUB` y **solo se sincronizan correos con `+prueba`**; los demás quedan en `error` sin llamar a Clientify.
 
 ### Flujo B — Nueva oportunidad (Hub) → Clientify
 
 1. Crear el contacto (y la empresa, si aplica) con el campo personalizado `ID_aliado = codigo_aliado`.
 2. Poner la etiqueta **"Referido perfecto"** o **"Referido imperfecto"** según `es_perfecto`, para que Clientify continúe su proceso existente. El contacto entra con el Status inicial que use su flujo actual.
-3. La factura se envía como adjunto o como enlace firmado (*confirmar qué soporta la API de Clientify*).
+3. La factura se **adjunta a la ficha de la empresa** en Clientify, donde el equipo ya guarda los documentos (decisión del equipo).
 4. Guardar el **`ID` nativo del contacto** que devuelve Clientify en `clientify_contact_id`. Es el mismo "ID" que aparece al exportar leads, y no se necesita crear ningún campo adicional. La oportunidad la crea el equipo comercial más adelante; su id se captura por webhook.
+
+**Implementación (fase 5):**
+- La empresa **siempre** se crea (o se reutiliza si ya existe con el mismo nombre) y el contacto queda vinculado a ella (`company`), con `ID_aliado`, la etiqueta de perfecto/imperfecto y un resumen del referido en la descripción.
+- Orden: empresa → factura adjunta (`POST /companies/{id}/files/`) → contacto. Cada paso se guarda aunque el siguiente falle (`clientify_company_id`, `facturas.clientify_subida_at`, `clientify_contact_id`), así el reintento no duplica nada.
+- Si el contacto ya existe en Clientify sin `ID_aliado`, se vincula a la empresa y recibe `ID_aliado` y etiquetas; si ya tiene **otro** `ID_aliado`, no se cambia la atribución: queda en `error` para revisión del equipo.
+- Cola en la base: `public.clientify_reclamar_empresas(limite, empresa)` y `public.clientify_registrar_resultado_empresa(...)`, con el mismo préstamo y backoff del flujo A; solo `service_role`. Las procesa el mismo cron `/api/cron/clientify`.
+- Fuera de Production aplica la misma regla: `PRUEBA HUB` y solo contactos con `+prueba` en el correo.
+- *Por confirmar con la API real:* los filtros `?email=` y `?name=`, el formato de `custom_fields`, el vínculo `company` y la subida multipart de archivos. Si difieren, se ajusta solo `lib/clientify/cliente.js`.
 
 **Evitar duplicados:** Clientify también dispara el webhook de "contacto creado" para este lead, y puede llegar **antes** de que el Hub guarde el `ID`. Por eso:
 
@@ -680,7 +699,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   8. dashboards por tipo;
   9. panel admin y eventos;
   10. endpoint de canjes.
-- **Tests:** `npm run test:db` (pgTAP, base local con `npx supabase start`) y `npm test` (`node --test` de `/lib` y `/api`; las pruebas de integración se omiten si no están `PRUEBAS_SUPABASE_URL`, `PRUEBAS_SUPABASE_SECRET_KEY` y `PRUEBAS_DB_URL`).
+- **Tests:** `npm run test:db` (pgTAP, base local con `npx supabase start`) y `npm test` (`node --test` de `/lib` y `/api`; las pruebas de integración se omiten si no están `PRUEBAS_SUPABASE_URL`, `PRUEBAS_SUPABASE_SECRET_KEY`, `PRUEBAS_SUPABASE_PUBLISHABLE_KEY` y `PRUEBAS_DB_URL`; corren en serie porque comparten la base local).
 - Incluir tests de las reglas críticas: idempotencia de puntos, límites de nivel, tope mensual de módulos, racha (incluido el reinicio y el bloqueo de 28 días), el cálculo de calidad con `revision` y el saldo con piso en 0 sin memoria (ejemplo +10, −30, +20 = 20).
 
 ## 13. Decisiones tomadas
@@ -704,6 +723,9 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - El contacto del aliado en Clientify se crea cuando GEENERA aprueba la solicitud, no al registrarse (§3, §8 flujo A).
 - La Política de Tratamiento de Datos debe incluir la transferencia internacional (§11).
 - Un aliado suspendido (o pendiente) no gana ni pierde puntos: se retienen y se acreditan al reactivarse (§4.7).
+- La factura de una oportunidad se adjunta a la **empresa** en Clientify, y la empresa se crea siempre, vinculada al contacto (§8, flujo B).
+- Un contacto solo se refiere una vez (gana el primer aliado) y un aliado no puede referirse a sí mismo (§4.4, §7.2).
+- Máximo 20 referidos por hora por aliado (§7.2).
 
 ## 14. Preguntas abiertas
 
@@ -718,6 +740,6 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
 5. Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?
 6. Sistema externo de canjes: quién lo opera y cómo se autentica (se asume API key por proveedor).
-7. Envío de la factura a Clientify: adjunto por API o enlace firmado.
+7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: se adjunta a la ficha de la empresa (§8, flujo B).
 8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).
 9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.

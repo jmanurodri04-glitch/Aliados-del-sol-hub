@@ -2797,8 +2797,18 @@
             <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;font-weight:600">Adjuntar factura de energía<span style="padding:2px 8px;border:1px solid rgba(255,202,5,.3);border-radius:99px;font-size:10.5px;font-weight:600;color:var(--y,#FFCA05)">Referido Perfecto</span></span>
             <span style="font-size:12.5px;color:var(--mut2,#8E8B86)">{{ refFileNote }}</span>
           </span>
-          <label style="margin-left:auto;flex:none;padding:8px 14px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:8px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">{{ refFileBtn }}<input type="file" accept="application/pdf,image/*" onChange="{{ refFileChange }}" style="display:none"></label>
+          <label style="margin-left:auto;flex:none;padding:8px 14px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:8px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">{{ refFileBtn }}<input type="file" accept="application/pdf,image/jpeg,image/png" onChange="{{ refFileChange }}" style="display:none"></label>
         </div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:16px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <button role="checkbox" aria-checked="{{ refAutOn }}" aria-label="Declaro que cuento con autorización del contacto" onClick="{{ refAutToggle }}" style="flex:0 0 auto;width:20px;height:20px;margin-top:1px;display:grid;place-items:center;padding:0;border:1.5px solid {{ refAutRing }};border-radius:5px;background:{{ refAutBox }};color:#1A1200;font-size:13px;font-weight:800;line-height:1;cursor:pointer">{{ refAutMark }}</button>
+            <span style="font-size:13px;line-height:1.5;color:var(--t3,#B4B0A9)">Declaro que cuento con autorización del contacto para compartir sus datos con GEENERA (Ley 1581 de 2012).<span style="color:var(--o,#F9A51A)"> *</span></span>
+          </div>
+          <sc-if value="{{ refAutHasErr }}" hint-placeholder-val="{{ false }}"><span style="padding-left:30px;font-size:12px;color:#C97B6E">Debes confirmar la autorización del contacto para enviar el referido.</span></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ refHasError }}" hint-placeholder-val="{{ false }}">
+      <p role="alert" style="margin:18px 0 0;padding:11px 14px;border:1px solid rgba(201,123,110,.4);border-radius:10px;background:rgba(201,123,110,.08);color:#C97B6E;font-size:13.5px;line-height:1.5">{{ refError }}</p>
       </sc-if>
       <div style="display:flex;align-items:center;gap:14px;padding-top:24px">
         <button onClick="{{ prevStep }}" style="padding:11px 17px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--t2,#C9C5BE);font-size:14px;font-weight:600;cursor:pointer">{{ prevLabel }}</button>
@@ -3475,7 +3485,7 @@ class Component extends DCLogic {
     const perfectDone = perfectDefs.filter(filled).length + (d.file ? 1 : 0); const perfectTotal = perfectDefs.length + 1;
     const isPerfect = perfectDone === perfectTotal;
     const cur = REFER_CONFIG.steps[step] || REFER_CONFIG.steps[1];
-    const stepValid = cur.fields.filter(f => f.req).every(f => !errOf(f));
+    const stepValid = cur.fields.filter(f => f.req).every(f => !errOf(f)) && (step !== 2 || !!d.autoriza);
     const countries = PHONE_COUNTRIES.map(c => ({ id: c.id, label: c.id + ' +' + c.dial + ' · ' + c.name }));
     const fields = cur.fields.map(f => { const e = f.req ? errOf(f) : ''; const show = !!e && tr; const k = f.kind;
       const onChange = ev => { const raw = ev.target.value; this.refSet(f.id, k === 'phone' ? fmtPhone(raw, pc.id) : k === 'money' ? (fmtThousands(raw) ? '$ ' + fmtThousands(raw) : '') : k === 'number' ? fmtThousands(raw) : raw); };
@@ -3486,22 +3496,39 @@ class Component extends DCLogic {
         options: f.options ? REFER_CONFIG[f.options].map(v => ({ v })) : [], countries, country: pc.id,
         onCountry: ev => { const c = ev.target.value; this.setState(st => ({ refData: Object.assign({}, st.refData, { country: c, telefono: fmtPhone(st.refData && st.refData.telefono, c) }) })); },
         note: show ? e : (f.hint || ''), noteColor: show ? '#E8836B' : 'var(--mut5,#5A5651)' }; });
-    const payload = () => ({ company: d.empresa, sector: d.sector, subsector: d.subsector || null, city: d.ciudad || null, contact_name: d.contacto, contact_title: d.cargo || null,
-      contact_phone: '+' + pc.dial + pd, contact_phone_country: pc.id, contact_email: d.correo, bill_value_cop: Number((d.factura || '').replace(/\D/g, '')) || null,
-      notes: d.obs || null, bill_file: d.fileName || null, perfect: isPerfect, source: 'hub_referir' });
+    /* Campos de POST /api/oportunidades (CLAUDE.md §7.2). El aliado sale de la sesión, nunca del formulario. */
+    const payload = () => ({ empresa: (d.empresa || '').trim(), sector: d.sector, subsector: d.subsector || null, ciudad: (d.ciudad || '').trim() || null,
+      nombre_contacto: (d.contacto || '').trim(), cargo: (d.cargo || '').trim() || null, telefono: '+' + pc.dial + pd, correo: (d.correo || '').trim(),
+      valor_factura: Number((d.factura || '').replace(/\D/g, '')) || null, observaciones: (d.obs || '').trim() || null, autorizacion_contacto: !!d.autoriza });
+    /* Puntos que confirmó el servidor (movimientos del registro). */
+    const res = s.refResult || null;
+    const ptsRes = res && Array.isArray(res.movimientos) ? res.movimientos.reduce((a, m) => a + (m.tipo === 'perdido' ? -m.puntos : m.puntos), 0) : null;
+    const perfRes = res ? !!res.es_perfecto : isPerfect;
+    const autErr = tr && step === 2 && !d.autoriza;
     return { sub: cur.sub, fields, out: {
       refPerfectCount: perfectDone + '/' + perfectTotal,
       refPerfectLabel: isPerfect ? 'Referido Perfecto completo: +20 Puntos Sol adicionales.' : 'datos para Referido Perfecto. Los opcionales marcados suman.',
-      refFileNote: d.fileName ? d.fileName + ' · cuenta para Referido Perfecto.' : 'Opcional, pero cuenta para Referido Perfecto: +20 Puntos Sol. PDF o imagen.',
+      refFileNote: d.fileName ? d.fileName + ' · cuenta para Referido Perfecto.' : 'Opcional, pero cuenta para Referido Perfecto: +20 Puntos Sol. PDF, JPG o PNG de máximo 10 MB.',
       refFileBtn: d.fileName ? 'Cambiar' : 'Seleccionar',
-      refFileChange: ev => { const fl = ev.target.files && ev.target.files[0]; if (fl) this.setState(st => ({ refData: Object.assign({ country: 'CO' }, st.refData, { file: true, fileName: fl.name }) })); },
+      refFileChange: ev => { const fl = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!fl) return;
+        if (['application/pdf', 'image/jpeg', 'image/png'].indexOf(fl.type) < 0) { this.setState({ refError: 'La factura debe ser PDF, JPG o PNG.' }); return; }
+        if (fl.size > 10 * 1024 * 1024) { this.setState({ refError: 'La factura debe pesar máximo 10 MB.' }); return; }
+        this.setState(st => ({ refError: '', refData: Object.assign({ country: 'CO' }, st.refData, { file: true, fileName: fl.name, archivo: fl }) })); },
+      refAutOn: d.autoriza ? 'true' : 'false', refAutMark: d.autoriza ? '✓' : '', refAutBox: d.autoriza ? 'var(--y,#FFCA05)' : 'transparent',
+      refAutRing: d.autoriza ? 'var(--y,#FFCA05)' : autErr ? '#C97B6E' : 'var(--w-22,rgba(255,255,255,.22))', refAutHasErr: autErr,
+      refAutToggle: () => this.refSet('autoriza', !d.autoriza),
+      refHasError: !!s.refError, refError: s.refError || '',
       refNextOpacity: stepValid ? 1 : 0.45, refNextCursor: stepValid ? 'pointer' : 'not-allowed',
-      refEmpresa: d.empresa || 'La empresa', refDonePts: isPerfect ? '+30' : '+10', refDoneLabel: isPerfect ? 'Puntos Sol por un Referido Perfecto' : 'Puntos Sol por registro completo',
-      nextStep: () => { if (!stepValid) { this.setState({ refTried: true }); return; }
-        if (step === 2) { window.dispatchEvent(new CustomEvent('ads:referral', { detail: payload() })); this.setState({ done: true, refTried: false }); } else this.setState({ step: step + 1, refTried: false }); },
+      refEmpresa: d.empresa || 'La empresa',
+      refDonePts: ptsRes != null ? (ptsRes >= 0 ? '+' : '') + ptsRes : perfRes ? '+30' : '+5',
+      refDoneLabel: perfRes ? 'Puntos Sol por un Referido Perfecto' : 'Puntos Sol: +10 por registro y −5 por datos incompletos',
+      nextStep: () => { if (s.refSending) return; if (!stepValid) { this.setState({ refTried: true }); return; }
+        /* El envío lo hace js/supabase.js (ads:referral) y el resultado llega por ads:referral-resultado. */
+        if (step === 2) { this.setState({ refSending: true, refError: '' }); window.dispatchEvent(new CustomEvent('ads:referral', { detail: { datos: payload(), archivo: d.archivo || null } })); }
+        else this.setState({ step: step + 1, refTried: false }); },
       prevStep: () => { if (step === 1) this.setState({ newOpen: false, refTried: false }); else this.setState({ step: step - 1, refTried: false }); },
-      openNew: () => this.setState({ newOpen: true, step: 1, done: false, refData: {}, refTried: false }),
-      resetNew: () => this.setState({ step: 1, done: false, refData: {}, refTried: false })
+      openNew: () => this.setState({ newOpen: true, step: 1, done: false, refData: {}, refTried: false, refError: '', refResult: null, refSending: false }),
+      resetNew: () => this.setState({ step: 1, done: false, refData: {}, refTried: false, refError: '', refResult: null, refSending: false })
     } };
   }
   joinSet(k, v) { this.setState(st => ({ joinData: Object.assign({}, st.joinData, { [k]: v }) })); }
@@ -3629,9 +3656,10 @@ class Component extends DCLogic {
       if (e.type === 'ads:join-resultado') this.setState(d.ok ? { joinSending: false, joinSent: true, joinSentKind: 'register', joinConfirmar: d.confirmarCorreo !== false, joinError: '' } : { joinSending: false, joinError: d.mensaje || '' });
       else if (e.type === 'ads:login-resultado') { if (d.ok) { this.setState({ loginSending: false, loginMsg: '', loginPass: '', sesion: d.aliado || null }); this.go('inicio'); } else this.setState({ loginSending: false, loginMsg: d.mensaje || '', loginTono: 'error', loginPass: '' }); }
       else if (e.type === 'ads:sesion') this.setState({ sesion: d.activa ? (d.aliado || null) : null });
+      else if (e.type === 'ads:referral-resultado') this.setState(d.ok ? { refSending: false, refError: '', refTried: false, refResult: d, done: true } : { refSending: false, refError: d.mensaje || '' });
       else if (e.type === 'ads:aviso') { this.setState({ loginMsg: d.mensaje || '', loginTono: d.tono || 'info' }); if (d.ruta) this.go(d.ruta); }
     };
-    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso'];
+    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado'];
     this._adsEventos.forEach(n => window.addEventListener(n, this._adsAuth));
     window.dispatchEvent(new CustomEvent('ads:consultar-sesion'));
   }
@@ -4406,7 +4434,7 @@ class Component extends DCLogic {
         { value: this.n(c.balance), label: 'Puntos Sol disponibles', color: 'var(--y,#FFCA05)' }
       ],
       quickActions: [
-        { label: 'Referir', go: () => this.setState({ newOpen: true, step: 1, done: false, refData: {}, refTried: false }), bg: 'rgba(255,202,5,.1)', border: 'rgba(255,202,5,.34)', color: 'var(--y,#FFCA05)' },
+        { label: 'Referir', go: () => this.setState({ newOpen: true, step: 1, done: false, refData: {}, refTried: false, refError: '', refResult: null, refSending: false }), bg: 'rgba(255,202,5,.1)', border: 'rgba(255,202,5,.34)', color: 'var(--y,#FFCA05)' },
         { label: 'Compartir mi enlace', go: () => { this.go('perfil'); this.ping('Enlace listo para compartir.'); }, bg: 'var(--w-028,rgba(255,255,255,.028))', border: 'var(--w-08,rgba(255,255,255,.08))', color: 'var(--fg,#F2F0EC)' },
         { label: 'Explorar beneficios', go: () => this.go('beneficios'), bg: 'var(--w-028,rgba(255,255,255,.028))', border: 'var(--w-08,rgba(255,255,255,.08))', color: 'var(--fg,#F2F0EC)' },
         { label: 'Continuar aprendiendo', go: () => this.go('academy'), bg: 'var(--w-028,rgba(255,255,255,.028))', border: 'var(--w-08,rgba(255,255,255,.08))', color: 'var(--fg,#F2F0EC)' }
@@ -4515,8 +4543,8 @@ class Component extends DCLogic {
       stepFields: refV.fields,
       stepBars: [1, 2].map(i => ({ bg: i <= s.step ? 'var(--y,#FFCA05)' : 'var(--w-10,rgba(255,255,255,.1))' })),
       prevLabel: s.step === 1 ? 'Cancelar' : 'Atrás',
-      nextLabel: s.step === 2 ? 'Enviar referido' : 'Continuar',
-      closeNew: () => { this.setState({ newOpen: false, done: false, step: 1 }); },
+      nextLabel: s.step === 2 ? (s.refSending ? 'Enviando…' : 'Enviar referido') : 'Continuar',
+      closeNew: () => { if (s.refSending) return; this.setState({ newOpen: false, done: false, step: 1, refError: '' }); },
       ...refV.out,
       levelUp: s.levelUp,
       closeLevelUp: () => { this.setState({ levelUp: false }); this.go('beneficios'); },

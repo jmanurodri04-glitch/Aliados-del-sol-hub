@@ -106,9 +106,10 @@ test('procesa la cola: crea, vincula, registra errores y respeta las reglas del 
   const { status, cuerpo } = await llamarEndpoint('Bearer secreto-cron-de-prueba');
   assert.equal(status, 200);
   assert.equal(cuerpo.entorno, 'preview');
-  assert.equal(cuerpo.procesados, 4, 'los 4 activos; el pendiente de aprobación no se procesa');
-  assert.equal(cuerpo.ok, 2);
-  assert.equal(cuerpo.errores, 2);
+  assert.equal(cuerpo.aliados.procesados, 4, 'los 4 activos; el pendiente de aprobación no se procesa');
+  assert.equal(cuerpo.aliados.ok, 2);
+  assert.equal(cuerpo.aliados.errores, 2);
+  assert.equal(cuerpo.empresas.procesados, 0, 'sin oportunidades pendientes');
 
   // Nuevo: contacto creado con etiquetas (incluida PRUEBA HUB) e ID_aliado.
   const creacion = pedidas.find((p) => p.metodo === 'POST' && p.url === '/v1/contacts/' && p.cuerpo.email === ALIADOS.nuevo.correo);
@@ -140,14 +141,14 @@ test('procesa la cola: crea, vincula, registra errores y respeta las reglas del 
 test('una segunda ejecución no repite lo sincronizado ni reintenta antes de tiempo', { skip: omitir }, async () => {
   const antes = pedidas.length;
   const { cuerpo } = await llamarEndpoint('Bearer secreto-cron-de-prueba');
-  assert.equal(cuerpo.procesados, 0);
+  assert.equal(cuerpo.aliados.procesados, 0);
   assert.equal(pedidas.length, antes);
 });
 
 test('si el aliado edita su perfil, se actualiza el mismo contacto', { skip: omitir }, async () => {
   sql(`update public.aliados set celular = '+573115550000' where id = '${ALIADOS.nuevo.id}'`);
   const { cuerpo } = await llamarEndpoint('Bearer secreto-cron-de-prueba');
-  assert.deepEqual(cuerpo.detalle, [{ codigo_aliado: codigo(ALIADOS.nuevo), accion: 'actualizado' }]);
+  assert.deepEqual(cuerpo.aliados.detalle, [{ codigo_aliado: codigo(ALIADOS.nuevo), accion: 'actualizado' }]);
   const actualizacion = pedidas.findLast((p) => p.metodo === 'PATCH' && p.url === '/v1/contacts/1001/');
   assert.equal(actualizacion.cuerpo.phone, '+573115550000');
   assert.equal(fila(ALIADOS.nuevo, 'clientify_sync_estado'), 'ok');

@@ -107,9 +107,9 @@ select row_eq($$select (select count(*) from public.movimientos_puntos where cla
 
 -- Calidad y nivel (§6) -------------------------------------------------------------------------
 
-insert into public.empresas (id, aliado_id, origen, empresa, sector, nombre_contacto, telefono, correo, valor_factura, es_perfecto) values
-  ('e0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-00000000000c', 'hub', 'E1', 'Industrial', 'C1', '3', 'e1@x.test', 1, true),
-  ('e0000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-00000000000c', 'hub', 'E2', 'Industrial', 'C2', '3', 'e2@x.test', 1, true);
+insert into public.empresas (id, aliado_id, origen, empresa, sector, nombre_contacto, telefono, correo, valor_factura, es_perfecto, autorizacion_contacto_at) values
+  ('e0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-00000000000c', 'hub', 'E1', 'Industrial', 'C1', '3', 'e1@x.test', 1, true, now()),
+  ('e0000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-00000000000c', 'hub', 'E2', 'Industrial', 'C2', '3', 'e2@x.test', 1, true, now());
 insert into public.avance_empresa (empresa_id) values
   ('e0000000-0000-0000-0000-000000000001'), ('e0000000-0000-0000-0000-000000000002');
 

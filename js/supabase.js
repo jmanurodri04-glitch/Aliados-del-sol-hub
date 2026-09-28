@@ -1,4 +1,4 @@
-// Integración del Hub con Supabase Auth: registro, login, sesión y cierre de sesión.
+// Integración del Hub con Supabase: registro, login, sesión, cierre de sesión y "Nueva oportunidad".
 //
 // Las páginas no llaman a Supabase directamente: emiten eventos `ads:*` en `window`
 // y este módulo responde con otros eventos. Así la lógica de Supabase vive en un solo lugar.
@@ -8,6 +8,7 @@
 //   ads:login          {email,password} ads:login-resultado { ok, mensaje?, aliado? }
 //   ads:logout                          ads:sesion          { activa, aliado? }
 //   ads:consultar-sesion                ads:aviso           { mensaje, tono }  (p. ej. al volver del correo de confirmación)
+//   ads:referral {datos, archivo?}      ads:referral-resultado { ok, mensaje?, es_perfecto?, movimientos?, puntos_disponibles?, nivel? }
 //
 // En el navegador solo se usan la URL y la publishable key (GET /api/config); la seguridad la da RLS.
 // Nunca se registran contraseñas ni datos personales en la consola.
@@ -36,6 +37,8 @@ const MENSAJES = {
   suspendido: 'Tu cuenta está suspendida. Escríbenos a c.arenas@geenera.com si crees que es un error.',
   sinPerfil: 'Tu usuario no tiene un perfil de aliado. Escríbenos a c.arenas@geenera.com.',
   correoConfirmado: 'Confirmaste tu correo. GEENERA está validando tu perfil y te avisará por correo cuando tu cuenta esté activa.',
+  facturaNoSubio: 'No pudimos subir la factura. Revisa tu conexión e intenta de nuevo.',
+  sesionVencida: 'Tu sesión expiró. Vuelve a iniciar sesión para referir.',
   enlaceVencido: 'El enlace de confirmación venció o ya fue usado. Inicia sesión; si tu correo sigue sin confirmar, regístrate de nuevo para recibir otro enlace.'
 };
 
@@ -172,6 +175,51 @@ async function cerrarSesion() {
   emitir('ads:sesion', sesionActual);
 }
 
+// "Nueva oportunidad" (CLAUDE.md §7.2). La factura se sube directo a Storage con una URL firmada de un
+// solo uso que entrega /api/oportunidades/factura; luego /api/oportunidades registra todo y otorga los puntos.
+async function llamarApi(supabase, ruta, cuerpo) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session && data.session.access_token;
+  if (!token) return { status: 401, datos: { error: MENSAJES.sesionVencida } };
+  const r = await fetch(ruta, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json', authorization: 'Bearer ' + token },
+    body: JSON.stringify(cuerpo)
+  });
+  let datos = {};
+  try { datos = await r.json(); } catch (e) { /* respuesta sin cuerpo */ }
+  return { status: r.status, datos };
+}
+
+async function referir({ datos, archivo }) {
+  const fallo = (mensaje) => emitir('ads:referral-resultado', { ok: false, mensaje: mensaje || MENSAJES.generico });
+  try {
+    const supabase = await obtenerCliente();
+    let empresaId = null;
+    let factura = null;
+    if (archivo) {
+      const permiso = await llamarApi(supabase, '/api/oportunidades/factura', { nombre_archivo: archivo.name, tipo: archivo.type, tamano: archivo.size });
+      if (permiso.status !== 200) return fallo(permiso.datos.error);
+      const { error } = await supabase.storage.from('facturas')
+        .uploadToSignedUrl(permiso.datos.ruta, permiso.datos.token, archivo, { contentType: archivo.type });
+      if (error) return fallo(MENSAJES.facturaNoSubio);
+      empresaId = permiso.datos.empresa_id;
+      factura = { ruta: permiso.datos.ruta, nombre_archivo: archivo.name };
+    }
+    const r = await llamarApi(supabase, '/api/oportunidades', { empresa_id: empresaId || crypto.randomUUID(), datos, factura });
+    if (r.status !== 201) return fallo(r.status === 401 ? MENSAJES.sesionVencida : r.datos.error);
+
+    const { es_perfecto, movimientos, puntos_disponibles, puntos_nivel, nivel } = r.datos;
+    if (sesionActual.activa) {
+      sesionActual = { activa: true, aliado: Object.assign({}, sesionActual.aliado, { puntos_disponibles, puntos_nivel, nivel }) };
+      emitir('ads:sesion', sesionActual);
+    }
+    emitir('ads:referral-resultado', { ok: true, es_perfecto, movimientos, puntos_disponibles, nivel });
+  } catch (e) {
+    fallo(mensajeDeError(e));
+  }
+}
+
 // Al cargar: procesa el enlace de confirmación (si viene de uno) y restaura la sesión guardada.
 async function iniciar() {
   try {
@@ -197,6 +245,7 @@ async function iniciar() {
 window.addEventListener('ads:join-register', (e) => registrar(e.detail || {}));
 window.addEventListener('ads:login', (e) => iniciarSesion(e.detail || {}));
 window.addEventListener('ads:logout', () => cerrarSesion());
+window.addEventListener('ads:referral', (e) => referir(e.detail || {}));
 // La página puede montarse antes o después de este módulo: al montarse pregunta el estado.
 window.addEventListener('ads:consultar-sesion', () => {
   emitir('ads:sesion', sesionActual);

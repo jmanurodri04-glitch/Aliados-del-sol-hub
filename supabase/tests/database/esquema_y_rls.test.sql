@@ -42,9 +42,9 @@ update public.aliados set rol = 'admin' where id = '33333333-3333-3333-3333-3333
 create temp table codigos on commit drop as
   select id, codigo_aliado from public.aliados;
 
-insert into public.empresas (id, aliado_id, origen, empresa, sector, nombre_contacto, telefono, correo, valor_factura, es_perfecto) values
-  ('aaaaaaaa-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'hub', 'Empresa A', 'Industria', 'Contacto A', '3100000001', 'ca@empresa.test', 1000000, false),
-  ('bbbbbbbb-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'hub', 'Empresa B', 'Comercio',  'Contacto B', '3100000002', 'cb@empresa.test', 2000000, false);
+insert into public.empresas (id, aliado_id, origen, empresa, sector, nombre_contacto, telefono, correo, valor_factura, es_perfecto, autorizacion_contacto_at) values
+  ('aaaaaaaa-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'hub', 'Empresa A', 'Industria', 'Contacto A', '3100000001', 'ca@empresa.test', 1000000, false, now()),
+  ('bbbbbbbb-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'hub', 'Empresa B', 'Comercio',  'Contacto B', '3100000002', 'cb@empresa.test', 2000000, false, now());
 
 insert into public.avance_empresa (empresa_id) values
   ('aaaaaaaa-0000-0000-0000-00000000000a'),

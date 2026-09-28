@@ -179,6 +179,8 @@ created_at, updated_at timestamptz
 
 Un contacto solo puede referirse **una vez** en todo el programa: índice único `lower(correo)` (gana el primer aliado).
 
+Los leads del formulario público (`origen = 'clientify_form'`) pueden llegar sin empresa, sector, teléfono, correo o valor de la factura; para `origen = 'hub'` esos campos siguen siendo obligatorios (CHECK `empresas_campos_hub`).
+
 **Referido perfecto:** los **10 campos** completos: empresa, sector, subsector, ciudad, nombre_contacto, cargo, telefono, correo, valor_factura y **factura adjunta**. `observaciones` no cuenta. Si falta alguno, `es_perfecto = false` (imperfecto).
 
 ### 4.5 `facturas`
@@ -302,8 +304,16 @@ Entra por un endpoint seguro `POST /api/canjes` (API key propia por proveedor), 
 ### 4.11 `webhook_eventos` (auditoría de integración)
 
 ```
-id, fuente ('clientify'), payload jsonb, recibido_at, procesado_at NULL, error text NULL
+id, fuente ('clientify'), payload jsonb, recibido_at, procesado_at NULL, error text NULL,
+entidad ('contacto' | 'oportunidad'), entidad_id, accion        -- fase 6
 ```
+
+- `error` guarda también los **avisos** de un evento procesado (Status o fase desconocidos, `ID_aliado` inexistente, conflictos).
+- El payload crudo se vacía a los **90 días** (`interno.depurar_webhooks_clientify()`, cron `depurar-webhooks-clientify` el día 1 de cada mes) porque trae datos personales (decisión del equipo).
+
+**Tablas de la fase 6:**
+- `clientify_cola_entidades` (PK `entidad, entidad_id`): contactos y oportunidades por reprocesar; varios eventos de la misma entidad quedan en una sola fila. Solo el servidor.
+- `avance_conflictos`: cambios de Clientify sobre un valor que ya era definitivo (§5.1). No cambian puntos ni calidad; los resuelve un admin con `ajuste_admin` (panel de la fase 9). Un admin puede leerlos.
 
 ### 4.12 Vista `v_aliado_dashboard`
 
@@ -449,6 +459,7 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
   - crea la fila en `empresas` con `origen = 'clientify_form'` y en `avance_empresa`;
   - otorga `registro_valido` si `ID_aliado` corresponde a un aliado activo.
 - Si `ID_aliado` no existe o viene vacío, se registra en `webhook_eventos` con un error para revisión y no se otorgan puntos.
+- **Implementado (fase 6):** `public.clientify_registrar_lead(codigo, contact_id, datos)`. Si el aliado está `pendiente` o `suspendido`, la empresa se crea y el `registro_valido` queda **retenido** hasta que la cuenta vuelva a `activo` (§4.7, decisión del equipo). `perfecto` queda en `revision` y lo define la etiqueta del contacto.
 
 ### 7.2 "Nueva oportunidad" (dentro del Hub, con sesión iniciada)
 
@@ -503,8 +514,8 @@ Cuando el aliado edita su perfil, también se replica en Clientify.
 **Implementación (fase 4):**
 - Cola en la base: `public.clientify_reclamar_aliados(limite)` toma aliados `activo` con `clientify_sync_estado` `pendiente`/`error` cuya espera se cumplió (con préstamo de 10 min y `SKIP LOCKED`); `public.clientify_registrar_resultado(aliado, contact_id, error)` guarda el éxito o programa el reintento (15 min, 30, 1 h… máximo 24 h; columnas `clientify_sync_intentos`, `clientify_sync_proximo_at`, `clientify_sync_at`). Solo `service_role` puede ejecutarlas.
 - Cambiar nombre, correo, celular, regional, tipo, organización o cargo de un aliado ya sincronizado lo vuelve a marcar `pendiente`.
-- `GET|POST /api/cron/clientify` procesa un lote de aliados (flujo A) y otro de oportunidades (flujo B) en un presupuesto de 40 s; se protege con `Authorization: Bearer <CRON_SECRET>`. `/api/cron/clientify-aliados` queda como alias para no romper la URL ya guardada en el Vault (se recomienda actualizar `clientify_sync_url` a `/api/cron/clientify`).
-- **Programación (independiente del plan de Vercel):** el job `sincronizar-clientify-aliados` de `pg_cron` llama al endpoint **cada 15 minutos** con `pg_net`, usando la URL y el `CRON_SECRET` guardados en el **Vault** de cada proyecto de Supabase (`clientify_sync_url`, `cron_secret` y, si el despliegue tiene Deployment Protection, `vercel_bypass_secret`). Sin esos secretos el job no hace nada. Además, `vercel.json` declara un Vercel Cron **diario** (`0 7 * * *` UTC = 02:00 Bogotá) como respaldo, compatible con el plan Hobby. Con Vercel Pro se podría pasar el cron de Vercel a cada 15 min y retirar el de Supabase.
+- `GET|POST /api/cron/clientify` procesa un lote de aliados (flujo A), otro de oportunidades (flujo B) y otro de eventos de Clientify (flujo C) en un presupuesto de 40 s; se protege con `Authorization: Bearer <CRON_SECRET>`. `/api/cron/clientify-aliados` queda como alias para no romper la URL ya guardada en el Vault (se recomienda actualizar `clientify_sync_url` a `/api/cron/clientify`).
+- **Programación (independiente del plan de Vercel):** el job `sincronizar-clientify-aliados` de `pg_cron` llama al endpoint **cada 2 minutos** (desde la fase 6, para procesar los webhooks) con `pg_net`, usando la URL y el `CRON_SECRET` guardados en el **Vault** de cada proyecto de Supabase (`clientify_sync_url`, `cron_secret` y, si el despliegue tiene Deployment Protection, `vercel_bypass_secret`). Sin esos secretos el job no hace nada. Además, `vercel.json` declara un Vercel Cron **diario** (`0 7 * * *` UTC = 02:00 Bogotá) a `/api/cron/clientify-conciliacion`, que concilia y procesa las colas (respaldo compatible con el plan Hobby). `interno.invocar_cron_hub('<endpoint>')` llama a otro `/api/cron/*` del despliegue guardado en el Vault (p. ej. el diagnóstico).
 - Código: `lib/clientify/mapeo.js` (nombres de Clientify), `lib/clientify/cliente.js` (HTTP), `lib/clientify/aliados.js` (flujo A), `lib/clientify/empresas.js` (flujo B) y `lib/clientify/cola.js` (procesamiento de ambas colas). Si ya existe un contacto con el mismo correo (p. ej. un cliente que se vuelve Cliente Embajador), **se vincula sin pisar sus datos**: solo se agregan `ID_aliado` y las etiquetas.
 - Fuera de Production (`VERCEL_ENV` ≠ `production`) se agrega `PRUEBA HUB` y **solo se sincronizan correos con `+prueba`**; los demás quedan en `error` sin llamar a Clientify.
 
@@ -547,7 +558,17 @@ Pasos:
 6. Por cada variable que pasó de `revision` a `si` o `no`, insertar el movimiento con su `clave_unica`. Luego recalcular la calidad, los saldos, el nivel y la racha.
 7. Marcar `procesado_at` o `error`.
 
-**Conciliación nocturna** (Vercel Cron, 02:00 Bogotá): recorre los contactos y oportunidades modificados en Clientify en las últimas 48 h y reaplica el mismo proceso, que es idempotente. Así se cubren webhooks perdidos.
+**Implementación (fase 6):**
+- `POST /api/webhooks/clientify?token=…` valida `CLIENTIFY_WEBHOOK_SECRET` en tiempo constante, interpreta el evento (`interpretarWebhook` en `mapeo.js`) y llama a `public.webhook_clientify_recibir`, que guarda el evento y encola la entidad. Responde 200 sin procesar (500 si no pudo guardar, para que Clientify reintente). Un contacto **creado** espera 2 minutos.
+- El cron (cada 2 min) toma la cola (`clientify_reclamar_entidades`, préstamo de 5 min y `SKIP LOCKED`) y, por entidad (`lib/clientify/webhook.js`):
+  1. vuelve a consultar el contacto (una oportunidad se resuelve a su contacto) y sus oportunidades (`GET /deals/?contact=`), quedándose solo con las vinculadas a ese contacto y usando la más avanzada;
+  2. resuelve la empresa por `clientify_contact_id`; si no existe y el contacto tiene `ID_aliado`, es un lead del formulario (§7.1). Se ignoran sin error los aliados (etiqueta "Aliado del Sol" o `aliados.clientify_contact_id`) y los contactos sin `ID_aliado`. Fuera de Production se ignoran los correos sin `+prueba`; en Production, los contactos con `PRUEBA HUB`;
+  3. deriva con `derivarAvance` (`lib/clientify/avance.js`) y aplica con `public.aplicar_avance_clientify(empresa, crudos, variables, deal_id)`, que en una transacción guarda los datos crudos, pasa de `revision` a definitivo, registra conflictos y luego inserta los movimientos en el orden de esta sección.
+  4. `clientify_resultado_entidad` cierra los eventos (con sus avisos) o programa el reintento (2 min, 4, 8… máximo 6 h).
+- **Conciliación:** `/api/cron/clientify-conciliacion` encola los contactos de las empresas que siguen en curso (`negocio_cerrado <> 'si'`) con `public.clientify_encolar_conciliacion()` y procesa las colas. *Pendiente:* recorrer también los contactos modificados en Clientify en las últimas 48 h, si la API permite filtrar por fecha (lo dirá el diagnóstico).
+- **Diagnóstico:** `/api/cron/clientify-diagnostico` (con `CRON_SECRET`) devuelve solo nombres y estructura, sin datos personales: campos personalizados, etiquetas, embudos, fases, los valores de Status en uso, la forma de contactos y oportunidades, si el filtro `?contact=` funciona y la estructura de los últimos webhooks. Sirve para confirmar el mapeo y responder §14 (preguntas 1 y 2). Se llama con `select interno.invocar_cron_hub('clientify-diagnostico');`.
+
+**Conciliación nocturna** (Vercel Cron, 02:00 Bogotá; ver la implementación arriba): recorre los contactos y oportunidades modificados en Clientify en las últimas 48 h y reaplica el mismo proceso, que es idempotente. Así se cubren webhooks perdidos.
 
 ### Mapeo Clientify → `avance_empresa` (decisión del equipo)
 
@@ -640,6 +661,9 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
   3. insertar los movimientos, en orden: calificado → perfecto → fuera_perfil → oportunidad_tecnica → propuesta → cierre → información falsa;
   4. actualizar la racha;
   5. recalcular la calidad, los saldos y el nivel.
+- **Valor efectivo en las derivadas:** `fuera_perfil`, `integridad_informacion` y `oportunidad_tecnica = no` usan el valor vigente del Hub si ya es definitivo (p. ej. el `perfecto` de un referido del Hub); si no, el de Clientify. Con `calificado = no` y `perfecto` aún en `revision`, `fuera_perfil` queda en `revision`.
+- **Pendientes en `mapeo.js`** (hasta confirmarlos con el diagnóstico): `ETIQUETA_INFORMACION_FALSA`, `CAMPO_POTENCIA_KWP` y `CAMPO_VALOR_COTIZADO` valen `null`; mientras tanto `informacion_falsa` queda en `revision` y esos datos no se tocan. También están por confirmar los nombres de los campos del contacto y de la oportunidad (`leerContacto`, `leerOportunidad`) y el formato del webhook.
+- **Racha:** la fase 6 ya guarda `fecha_calificado`; la actualización de la racha llega en la fase 7 y se reconstruirá desde esas fechas.
 
 ---
 
@@ -726,13 +750,16 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - La factura de una oportunidad se adjunta a la **empresa** en Clientify, y la empresa se crea siempre, vinculada al contacto (§8, flujo B).
 - Un contacto solo se refiere una vez (gana el primer aliado) y un aliado no puede referirse a sí mismo (§4.4, §7.2).
 - Máximo 20 referidos por hora por aliado (§7.2).
+- Un lead del formulario público de un aliado `pendiente` o `suspendido` se registra y sus puntos quedan retenidos hasta la reactivación (§7.1).
+- El payload crudo de los webhooks se conserva 90 días (§4.11).
+- Un cambio de Clientify sobre un valor definitivo queda en `avance_conflictos` para un admin; no cambia puntos ni calidad (§5.1, §8).
 
 ## 14. Preguntas abiertas
 
 **Necesarias antes de la fase del webhook** (no bloquean las fases 1 a 5):
 
-1. Nombre exacto de la **etiqueta de información falsa** en Clientify.
-2. Campo **"Potencia"** (en kWp): ¿está en el contacto o en la oportunidad? ¿Qué campos exactos son el valor de la oportunidad y el valor cotizado? (Claude Code puede listarlos con la API de Clientify para confirmarlo.)
+1. Nombre exacto de la **etiqueta de información falsa** en Clientify. (Se puede ver con `/api/cron/clientify-diagnostico`; va en `ETIQUETA_INFORMACION_FALSA` de `mapeo.js`.)
+2. Campo **"Potencia"** (en kWp): ¿está en el contacto o en la oportunidad? ¿Qué campos exactos son el valor de la oportunidad y el valor cotizado? (Se pueden listar con `/api/cron/clientify-diagnostico`; van en `CAMPO_POTENCIA_KWP` y `CAMPO_VALOR_COTIZADO` de `mapeo.js`.)
 
 **Generales:**
 

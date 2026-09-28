@@ -3,8 +3,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(7);
 
-select is((select schedule from cron.job where jobname = 'sincronizar-clientify-aliados'), '*/15 * * * *',
-  'la sincronización se programa cada 15 minutos');
+select is((select schedule from cron.job where jobname = 'sincronizar-clientify-aliados'), '*/2 * * * *',
+  'la sincronización se programa cada 2 minutos');
 
 -- Sin secretos en el Vault: no se llama a nada ---------------------------------------------------
 

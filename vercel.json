@@ -8,11 +8,14 @@
     },
     "api/oportunidades/*.js": {
       "maxDuration": 60
+    },
+    "api/webhooks/*.js": {
+      "maxDuration": 15
     }
   },
   "crons": [
     {
-      "path": "/api/cron/clientify",
+      "path": "/api/cron/clientify-conciliacion",
       "schedule": "0 7 * * *"
     }
   ],

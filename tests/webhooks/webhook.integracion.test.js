@@ -39,17 +39,19 @@ function iniciarClientifyFalso() {
         return clientify.oportunidades[m[1]] ? json(200, clientify.oportunidades[m[1]]) : json(404, { detail: 'No encontrado' });
       }
       if (url.pathname === '/v1/deals/') {
+        // Como la API real: ignora ?contact= y pagina de a `page_size`.
         const todas = Object.values(clientify.oportunidades);
-        const contacto = url.searchParams.get('contact');
-        const lista = contacto ? todas.filter((d) => d.contact.endsWith(`/contacts/${contacto}/`)) : todas;
-        return json(200, { count: lista.length, next: null, results: lista });
+        const tam = Number(url.searchParams.get('page_size') || 100);
+        const pagina = Number(url.searchParams.get('page') || 1);
+        const next = pagina * tam < todas.length ? `http://127.0.0.1:${servidor.address().port}/v1/deals/?page=${pagina + 1}&page_size=${tam}` : null;
+        return json(200, { count: todas.length, next, results: todas.slice((pagina - 1) * tam, pagina * tam) });
       }
       if (url.pathname === '/v1/contacts/') {
         const lista = Object.values(clientify.contactos);
         return json(200, { count: lista.length, next: null, results: lista });
       }
       if (url.pathname === '/v1/custom-fields/') return json(200, { count: 1, results: [{ id: 1, name: 'ID_aliado', content_type: 'contact' }] });
-      if (url.pathname === '/v1/tags/') return json(200, { count: 1, results: [{ id: 1, name: 'Referido perfecto' }] });
+      if (url.pathname === '/v1/contacts/tags/') return json(200, { count: 1, results: [{ id: 1, name: 'Referido perfecto' }] });
       return json(404, { detail: 'No encontrado' });
     }).listen(0, '127.0.0.1', () => resolver(servidor.address().port));
   });
@@ -76,8 +78,12 @@ const ahora = () => sql('update public.clientify_cola_entidades set programado_a
 let codigo;
 const contacto = (id, extra = {}) => ({
   id, first_name: 'Contacto', last_name: String(id), emails: [{ email: `c${id}+prueba@lead.test` }], phones: [{ phone: '+573105550000' }],
-  company_name: 'Empresa ' + id, status: '1. lead frío', tags: ['Referido perfecto'],
+  company_name: 'Empresa ' + id, status: 'cold-lead', tags: ['referido perfecto'],
   custom_fields: [{ field: 'ID_aliado', value: codigo }], ...extra
+});
+const oportunidad = (id, contacto, fase, monto, extra = {}) => ({
+  id, contact: `https://api.clientify.net/v1/contacts/${contacto}/`, pipeline_desc: 'GEENERA AUTOCONSUMO',
+  pipeline_stage_desc: fase, status: 1, status_desc: 'Open', amount: `${monto}.00`, custom_fields: [], ...extra
 });
 const empresa = (contactId, columnas) => sql(`select ${columnas} from public.empresas e join public.avance_empresa a on a.empresa_id = e.id
   where e.clientify_contact_id = '${contactId}'`);
@@ -132,18 +138,18 @@ test('lead nuevo del formulario público: se crea la empresa con +10 y +20', { s
   assert.equal(status, 200);
   assert.deepEqual(cuerpo.entidades.detalle, [{ entidad: 'contacto', id: '5001', resultado: 'actualizado', movimientos: ['referido_perfecto'] }]);
   assert.equal(empresa('5001', "e.origen || '|' || e.aliado_id || '|' || a.perfecto || '|' || a.calificado || '|' || a.estado_contacto_clientify"),
-    `clientify_form|${ALIADO.id}|si|revision|1. lead frío`);
+    `clientify_form|${ALIADO.id}|si|revision|cold-lead`);
   assert.equal(motivos('5001'), 'registro_valido,referido_perfecto');
   assert.equal(sql("select count(*) from public.webhook_eventos where entidad_id = '5001' and procesado_at is not null and error is null"), '1');
-  assert.ok(pedidas.some((p) => p.url === '/v1/contacts/5001/') && pedidas.some((p) => p.url === '/v1/deals/?contact=5001'),
-    'vuelve a consultar el contacto y sus oportunidades');
+  assert.ok(pedidas.some((p) => p.url === '/v1/contacts/5001/'), 'vuelve a consultar el contacto');
+  assert.ok(!pedidas.some((p) => p.url.startsWith('/v1/deals/?')), 'no depende del filtro ?contact= (la API no lo aplica)');
 });
 
 test('la oportunidad avanza de golpe a la fase 6: calificado, evaluación técnica y propuesta', { skip: omitir }, async () => {
-  clientify.contactos['5001'].status = '4. en oportunidad';
-  clientify.oportunidades['6001'] = { id: 6001, contact: 'http://x/v1/contacts/5001/', pipeline_stage_desc: '2. Agendamiento visita técnica', status: 1, amount: 50000000 };
-  clientify.oportunidades['6002'] = { id: 6002, contact: 'http://x/v1/contacts/5001/', pipeline_stage_desc: '6. Presentación de oferta', status: 1, amount: 180000000 };
-  clientify.oportunidades['6999'] = { id: 6999, contact: 'http://x/v1/contacts/5999/', pipeline_stage_desc: '10. Contrato', status: 2, amount: 1 };
+  clientify.contactos['5001'].status = 'in-deal';
+  clientify.oportunidades['6001'] = oportunidad(6001, 5001, '2. Agendamiento Visita Tecnica', 50000000);
+  clientify.oportunidades['6002'] = oportunidad(6002, 5001, '6. Presentación de Oferta', 180000000);
+  clientify.oportunidades['6999'] = oportunidad(6999, 5999, '10. Contrato', 1, { status_desc: 'Won' });
 
   assert.equal((await webhook({ event: 'deal.updated', data: { id: 6002 } })).status, 200);
   const { cuerpo } = await cron();
@@ -164,13 +170,13 @@ test('eventos repetidos no generan puntos de nuevo', { skip: omitir }, async () 
 });
 
 test('un Status desconocido queda como aviso y no da puntos; un retroceso es un conflicto', { skip: omitir }, async () => {
-  clientify.contactos['5001'].status = '9. Estado nuevo';
+  clientify.contactos['5001'].status = 'estado-nuevo';
   await webhook({ event: 'contact.updated', data: { id: 5001 } });
   await cron();
   assert.match(sql("select error from public.webhook_eventos where entidad_id = '5001' order by recibido_at desc limit 1"),
-    /Status de contacto desconocido: "9. Estado nuevo"/);
+    /Status de contacto desconocido: "estado-nuevo"/);
 
-  clientify.contactos['5001'].status = '0. lead no calificado';
+  clientify.contactos['5001'].status = 'not-qualified-lead';
   await webhook({ event: 'contact.updated', data: { id: 5001 } });
   await cron();
   assert.match(sql("select error from public.webhook_eventos where entidad_id = '5001' order by recibido_at desc limit 1"),
@@ -181,7 +187,7 @@ test('un Status desconocido queda como aviso y no da puntos; un retroceso es un 
 
 test('se ignoran aliados, contactos sin +prueba en Preview y contactos ajenos al programa', { skip: omitir }, async () => {
   clientify.contactos['5002'] = contacto('5002', { emails: [{ email: 'real@lead.test' }] });
-  clientify.contactos['5003'] = contacto('5003', { tags: ['Aliado del Sol'] });
+  clientify.contactos['5003'] = contacto('5003', { tags: ['aliado del sol'] });
   clientify.contactos['5004'] = contacto('5004', { custom_fields: [] });
   for (const id of [5002, 5003, 5004]) await webhook({ event: 'contact.updated', data: { id } });
   const { cuerpo } = await cron();
@@ -201,23 +207,43 @@ test('si Clientify falla, el evento se reintenta más tarde', { skip: omitir }, 
 
 test('la conciliación vuelve a encolar los referidos en curso', { skip: omitir }, async () => {
   sql('delete from public.clientify_cola_entidades');
-  clientify.contactos['5001'].status = '4. en oportunidad';
+  clientify.contactos['5001'].status = 'in-deal';
   const { status, cuerpo } = await cron('clientify-conciliacion');
   assert.equal(status, 200);
   assert.ok(cuerpo.encolados >= 1);
   assert.ok(cuerpo.entidades.detalle.some((d) => d.id === '5001' && d.resultado === 'actualizado'));
+  assert.equal(cuerpo.escaneo.encoladas, 0, 'la conciliación también escanea oportunidades');
+});
+
+test('el escaneo horario encuentra oportunidades nuevas y solo cuenta el embudo del programa', { skip: omitir }, async () => {
+  sql('delete from public.clientify_cola_entidades');
+  // Otro embudo con fase 10 (no cuenta) y una oportunidad nueva del programa en fase 10 (sí cuenta).
+  clientify.oportunidades['6003'] = oportunidad(6003, 5001, '10. Contrato', 900, { pipeline_desc: 'GEENERA OFF GRID' });
+  for (let i = 0; i < 130; i++) clientify.oportunidades[String(7000 + i)] = oportunidad(7000 + i, 8000 + i, '3. Diseño', 1);
+  const { status, cuerpo } = await cron('clientify-oportunidades');
+  assert.equal(status, 200);
+  assert.equal(cuerpo.escaneo.encoladas, 0, 'nada cambió en el embudo del programa');
+  assert.equal(cuerpo.escaneo.revisadas, Object.values(clientify.oportunidades).filter((o) => o.pipeline_desc === 'GEENERA AUTOCONSUMO').length,
+    'recorre todas las páginas');
+
+  clientify.oportunidades['6004'] = oportunidad(6004, 5001, '10. Contrato', 250000000, { status_desc: 'Won' });
+  const r = await cron('clientify-oportunidades');
+  assert.equal(r.cuerpo.escaneo.encoladas, 1);
+  assert.deepEqual(r.cuerpo.entidades.detalle.map((d) => [d.id, d.movimientos]), [['6004', ['negocio_cerrado']]]);
+  assert.equal(empresa('5001', "e.clientify_deal_id || '|' || a.negocio_cerrado || '|' || a.estado_oportunidad"), '6004|si|ganada');
+  assert.equal((await cron('clientify-oportunidades')).cuerpo.escaneo.encoladas, 0, 'sin cambios no se vuelve a encolar');
 });
 
 test('el diagnóstico devuelve nombres y estructura, sin datos personales', { skip: omitir }, async () => {
   const { status, cuerpo } = await cron('clientify-diagnostico');
   assert.equal(status, 200);
   assert.equal(cuerpo.catalogos.campos_personalizados.ruta, '/custom-fields/?page_size=200');
+  assert.equal(cuerpo.catalogos.etiquetas.ruta, '/contacts/tags/?page_size=200');
   assert.deepEqual(cuerpo.catalogos.campos_personalizados.elementos, [{ id: 1, name: 'ID_aliado', content_type: 'contact' }]);
   assert.equal(cuerpo.contactos.estructura.first_name, 'string');
-  assert.ok(cuerpo.contactos.valores.status.includes('4. en oportunidad'));
+  assert.ok(cuerpo.contactos.valores.status.includes('in-deal'));
   assert.ok(cuerpo.contactos.valores.nombres_campos_personalizados.includes('ID_aliado'));
-  assert.ok(cuerpo.oportunidades.valores.pipeline_stage_desc.includes('6. Presentación de oferta'));
+  assert.ok(cuerpo.oportunidades.valores.pipeline_stage_desc.includes('6. Presentación de Oferta'));
   const texto = JSON.stringify(cuerpo);
   assert.ok(!texto.includes('@lead.test') && !texto.includes('+573105550000') && !texto.includes(codigo), 'sin correos, teléfonos ni códigos');
-  assert.equal(cuerpo.filtro_oportunidades_por_contacto.total_con_filtro < cuerpo.filtro_oportunidades_por_contacto.total_sin_filtro, true);
 });

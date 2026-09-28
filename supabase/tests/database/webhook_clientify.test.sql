@@ -2,7 +2,7 @@
 -- conflictos, retención, conciliación y depuración (CLAUDE.md §4.7, §5, §5.1, §7.1, §8).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(53);
+select plan(54);
 
 create function pg_temp.aliado(id uuid, email text, celular text, estado text)
 returns void language sql as $$
@@ -214,6 +214,9 @@ select is((select schedule from cron.job where jobname = 'sincronizar-clientify-
   'el job de sincronización corre cada 2 minutos');
 select is((select schedule from cron.job where jobname = 'depurar-webhooks-clientify'), '30 8 1 * *',
   'la depuración corre el día 1 de cada mes');
+
+select is((select command from cron.job where jobname = 'escanear-oportunidades-clientify' and schedule = '7 * * * *'),
+  $$select interno.invocar_cron_hub('clientify-oportunidades')$$, 'el escaneo de oportunidades corre cada hora');
 
 select * from finish();
 rollback;

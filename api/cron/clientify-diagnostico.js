@@ -13,14 +13,15 @@
 import { contextoClientify, validarCron } from '../../lib/cron.js';
 import { interpretarWebhook } from '../../lib/clientify/mapeo.js';
 
-// Rutas candidatas: la API no está documentada desde este entorno; se reporta cuál responde.
+// Rutas confirmadas con el primer diagnóstico (la API no tiene un catálogo de Status de contacto: sus valores
+// salen de la muestra de contactos). Se siguen hasta 5 páginas.
 const CATALOGOS = {
-  campos_personalizados: ['/custom-fields/?page_size=200', '/contacts/custom-fields/?page_size=200'],
-  etiquetas: ['/tags/?page_size=200', '/contacts/tags/?page_size=200'],
-  embudos: ['/deals/pipelines/?page_size=50', '/pipelines/?page_size=50'],
-  fases: ['/deals/pipelines/stages/?page_size=200', '/deals/stages/?page_size=200', '/pipeline-stages/?page_size=200'],
-  estados_contacto: ['/contacts/statuses/?page_size=100', '/contact-statuses/?page_size=100', '/statuses/?page_size=100']
+  campos_personalizados: ['/custom-fields/?page_size=200'],
+  etiquetas: ['/contacts/tags/?page_size=200'],
+  embudos: ['/deals/pipelines/?page_size=50'],
+  fases: ['/deals/pipelines/stages/?page_size=200']
 };
+const siguientePagina = (datos) => (datos && datos.next ? String(datos.next).replace(/^https?:\/\/[^/]+\/v\d+/, '') : null);
 // Claves de catálogos que se muestran tal cual (no son datos personales).
 const CLAVES_CATALOGO = ['id', 'name', 'label', 'field', 'content_type', 'model', 'type', 'field_type', 'choices', 'options',
   'pipeline', 'pipeline_desc', 'position', 'order', 'probability', 'slug', 'status', 'description'];
@@ -70,11 +71,16 @@ async function probar(clientify, rutas) {
   const intentos = [];
   for (const ruta of rutas) {
     try {
-      const datos = await clientify.leer(ruta);
+      let datos = await clientify.leer(ruta);
+      const total = datos && datos.count;
       const lista = Array.isArray(datos) ? datos : (datos && datos.results) || [];
+      for (let pagina = 1, sig = siguientePagina(datos); pagina < 5 && sig; pagina++, sig = siguientePagina(datos)) {
+        datos = await clientify.leer(sig);
+        lista.push(...((datos && datos.results) || []));
+      }
       return {
-        ruta, total: datos && datos.count != null ? datos.count : lista.length,
-        elementos: lista.slice(0, 200).map((x) => Object.fromEntries(CLAVES_CATALOGO.filter((k) => k in x).map((k) => [k, x[k]]))),
+        ruta, total: total != null ? total : lista.length,
+        elementos: lista.map((x) => Object.fromEntries(CLAVES_CATALOGO.filter((k) => k in x).map((k) => [k, x[k]]))),
         intentos
       };
     } catch (e) {
@@ -110,20 +116,6 @@ export default async function handler(req, res) {
   const contactos = await muestra(clientify, '/contacts/?page_size=100');
   const oportunidades = await muestra(clientify, '/deals/?page_size=100');
 
-  // Un contacto con oportunidad: confirma el filtro ?contact= (debe devolver solo las suyas).
-  let filtro_oportunidades_por_contacto = null;
-  try {
-    const d = await clientify.leer('/deals/?page_size=1');
-    const deal = d && d.results && d.results[0];
-    const contacto = deal && String(deal.contact ?? '').match(/(\d+)\/?$/);
-    if (contacto) {
-      const filtradas = await clientify.leer(`/deals/?contact=${contacto[1]}&page_size=100`);
-      filtro_oportunidades_por_contacto = { total_sin_filtro: d.count, total_con_filtro: filtradas && filtradas.count };
-    }
-  } catch (e) {
-    filtro_oportunidades_por_contacto = { error: e.status || e.message };
-  }
-
   const { data: eventos } = await supabase.from('webhook_eventos')
     .select('payload, entidad, accion, recibido_at').not('entidad', 'is', null).order('recibido_at', { ascending: false }).limit(3);
   const webhooks = (eventos || []).map((e) => ({
@@ -132,5 +124,5 @@ export default async function handler(req, res) {
     estructura: estructura(e.payload)
   }));
 
-  return res.status(200).json({ entorno: contexto.entorno, catalogos, contactos, oportunidades, filtro_oportunidades_por_contacto, webhooks });
+  return res.status(200).json({ entorno: contexto.entorno, catalogos, contactos, oportunidades, webhooks });
 }

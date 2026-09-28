@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { derivarAvance, elegirOportunidad, normalizarTexto, numeroDeFase } from '../../lib/clientify/avance.js';
-import { interpretarWebhook, leerContacto, leerOportunidad } from '../../lib/clientify/mapeo.js';
+import { esEmbudoReferidos, interpretarWebhook, leerContacto, leerOportunidad } from '../../lib/clientify/mapeo.js';
 
 const contacto = (status, etiquetas = []) => ({ status, etiquetas, leadScoring: null });
 const op = (fase, estado = 'abierta') => ({ id: '9', fase, estado, valor: null });
@@ -15,6 +15,18 @@ test('A. Status del contacto → calificado (cada fila)', () => {
     ['2. lead templado', 'revision'], ['0. lead perdido', 'revision']
   ];
   for (const [status, esperado] of casos) assert.equal(v({ contacto: contacto(status) }).calificado, esperado, status);
+});
+
+test('A. códigos de Status que devuelve la API (confirmados con el diagnóstico)', () => {
+  const casos = [
+    ['not-qualified-lead', 'no'], ['hot-lead', 'si'], ['in-deal', 'si'], ['client', 'si'],
+    ['cold-lead', 'revision'], ['warm-lead', 'revision'], ['lost-lead', 'revision'], ['other', 'revision']
+  ];
+  for (const [status, esperado] of casos) {
+    const r = derivarAvance({ contacto: contacto(status) });
+    assert.equal(r.variables.calificado, esperado, status);
+    assert.deepEqual(r.avisos, [], status);
+  }
 });
 
 test('A. "0. cliente perdido" no cambia nada (ya fue si)', () => {
@@ -120,9 +132,28 @@ test('lectura de contactos y oportunidades de la API', () => {
     ['77', 'Laura Gómez', 'laura@x.test', '+573001112233', '3. lead caliente', 'EMJJPL7K4MQ9TX', 72]);
   assert.deepEqual(c.etiquetas, ['Referido perfecto', 'PRUEBA HUB']);
 
-  const o = leerOportunidad({ id: 5, contact: 'https://api.clientify.net/v1/contacts/77/', pipeline_stage_desc: '3. Diseño',
-    status: 3, amount: '120.000.000' });
-  assert.deepEqual([o.id, o.contactos, o.fase, o.estado, o.valor], ['5', ['77'], '3. Diseño', 'perdida', 120000000]);
+  const o = leerOportunidad({ id: 5, contact: 'https://api.clientify.net/v1/contacts/77/', pipeline_desc: 'GEENERA AUTOCONSUMO',
+    pipeline_stage_desc: '3. Diseño', status: 3, status_desc: 'Lost', amount: '120000000.00',
+    custom_fields: [{ id: 1, field: 'Potencia (kWp)', value: '85.5' }] });
+  assert.deepEqual([o.id, o.contactos, o.embudo, o.fase, o.estado, o.valor, o.potenciaKwp],
+    ['5', ['77'], 'GEENERA AUTOCONSUMO', '3. Diseño', 'perdida', 120000000, 85.5]);
+  assert.equal(leerOportunidad({ status_desc: 'Expired' }).estado, 'perdida');
+  assert.equal(leerOportunidad({ status_desc: 'Open' }).estado, 'abierta');
+  assert.equal(leerOportunidad({ status_desc: 'Won' }).estado, 'ganada');
+  assert.equal(leerOportunidad({ status: 2 }).estado, null, 'sin status_desc no se adivina');
+});
+
+test('solo cuentan las oportunidades de los embudos del programa', () => {
+  assert.equal(esEmbudoReferidos({ embudo: 'GEENERA AUTOCONSUMO' }), true);
+  assert.equal(esEmbudoReferidos({ embudo: 'geenera autoconsumo ' }), true);
+  assert.equal(esEmbudoReferidos({ embudo: 'GEENERA OFF GRID' }), false);
+  assert.equal(esEmbudoReferidos({ embudo: null }), false);
+});
+
+test('datos del contacto para leads del formulario público', () => {
+  const c = leerContacto({ id: 8, emails: ['a@x.test'], addresses: [{ city: 'Girón' }],
+    custom_fields: [{ field: 'Valor pagado en factura (COP / mes)', value: '3500000' }, { field: 'Subsector Economico', value: 'Avícolas' }] });
+  assert.deepEqual([c.correo, c.ciudad, c.valorFactura, c.subsector], ['a@x.test', 'Girón', 3500000, 'Avícolas']);
 });
 
 test('interpretación del webhook', () => {

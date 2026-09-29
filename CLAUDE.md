@@ -3,6 +3,7 @@
 > Contexto permanente para Claude Code. Léelo completo antes de cualquier tarea en este repositorio.
 > Idioma del proyecto: español (UI, nombres de tablas y columnas en `snake_case` español).
 > Zona horaria de negocio: **America/Bogota** (semanas lunes–domingo, meses calendario).
+> Guía para personas (funcionamiento, decisiones, tablas, planes y puesta en marcha): `docs/GUIA_HUB.md` y su PDF `docs/Guia_integral_Aliados_del_Sol_Hub.pdf`. Actualízala cuando cambie algo de lo que describe.
 
 ---
 

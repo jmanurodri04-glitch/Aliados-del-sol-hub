@@ -9,6 +9,12 @@
 //   ads:logout                          ads:sesion          { activa, aliado? }
 //   ads:consultar-sesion                ads:aviso           { mensaje, tono }  (p. ej. al volver del correo de confirmación)
 //   ads:referral {datos, archivo?}      ads:referral-resultado { ok, mensaje?, es_perfecto?, movimientos?, puntos_disponibles?, nivel? }
+//   ads:consultar-dashboard             ads:dashboard       { ok, aliado?, movimientos?, referidos?, modulos? }
+//   ads:modulo-completado {codigo}      ads:modulo-resultado { ok, codigo, mensaje?, nuevo?, puntos?, recompensa_estado? }
+//
+// El dashboard (fase 8) sale de las vistas v_aliado_dashboard, v_mis_movimientos, v_mis_referidos y
+// v_mis_modulos, que solo devuelven lo del aliado de la sesión. Se recarga al entrar, después de un
+// referido y al completar un módulo.
 //
 // En el navegador solo se usan la URL y la publishable key (GET /api/config); la seguridad la da RLS.
 // Nunca se registran contraseñas ni datos personales en la consola.
@@ -39,6 +45,7 @@ const MENSAJES = {
   correoConfirmado: 'Confirmaste tu correo. GEENERA está validando tu perfil y te avisará por correo cuando tu cuenta esté activa.',
   facturaNoSubio: 'No pudimos subir la factura. Revisa tu conexión e intenta de nuevo.',
   sesionVencida: 'Tu sesión expiró. Vuelve a iniciar sesión para referir.',
+  sesionVencidaModulo: 'Tu sesión expiró. Vuelve a iniciar sesión para registrar tu avance.',
   enlaceVencido: 'El enlace de confirmación venció o ya fue usado. Inicia sesión; si tu correo sigue sin confirmar, regístrate de nuevo para recibir otro enlace.'
 };
 
@@ -50,6 +57,7 @@ const errorEnEnlace = hashInicial.get('error_code') || hashInicial.get('error');
 let clientePromesa = null;
 let sesionActual = { activa: false };
 let avisoPendiente = null; // se reenvía si la página se monta después de emitirlo
+let dashboardActual = null; // último dashboard cargado; se reenvía si la página lo pide
 
 function emitir(nombre, detalle) {
   window.dispatchEvent(new CustomEvent(nombre, { detail: detalle }));
@@ -159,6 +167,7 @@ async function iniciarSesion({ email, password }) {
     if (error) return emitir('ads:login-resultado', { ok: false, mensaje: mensajeDeError(error) });
     emitir('ads:login-resultado', await resolverAcceso(supabase));
     emitir('ads:sesion', sesionActual);
+    cargarDashboard(supabase);
   } catch (e) {
     emitir('ads:login-resultado', { ok: false, mensaje: mensajeDeError(e) });
   }
@@ -172,6 +181,7 @@ async function cerrarSesion() {
     // Sin conexión: la sesión local se descarta igual.
   }
   sesionActual = { activa: false };
+  dashboardActual = null;
   emitir('ads:sesion', sesionActual);
 }
 
@@ -215,8 +225,51 @@ async function referir({ datos, archivo }) {
       emitir('ads:sesion', sesionActual);
     }
     emitir('ads:referral-resultado', { ok: true, es_perfecto, movimientos, puntos_disponibles, nivel });
+    cargarDashboard(supabase);
   } catch (e) {
     fallo(mensajeDeError(e));
+  }
+}
+
+// Dashboard del aliado (CLAUDE.md §9). Las vistas filtran por la sesión: nunca llega información de otro aliado.
+async function cargarDashboard(supabaseDado) {
+  try {
+    const supabase = supabaseDado || await obtenerCliente();
+    if (!sesionActual.activa) return;
+    const [aliado, movimientos, referidos, modulos] = await Promise.all([
+      supabase.from('v_aliado_dashboard').select('*').maybeSingle(),
+      supabase.from('v_mis_movimientos').select('*').order('fecha', { ascending: false }).order('secuencia', { ascending: false }).limit(500),
+      supabase.from('v_mis_referidos').select('*').order('created_at', { ascending: false }),
+      supabase.from('v_mis_modulos').select('*').order('orden')
+    ]);
+    const error = aliado.error || movimientos.error || referidos.error || modulos.error;
+    if (error || !aliado.data) {
+      emitir('ads:dashboard', { ok: false, mensaje: MENSAJES.generico });
+      return;
+    }
+    dashboardActual = { ok: true, aliado: aliado.data, movimientos: movimientos.data, referidos: referidos.data, modulos: modulos.data };
+    emitir('ads:dashboard', dashboardActual);
+  } catch (e) {
+    emitir('ads:dashboard', { ok: false, mensaje: mensajeDeError(e) });
+  }
+}
+
+// El aliado terminó la última lección de un curso de la Academy (CLAUDE.md §5.3).
+async function completarModulo({ codigo }) {
+  const resultado = (d) => emitir('ads:modulo-resultado', Object.assign({ codigo }, d));
+  try {
+    const supabase = await obtenerCliente();
+    const r = await llamarApi(supabase, '/api/modulos', { codigo });
+    if (r.status !== 200) return resultado({ ok: false, mensaje: r.status === 401 ? MENSAJES.sesionVencidaModulo : (r.datos.error || MENSAJES.generico) });
+    const { nuevo, puntos, recompensa_estado, puntos_disponibles, puntos_nivel, nivel } = r.datos;
+    if (sesionActual.activa && puntos_disponibles != null) {
+      sesionActual = { activa: true, aliado: Object.assign({}, sesionActual.aliado, { puntos_disponibles, puntos_nivel, nivel }) };
+      emitir('ads:sesion', sesionActual);
+    }
+    resultado({ ok: true, nuevo, puntos, recompensa_estado });
+    cargarDashboard(supabase);
+  } catch (e) {
+    resultado({ ok: false, mensaje: mensajeDeError(e) });
   }
 }
 
@@ -240,15 +293,22 @@ async function iniciar() {
     // Sin configuración o sin red: el sitio público sigue funcionando.
   }
   emitir('ads:sesion', sesionActual);
+  if (sesionActual.activa) cargarDashboard();
 }
 
 window.addEventListener('ads:join-register', (e) => registrar(e.detail || {}));
 window.addEventListener('ads:login', (e) => iniciarSesion(e.detail || {}));
 window.addEventListener('ads:logout', () => cerrarSesion());
 window.addEventListener('ads:referral', (e) => referir(e.detail || {}));
+window.addEventListener('ads:modulo-completado', (e) => completarModulo(e.detail || {}));
+window.addEventListener('ads:consultar-dashboard', () => {
+  if (dashboardActual) emitir('ads:dashboard', dashboardActual);
+  else cargarDashboard();
+});
 // La página puede montarse antes o después de este módulo: al montarse pregunta el estado.
 window.addEventListener('ads:consultar-sesion', () => {
   emitir('ads:sesion', sesionActual);
+  if (dashboardActual) emitir('ads:dashboard', dashboardActual);
   if (avisoPendiente) {
     emitir('ads:aviso', avisoPendiente);
     avisoPendiente = null;

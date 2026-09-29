@@ -279,9 +279,12 @@ Otorga +100 solo cuando un **admin** lo marca `validado` y se cumplen: evento re
 ### 4.9 `modulos` (catálogo) y `modulos_completados`
 
 ```
-modulos:             id, nombre, orden, activo
+modulos:             id, codigo text UNIQUE NOT NULL,           -- id del curso en la Academy del Hub (c11, c12…)
+                     nombre, orden, activo,
+                     puntos int NOT NULL DEFAULT 0 CHECK (0..20) -- 0 = sin puntos (fase 7)
 modulos_completados: id, aliado_id FK, modulo_id FK, fecha_completado timestamptz,
-                     recompensa_estado text DEFAULT 'pendiente',  -- pendiente | otorgada
+                     puntos int NOT NULL                          -- valor del módulo al completarlo
+                     recompensa_estado text DEFAULT 'pendiente',  -- pendiente | otorgada | no_aplica
                      fecha_otorgada timestamptz NULL,
                      UNIQUE (aliado_id, modulo_id)                -- un módulo se premia una sola vez
 ```
@@ -320,6 +323,13 @@ entidad ('contacto' | 'oportunidad'), entidad_id, accion        -- fase 6
 
 Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre, tipo, puntos, nivel, racha, calidad, conteos y sumas por tipo. **No expone `id`.**
 
+**Implementado (fase 8, migración `vistas_dashboard`):** cuatro vistas `security_invoker` que además filtran por `auth.uid()` (cada aliado, también un admin, ve solo lo suyo) y no exponen `id` ni `aliado_id`. Solo lectura para `authenticated`; `anon` no tiene acceso.
+
+- `v_aliado_dashboard`: perfil, puntos, nivel, calidad y `empresas_evaluadas`, racha (con `racha_semana_actual`), conteos de referidos (total, calificados, propuesta, cerrados, no continúan, activos), indicadores de Financieros (`potencia_kwp`, `pipeline_originado`, `valor_cotizado`, en COP) y módulos (completados, pendientes, `puntos_modulos_mes`).
+- `v_mis_movimientos`: historial con valor nominal y aplicado, descripción de la regla y nombre de la empresa o del módulo.
+- `v_mis_referidos`: empresas con su avance, `etapa` visible (ids de `OPPORTUNITY_STAGE_CONFIG`: recibida, validacion, calificacion, dtp, propuesta, cerrado, noviable) y puntos netos por empresa.
+- `v_mis_modulos`: catálogo activo con los puntos de cada módulo y el estado del aliado en cada uno.
+
 ### Diferencias respecto al Excel y por qué
 
 1. **Tablas hijas sin `ID_Aliado` duplicado.** Solo llevan la FK `aliado_id`, y el código se obtiene por JOIN. Así se evita que existan dos llaves que puedan desincronizarse.
@@ -345,7 +355,7 @@ Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre,
 | `fuera_perfil` | `fuera_perfil = si` (había información suficiente para identificarlo) | **−15** | `empresa:{id}:fuera_perfil` |
 | `informacion_falsa` | `informacion_falsa = si` (empresa inexistente o datos deliberadamente incorrectos) | **−30** | `empresa:{id}:informacion_falsa` |
 | `baja_calidad_reiterada` | Admin lo registra tras retroalimentación previa | **−20** | `aliado:{id}:baja_calidad:{fecha}` |
-| `modulo_completado` | Módulo terminado (máx. 20 pts/mes, ver §5.3) | **+5** | `modulo:{modulos_completados.id}` |
+| `modulo_completado` | Módulo terminado (máx. 20 pts/mes, ver §5.3) | **según el módulo** (hoy +5) | `modulo:{modulos_completados.id}` |
 | `evento_validado` | Evento validado por admin | **+100** | `evento:{id}` |
 | `racha_solar` | Racha 4x4 completada | **+75** | `racha:{aliado_id}:{lunes_semana_4}` |
 | `ajuste_admin` | Corrección manual justificada | ± | `ajuste:{uuid}` |
@@ -705,6 +715,16 @@ Todos ven un saludo con su **nombre completo**, su `codigo_aliado` (copiable, pa
 
 Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 
+**Implementado (fase 8):**
+- `js/supabase.js` carga las vistas del §4.12 al entrar, después de un referido y al completar un módulo, y emite `ads:dashboard { ok, aliado, movimientos, referidos, modulos }`; la página lo pide con `ads:consultar-dashboard`.
+- En `index.html` (y su fuente en `src/`), con sesión todas las pantallas usan esos datos; sin sesión se sigue viendo la demostración. Las funciones `referidoComoOpp`, `referidoComoCartera` y `movimientoComoHistorial` convierten las vistas a las formas de las constantes de demostración, así el diseño no cambia.
+- La vista la define `tipo_aliado` y se ocultan el selector de rol y las vistas de demostración: EMI, Linker y Cliente Embajador ven el dashboard de aliado; Financieros y Agremiaciones, el de gestión (solo sus referidos), también con su nivel, puntos y código.
+- El nivel es el de la base (puntos **y** calidad, §6.3); el Hub no muestra los requisitos de calidad por nivel (decisión del equipo).
+- El historial se filtra por tipo y por semana, mes y trimestre (hora Bogotá), con la nota de descuento parcial del §5.4.
+- Agremiaciones: la distribución regional agrupa por la ciudad de la empresa referida.
+- Secciones sin datos reales todavía (series por mes, pronóstico de desembolsos, distribución por ejecutivo, Beneficios y Comisiones) conservan los datos de demostración con la etiqueta **"Demostración"**.
+- **Academy:** los puntos de cada curso salen de `v_mis_modulos`. Al terminar la última lección se llama a `POST /api/modulos { codigo }`, que toma el aliado del token, exige cuenta activa y ejecuta `public.completar_modulo`; responde `{ codigo, nuevo, puntos, recompensa_estado, puntos_disponibles, puntos_nivel, nivel }`. En la base solo queda el curso completado; el avance por lección vive en el navegador (`localStorage`, clave `ads-aca-{codigo_aliado}`).
+
 ---
 
 ## 10. Seguridad
@@ -791,6 +811,11 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Racha Solar: al completar 4 de 4 se reinicia el lunes siguiente; las calificaciones retenidas no cuentan (§5.2).
 - Módulos: cada uno vale lo que indique el catálogo y el tope es de 20 puntos por mes, sin partir módulos y en orden de llegada (§5.3).
 - `empresas` exige los campos obligatorios del formulario solo para `origen = 'hub'`; el formulario público de Clientify puede traerlos incompletos (§4.4, §7.1).
+- Financieros y Agremiaciones también ven sus puntos y su nivel (§9).
+- Agremiaciones: la distribución regional se agrupa por la ciudad de la empresa referida (§9).
+- Las secciones del Hub sin datos reales todavía se muestran con datos de demostración y la etiqueta "Demostración" (§9).
+- Academy: en la base solo se guarda el curso completado; el avance por lección vive en el navegador del aliado (§9).
+- El Hub no muestra los requisitos de calidad por nivel, pero el nivel sí los aplica (§6.3, §9).
 
 ## 14. Preguntas abiertas
 
@@ -807,7 +832,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 
 3. ~~Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?~~ Resuelta: sí a ambas (§3).
 4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
-5. Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?
+5. ~~Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?~~ Resuelta: sí ven puntos y nivel; la distribución regional usa la ciudad de la empresa referida (§9).
 6. Sistema externo de canjes: quién lo opera y cómo se autentica (se asume API key por proveedor).
 7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: se adjunta a la ficha de la empresa (§8, flujo B).
 8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).

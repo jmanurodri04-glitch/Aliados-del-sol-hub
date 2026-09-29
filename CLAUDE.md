@@ -380,18 +380,23 @@ Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre,
   - si `racha_ultima_semana = S − 7 días`, se marca la siguiente `semana_n = true`;
   - si no, la racha **reinicia**: `semana_1 = true` y las demás en `false`.
   - Luego `racha_ultima_semana = S`.
-- **Al completar 4 de 4:** se inserta `racha_solar` (+75) y en la semana siguiente todo vuelve a `0 0 0 0`.
-- **Cron semanal** (lunes 00:05 Bogotá): si `racha_ultima_semana` es anterior a la semana recién terminada, la racha se reinicia a `0 0 0 0`.
+- **Al completar 4 de 4:** se inserta `racha_solar` (+75). La racha se ve completa el resto de esa semana y el cron del lunes siguiente la vuelve a `0 0 0 0` (decisión del equipo).
+- **Cron semanal** (lunes 00:05 Bogotá): vuelve a `0 0 0 0` la racha completada la semana anterior y la de quien no calificó ninguna empresa en la semana recién terminada.
 - **Garantía:** no puede existir más de un `racha_solar` por aliado en 28 días. Se valida en la función antes de insertar.
+- Una calificación retenida mientras la cuenta no estaba activa (§4.7) no cuenta para la racha (decisión del equipo).
+- Implementación: trigger `movimientos_puntos_racha` sobre el movimiento `empresa_calificada`, `interno.actualizar_racha` e `interno.reiniciar_rachas` (migración `racha_solar`).
 
-### 5.3 Módulos (+5 cada uno, máximo 20 por mes calendario)
+### 5.3 Módulos (puntos por módulo, máximo 20 puntos por mes calendario)
 
-- Completar un módulo crea una fila en `modulos_completados` con `recompensa_estado = 'pendiente'`.
-- La función `otorgar_modulos_pendientes(aliado)` corre al completar un módulo y en un **cron el día 1 de cada mes a las 00:05**. Hace lo siguiente:
-  - cuenta los movimientos `modulo_completado` del mes en curso;
-  - otorga pendientes en orden FIFO hasta llegar a 4 en el mes (20 puntos);
+- **Cada módulo tiene su propio valor** en `modulos.puntos` (0 = contenido sin puntos, máximo 20). El tope mensual es de **20 puntos**, no de un número de módulos (decisión del equipo). La regla `modulo_completado` de `reglas_puntos` no tiene valor fijo.
+- El catálogo `modulos` usa `codigo`, el mismo identificador de los cursos de la Academy del Hub (`c11`, `c12`…).
+- Completar un módulo (`public.completar_modulo(aliado, codigo)`, que llama el servidor con el aliado de la sesión) crea una fila en `modulos_completados` con el valor del módulo en ese momento y `recompensa_estado = 'pendiente'`, o `'no_aplica'` si el módulo no da puntos.
+- La función `otorgar_modulos_pendientes(aliado)` corre al completar un módulo, al activarse la cuenta y en un **cron el día 1 de cada mes a las 00:05**. Hace lo siguiente:
+  - suma los puntos de los movimientos `modulo_completado` del mes en curso;
+  - otorga pendientes en orden FIFO mientras quepan completos en el tope de 20 puntos del mes; un módulo que no cabe espera al mes siguiente, y los que llegaron después también esperan;
   - marca `otorgada` y `fecha_otorgada = now()`.
-- Ejemplo: 8 módulos en septiembre dan 20 puntos en septiembre, los otros 4 quedan pendientes y se otorgan el 1 de octubre. Total visible: 40 puntos al cabo de dos meses.
+- Ejemplo: 8 módulos de 5 puntos en septiembre dan 20 puntos en septiembre, los otros 4 quedan pendientes y se otorgan el 1 de octubre. Total visible: 40 puntos al cabo de dos meses.
+- Una cuenta que no está activa no recibe puntos de módulos: quedan pendientes hasta que se active.
 - El dashboard muestra los módulos con "recompensa pendiente".
 
 ### 5.4 Cálculos de saldo: **piso en 0 y sin memoria** (decisión del equipo)
@@ -783,6 +788,9 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Valor cotizado = suma del Importe de todas las oportunidades del referido; pipeline originado = suma del Importe de las que se cierran (ganadas o en "Contrato") (§8, tabla D).
 - Las etiquetas "aliado del sol hub" / "aliados del sol" marcan **referidos** (el formulario público pone "aliado del sol hub"); el contacto de un aliado se reconoce por su ID (§7.1, §8).
 - Las etiquetas de tipo ("AdS Financieros", "AdS EMI", "AdS Linker", "AdS Cliente Embajador", "AdS Agremiaciones") son las mismas del formulario público y del registro del Hub; se dejan así.
+- Racha Solar: al completar 4 de 4 se reinicia el lunes siguiente; las calificaciones retenidas no cuentan (§5.2).
+- Módulos: cada uno vale lo que indique el catálogo y el tope es de 20 puntos por mes, sin partir módulos y en orden de llegada (§5.3).
+- `empresas` exige los campos obligatorios del formulario solo para `origen = 'hub'`; el formulario público de Clientify puede traerlos incompletos (§4.4, §7.1).
 
 ## 14. Preguntas abiertas
 

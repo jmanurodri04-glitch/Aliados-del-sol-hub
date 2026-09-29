@@ -55,9 +55,11 @@ insert into public.movimientos_puntos (aliado_id, tipo, puntos, puntos_aplicados
   ('22222222-2222-2222-2222-222222222222', 'ganado', 10, 10, 'registro_valido', 'empresas',
    'bbbbbbbb-0000-0000-0000-00000000000b', 'empresa:bbbbbbbb-0000-0000-0000-00000000000b:registro_valido', 'sistema');
 
-insert into public.modulos (id, nombre, orden, activo) values
-  ('dddddddd-0000-0000-0000-000000000001', 'Módulo activo',   1, true),
-  ('dddddddd-0000-0000-0000-000000000002', 'Módulo inactivo', 2, false);
+-- El catálogo ya trae los 11 cursos de la Academy; se desactivan para contar solo los de prueba.
+update public.modulos set activo = false;
+insert into public.modulos (id, codigo, nombre, orden, activo) values
+  ('dddddddd-0000-0000-0000-000000000001', 'prueba-activo',   'Módulo activo',   1, true),
+  ('dddddddd-0000-0000-0000-000000000002', 'prueba-inactivo', 'Módulo inactivo', 2, false);
 
 insert into public.modulos_completados (aliado_id, modulo_id)
   values ('11111111-1111-1111-1111-111111111111', 'dddddddd-0000-0000-0000-000000000001');
@@ -275,7 +277,7 @@ select set_config('request.jwt.claims', '{"sub": "33333333-3333-3333-3333-333333
 
 select is(interno.es_admin(), true, 'C es admin');
 select is((select count(*) from public.aliados), 3::bigint, 'el admin ve todos los aliados');
-select is((select count(*) from public.modulos), 2::bigint, 'el admin ve también los módulos inactivos');
+select is((select count(*) from public.modulos), 13::bigint, 'el admin ve también los módulos inactivos');
 
 -- RLS: anónimo -----------------------------------------------------------------------------
 

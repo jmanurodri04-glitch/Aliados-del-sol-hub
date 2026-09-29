@@ -2095,7 +2095,61 @@
             <div style="padding:36px 22px;text-align:center;font-size:14px;color:var(--mut3,#7C7873)">No hay movimientos con este filtro.</div>
           </sc-if>
         </div>
-        <p style="margin:14px 0 0;font-size:12px;color:var(--mut5,#5A5651);line-height:1.55">Valores de demostración. Puntos, umbrales, calidad, racha y etapas están centralizados y son configurables sin rediseñar el Hub.</p>
+        <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ true }}"><p style="margin:14px 0 0;font-size:12px;color:var(--mut5,#5A5651);line-height:1.55">Valores de demostración. Puntos, umbrales, calidad, racha y etapas están centralizados y son configurables sin rediseñar el Hub.</p></sc-if>
+
+        <sc-if value="{{ esReal }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Eventos aliados" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;padding-top:36px;align-items:start">
+          <div style=display:flex;flex-direction:column;gap:16px;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022));border-color:rgba(255,202,5,.22)">
+            <span style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold,#8E7A45)">Eventos aliados</span>
+              <b style="font-size:19px;font-weight:700;letter-spacing:-.02em">Reporta un evento que organizaste</b>
+              <span style="font-size:13.5px;color:var(--mut,#9A968F);line-height:1.5">{{ eventRule }}. GEENERA revisa el reporte y, si cumple, suma los puntos a tu historial.</span>
+            </span>
+            <sc-if value="{{ evtOk }}" hint-placeholder-val="{{ false }}"><span role="status" style="padding:10px 13px;border:1px solid rgba(95,191,139,.35);border-radius:10px;background:rgba(95,191,139,.08);font-size:13.5px;color:var(--g2,#7FD3A6)">Recibimos tu evento. Te avisamos cuando GEENERA lo revise.</span></sc-if>
+            <sc-if value="{{ evtCerrado }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ abrirEvento }}" style="align-self:flex-start;padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;cursor:pointer">Reportar un evento</button>
+            </sc-if>
+            <sc-if value="{{ evtAbierto }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+                <label style="display:flex;flex-direction:column;gap:6px;grid-column:1 / -1"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--mut2,#8E8B86)">Nombre del evento<span style="color:var(--o,#F9A51A)"> *</span></span><input value="{{ evtNombre }}" onChange="{{ onEvtNombre }}" maxLength="150" placeholder="Desayuno empresarial Cámara de Comercio" style="padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;color-scheme:var(--scheme,dark)" style-focus="border-color:rgba(255,202,5,.55)"></label>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--mut2,#8E8B86)">Tipo de evento</span><input value="{{ evtTipo }}" onChange="{{ onEvtTipo }}" maxLength="60" placeholder="Taller, conferencia, feria…" style="padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;color-scheme:var(--scheme,dark)" style-focus="border-color:rgba(255,202,5,.55)"></label>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--mut2,#8E8B86)">Fecha<span style="color:var(--o,#F9A51A)"> *</span></span><input type="date" max="{{ evtHoy }}" value="{{ evtFecha }}" onChange="{{ onEvtFecha }}" style="padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;color-scheme:var(--scheme,dark)" style-focus="border-color:rgba(255,202,5,.55)"></label>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--mut2,#8E8B86)">Empresas dentro del perfil<span style="color:var(--o,#F9A51A)"> *</span></span><input inputMode="numeric" value="{{ evtEmpresas }}" onChange="{{ onEvtEmpresas }}" maxLength="5" placeholder="0" style="padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;color-scheme:var(--scheme,dark)" style-focus="border-color:rgba(255,202,5,.55)"></label>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ evtCasillas }}" as="c" hint-placeholder-count="2">
+                  <button onClick="{{ c.toggle }}" role="checkbox" aria-checked="{{ c.aria }}" style="display:flex;align-items:center;gap:10px;padding:0;border:none;background:transparent;color:var(--fg,#F2F0EC);font-size:14px;text-align:left;cursor:pointer"><span style="width:18px;height:18px;flex:none;border-radius:5px;display:grid;place-items:center;border:1.5px solid {{ c.boxBorder }};background:{{ c.boxBg }};color:#1A1200;font-size:12px;font-weight:800">{{ c.mark }}</span>{{ c.t }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px dashed var(--w-14,rgba(255,255,255,.14));border-radius:10px">
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--mut2,#8E8B86)">Registro de asistentes</span><span style="font-size:12.5px;color:var(--mut3,#7C7873);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ evtArchivoNota }}</span></span>
+                <label style="margin-left:auto;flex:none;padding:8px 14px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:8px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">{{ evtArchivoBtn }}<input type="file" accept="application/pdf,image/jpeg,image/png,text/csv,.xlsx" onChange="{{ onEvtArchivo }}" style="display:none"></label>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--mut2,#8E8B86)">Descripción · opcional</span><textarea rows="3" value="{{ evtDescripcion }}" onChange="{{ onEvtDescripcion }}" maxLength="1000" placeholder="Quiénes asistieron, qué se presentó, qué empresas mostraron interés…" style="padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;color-scheme:var(--scheme,dark);resize:vertical;line-height:1.45" style-focus="border-color:rgba(255,202,5,.55)"></textarea></label>
+              <div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:10px;background:var(--w-03,rgba(255,255,255,.03))">
+                <span style="font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--mut2,#8E8B86)">Para sumar +100 el evento debe cumplir</span>
+                <sc-for list="{{ evtCondiciones }}" as="q" hint-placeholder-count="4"><span style="display:flex;gap:8px;font-size:13px;color:var(--t2,#C9C5BE)"><b style="width:14px;color:{{ q.color }}">{{ q.mark }}</b>{{ q.t }}</span></sc-for>
+              </div>
+              <sc-if value="{{ evtHasError }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px;color:#E8836B">{{ evtError }}</span></sc-if>
+              <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button onClick="{{ cerrarEvento }}" style="padding:10px 16px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:10px;background:transparent;color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+                <button onClick="{{ enviarEvento }}" style="padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;cursor:pointer">{{ evtEnviarLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+          <div style=display:flex;flex-direction:column;gap:16px;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
+            <b style="font-size:17px;font-weight:600">Mis eventos</b>
+            <sc-for list="{{ misEventos }}" as="ev" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--w-06,rgba(255,255,255,.06))">
+                <span style="display:flex;align-items:center;justify-content:space-between;gap:10px"><b style="font-size:14.5px;font-weight:600">{{ ev.nombre }}</b><span style="flex:none;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:600;background:{{ ev.stBg }};color:{{ ev.stColor }}">{{ ev.estado }}</span></span>
+                <span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ ev.meta }}</span>
+                <sc-if value="{{ ev.hasNota }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--t2,#C9C5BE)">GEENERA: {{ ev.nota }}</span></sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{ misEventosVacio }}" hint-placeholder-val="{{ false }}"><span style="font-size:13.5px;color:var(--mut3,#7C7873)">Aún no has reportado eventos.</span></sc-if>
+          </div>
+        </div>
+        </sc-if>
       </section>
       </sc-if>
 
@@ -3528,7 +3582,8 @@ const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vier
 function enBogota(v) { const t = v instanceof Date ? v.getTime() : Date.parse(v); return new Date(t - 5 * 3600 * 1000); }
 function fechaCorta(v, conAnio) {
   if (!v) return '—';
-  const d = enBogota(v);
+  /* Una fecha sin hora (p. ej. eventos.fecha) ya es un día calendario: no se convierte de zona horaria. */
+  const d = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(v + 'T00:00:00Z') : enBogota(v);
   return d.getUTCDate() + ' ' + MESES_CORTOS[d.getUTCMonth()] + (conAnio ? ' ' + d.getUTCFullYear() : '');
 }
 function haceCuanto(v) {
@@ -3615,6 +3670,62 @@ function movimientoComoHistorial(m) {
 
 class Component extends DCLogic {
   refSet(k, v) { this.setState(st => ({ refData: Object.assign({ country: 'CO' }, st.refData, { [k]: v }) })); }
+  /* Reportar un evento aliado (CLAUDE.md §4.8). El envío lo hace js/supabase.js (ads:evento-registrar) y el
+     resultado llega por ads:evento-resultado. GEENERA lo valida desde el panel de administración (+100). */
+  eventoVals(s, real) {
+    const d = s.evtDatos || {};
+    const set = (k) => (ev) => { const v = ev.target.value; this.setState(st => ({ evtDatos: Object.assign({}, st.evtDatos, { [k]: v }), evtError: '' })); };
+    const toggle = (k) => () => this.setState(st => ({ evtDatos: Object.assign({}, st.evtDatos, { [k]: !(st.evtDatos || {})[k] }), evtError: '' }));
+    const hoy = enBogota(new Date()).toISOString().slice(0, 10);
+    const empresas = d.empresas === undefined || d.empresas === '' ? null : Number(String(d.empresas).replace(/\D/g, ''));
+    const conArchivo = !!d.archivo;
+    const condiciones = [
+      ['Evento ya realizado', !!d.fecha && d.fecha <= hoy],
+      ['GEENERA involucrada', !!d.geenera],
+      ['Registro de asistentes', !!d.registro || conArchivo],
+      ['Mínimo ' + POINTS_CONFIG.event.minCompanies + ' empresas dentro del perfil', empresas != null && empresas >= POINTS_CONFIG.event.minCompanies]
+    ].map(([t, ok]) => ({ t, mark: ok ? '✓' : '○', color: ok ? 'var(--g,#5FBF8B)' : 'var(--mut4,#6B6762)' }));
+    const casilla = (k, t) => ({ t, on: !!d[k] || (k === 'registro' && conArchivo), toggle: toggle(k),
+      mark: (!!d[k] || (k === 'registro' && conArchivo)) ? '✓' : '', boxBg: (!!d[k] || (k === 'registro' && conArchivo)) ? 'var(--y,#FFCA05)' : 'transparent',
+      boxBorder: (!!d[k] || (k === 'registro' && conArchivo)) ? 'var(--y,#FFCA05)' : 'var(--w-20,rgba(255,255,255,.2))', aria: (!!d[k] || (k === 'registro' && conArchivo)) ? 'true' : 'false' });
+    const enviar = () => {
+      if (s.evtEnviando) return;
+      const nombre = (d.nombre || '').trim();
+      if (nombre.length < 3) return this.setState({ evtError: 'Escribe el nombre del evento.' });
+      if (!d.fecha || d.fecha > hoy) return this.setState({ evtError: 'La fecha debe ser la de un evento ya realizado.' });
+      if (empresas == null || !(empresas >= 0)) return this.setState({ evtError: 'Indica cuántas empresas dentro del perfil asistieron.' });
+      this.setState({ evtEnviando: true, evtError: '' });
+      window.dispatchEvent(new CustomEvent('ads:evento-registrar', { detail: {
+        datos: { nombre_evento: nombre, tipo_evento: (d.tipo || '').trim() || null, fecha: d.fecha, geenera_involucrada: !!d.geenera,
+          registro_asistentes: !!d.registro || conArchivo, empresas_perfil_count: empresas, descripcion: (d.descripcion || '').trim() || null },
+        archivo: d.archivo || null } }));
+    };
+    const ESTADOS = { pendiente: ['En revisión', TONES.w], validado: ['Validado · +' + POINTS_CONFIG.event.pts, TONES.ok], rechazado: ['No validado', TONES.bad] };
+    const misEventos = (real && real.eventos ? real.eventos : []).map(ev => {
+      const e = ESTADOS[ev.estado] || ESTADOS.pendiente;
+      return { nombre: ev.nombre_evento, meta: fechaCorta(ev.fecha, true) + (ev.tipo_evento ? ' · ' + ev.tipo_evento : '') + ' · ' + ev.empresas_perfil_count + ' empresas en el perfil',
+        estado: e[0], stBg: e[1][0], stColor: e[1][1], nota: ev.revision_nota || '', hasNota: !!ev.revision_nota };
+    });
+    return {
+      evtAbierto: !!s.evtAbierto, evtCerrado: !s.evtAbierto,
+      abrirEvento: () => this.setState({ evtAbierto: true, evtDatos: {}, evtError: '', evtOk: false }),
+      cerrarEvento: () => { if (!s.evtEnviando) this.setState({ evtAbierto: false, evtError: '' }); },
+      evtNombre: d.nombre || '', evtTipo: d.tipo || '', evtFecha: d.fecha || '', evtEmpresas: d.empresas || '', evtDescripcion: d.descripcion || '', evtHoy: hoy,
+      onEvtNombre: set('nombre'), onEvtTipo: set('tipo'), onEvtFecha: set('fecha'), onEvtEmpresas: set('empresas'), onEvtDescripcion: set('descripcion'),
+      evtCasillas: [casilla('geenera', 'GEENERA estuvo involucrada en el evento'), casilla('registro', 'Hay registro de asistentes')],
+      evtCondiciones: condiciones,
+      evtArchivoNota: d.archivoNombre ? d.archivoNombre : 'Opcional · PDF, imagen, Excel o CSV de máximo 10 MB.',
+      evtArchivoBtn: d.archivoNombre ? 'Cambiar' : 'Adjuntar',
+      onEvtArchivo: (ev) => { const fl = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!fl) return;
+        const tipos = ['application/pdf', 'image/jpeg', 'image/png', 'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        if (tipos.indexOf(fl.type) < 0) return this.setState({ evtError: 'El registro de asistentes debe ser PDF, imagen, Excel o CSV.' });
+        if (fl.size > 10 * 1024 * 1024) return this.setState({ evtError: 'El archivo debe pesar máximo 10 MB.' });
+        this.setState(st => ({ evtDatos: Object.assign({}, st.evtDatos, { archivo: fl, archivoNombre: fl.name }), evtError: '' })); },
+      evtHasError: !!s.evtError, evtError: s.evtError || '',
+      evtEnviarLabel: s.evtEnviando ? 'Enviando…' : 'Enviar a revisión', enviarEvento: enviar,
+      evtOk: !!s.evtOk, misEventos, misEventosVacio: misEventos.length === 0
+    };
+  }
   refVals(s) {
     const d = Object.assign({ country: 'CO' }, s.refData || {}); const step = s.step || 1; const tr = !!s.refTried;
     const pc = phoneCountry(d.country); const pd = (d.telefono || '').replace(/\D/g, ''); const pStart = !pc.start || pc.start.indexOf(pd[0]) >= 0;
@@ -3801,10 +3912,11 @@ class Component extends DCLogic {
       else if (e.type === 'ads:sesion') this.setState(d.activa ? { sesion: d.aliado || null } : { sesion: null, datos: null });
       else if (e.type === 'ads:dashboard') { if (d.ok) this.recibirDashboard(d); else if (this.state.sesion) this.ping(d.mensaje || 'No pudimos cargar tus datos. Intenta de nuevo en unos minutos.'); }
       else if (e.type === 'ads:modulo-resultado') this.avisarModulo(d);
+      else if (e.type === 'ads:evento-resultado') this.setState(d.ok ? { evtEnviando: false, evtAbierto: false, evtOk: true, evtDatos: {} } : { evtEnviando: false, evtError: d.mensaje || 'No pudimos enviar el evento.' });
       else if (e.type === 'ads:referral-resultado') this.setState(d.ok ? { refSending: false, refError: '', refTried: false, refResult: d, done: true } : { refSending: false, refError: d.mensaje || '' });
       else if (e.type === 'ads:aviso') { this.setState({ loginMsg: d.mensaje || '', loginTono: d.tono || 'info' }); if (d.ruta) this.go(d.ruta); }
     };
-    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:dashboard', 'ads:modulo-resultado'];
+    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:dashboard', 'ads:modulo-resultado', 'ads:evento-resultado'];
     this._adsEventos.forEach(n => window.addEventListener(n, this._adsAuth));
     window.dispatchEvent(new CustomEvent('ads:consultar-sesion'));
   }
@@ -4062,7 +4174,7 @@ class Component extends DCLogic {
     });
 
     /* ---- Historial de Puntos Sol ---- */
-    const histFilters = ['Todos', 'Ganados', 'Perdidos', 'Oportunidades', 'Racha', 'Academy'];
+    const histFilters = ['Todos', 'Ganados', 'Perdidos', 'Oportunidades', 'Racha', 'Academy', 'Eventos'];
     const hf = s.histFilter || 'Todos';
     /* Con sesión: el libro mayor real, filtrable por semana, mes y trimestre (hora Bogotá, CLAUDE.md §9). */
     const desdeHist = real ? inicioPeriodo(s.histPeriod) : null;
@@ -4531,6 +4643,7 @@ class Component extends DCLogic {
       solarStreak,
       impactGroups,
       histTabs, historyRows, histEmpty: historyRows.length === 0, histPeriodTabs,
+      ...this.eventoVals(s, real),
       gainedLabel: '+' + this.n(gained), lostLabel: '−' + this.n(Math.abs(lost)),
       earnOpportunity: POINTS_CONFIG.opportunity.map(m => ({ label: m.label, pts: '+' + m.pts, desc: m.desc })),
       perfectFields: POINTS_CONFIG.perfectFields.map(t => ({ t })),

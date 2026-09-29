@@ -11,9 +11,10 @@
 //   ads:referral {datos, archivo?}      ads:referral-resultado { ok, mensaje?, es_perfecto?, movimientos?, puntos_disponibles?, nivel? }
 //   ads:consultar-dashboard             ads:dashboard       { ok, aliado?, movimientos?, referidos?, modulos? }
 //   ads:modulo-completado {codigo}      ads:modulo-resultado { ok, codigo, mensaje?, nuevo?, puntos?, recompensa_estado? }
+//   ads:evento-registrar {datos, archivo?} ads:evento-resultado { ok, mensaje?, evento_id? }
 //
 // El dashboard (fase 8) sale de las vistas v_aliado_dashboard, v_mis_movimientos, v_mis_referidos y
-// v_mis_modulos, que solo devuelven lo del aliado de la sesión. Se recarga al entrar, después de un
+// v_mis_modulos (y v_mis_eventos, fase 9), que solo devuelven lo del aliado de la sesión. Se recarga al entrar, después de un
 // referido y al completar un módulo.
 //
 // En el navegador solo se usan la URL y la publishable key (GET /api/config); la seguridad la da RLS.
@@ -41,11 +42,14 @@ const MENSAJES = {
   correoSinConfirmar: 'Aún no confirmas tu correo. Revisa tu bandeja de entrada (y la carpeta de spam) y abre el enlace que te enviamos.',
   pendiente: 'Tu solicitud está en revisión. GEENERA valida tu perfil y te avisa por correo cuando tu cuenta esté activa.',
   suspendido: 'Tu cuenta está suspendida. Escríbenos a c.arenas@geenera.com si crees que es un error.',
+  rechazado: 'Tu solicitud no fue aprobada. Si crees que es un error, escríbenos a c.arenas@geenera.com.',
   sinPerfil: 'Tu usuario no tiene un perfil de aliado. Escríbenos a c.arenas@geenera.com.',
   correoConfirmado: 'Confirmaste tu correo. GEENERA está validando tu perfil y te avisará por correo cuando tu cuenta esté activa.',
   facturaNoSubio: 'No pudimos subir la factura. Revisa tu conexión e intenta de nuevo.',
   sesionVencida: 'Tu sesión expiró. Vuelve a iniciar sesión para referir.',
   sesionVencidaModulo: 'Tu sesión expiró. Vuelve a iniciar sesión para registrar tu avance.',
+  sesionVencidaEvento: 'Tu sesión expiró. Vuelve a iniciar sesión para reportar el evento.',
+  archivoNoSubio: 'No pudimos subir el registro de asistentes. Revisa tu conexión e intenta de nuevo.',
   enlaceVencido: 'El enlace de confirmación venció o ya fue usado. Inicia sesión; si tu correo sigue sin confirmar, regístrate de nuevo para recibir otro enlace.'
 };
 
@@ -236,18 +240,19 @@ async function cargarDashboard(supabaseDado) {
   try {
     const supabase = supabaseDado || await obtenerCliente();
     if (!sesionActual.activa) return;
-    const [aliado, movimientos, referidos, modulos] = await Promise.all([
+    const [aliado, movimientos, referidos, modulos, eventos] = await Promise.all([
       supabase.from('v_aliado_dashboard').select('*').maybeSingle(),
       supabase.from('v_mis_movimientos').select('*').order('fecha', { ascending: false }).order('secuencia', { ascending: false }).limit(500),
       supabase.from('v_mis_referidos').select('*').order('created_at', { ascending: false }),
-      supabase.from('v_mis_modulos').select('*').order('orden')
+      supabase.from('v_mis_modulos').select('*').order('orden'),
+      supabase.from('v_mis_eventos').select('*').order('fecha', { ascending: false })
     ]);
-    const error = aliado.error || movimientos.error || referidos.error || modulos.error;
+    const error = aliado.error || movimientos.error || referidos.error || modulos.error || eventos.error;
     if (error || !aliado.data) {
       emitir('ads:dashboard', { ok: false, mensaje: MENSAJES.generico });
       return;
     }
-    dashboardActual = { ok: true, aliado: aliado.data, movimientos: movimientos.data, referidos: referidos.data, modulos: modulos.data };
+    dashboardActual = { ok: true, aliado: aliado.data, movimientos: movimientos.data, referidos: referidos.data, modulos: modulos.data, eventos: eventos.data };
     emitir('ads:dashboard', dashboardActual);
   } catch (e) {
     emitir('ads:dashboard', { ok: false, mensaje: mensajeDeError(e) });
@@ -267,6 +272,31 @@ async function completarModulo({ codigo }) {
       emitir('ads:sesion', sesionActual);
     }
     resultado({ ok: true, nuevo, puntos, recompensa_estado });
+    cargarDashboard(supabase);
+  } catch (e) {
+    resultado({ ok: false, mensaje: mensajeDeError(e) });
+  }
+}
+
+// El aliado reporta un evento (CLAUDE.md §4.8). El registro de asistentes se sube directo a Storage con una URL
+// firmada de un solo uso que entrega /api/eventos; después se registra el evento y un admin lo valida.
+async function registrarEvento({ datos, archivo }) {
+  const resultado = (d) => emitir('ads:evento-resultado', d);
+  try {
+    const supabase = await obtenerCliente();
+    let eventoId = crypto.randomUUID();
+    let ruta = null;
+    if (archivo) {
+      const permiso = await llamarApi(supabase, '/api/eventos', { accion: 'subir', nombre_archivo: archivo.name, tipo: archivo.type, tamano: archivo.size });
+      if (permiso.status !== 200) return resultado({ ok: false, mensaje: permiso.status === 401 ? MENSAJES.sesionVencidaEvento : (permiso.datos.error || MENSAJES.generico) });
+      const { error } = await supabase.storage.from('eventos').uploadToSignedUrl(permiso.datos.ruta, permiso.datos.token, archivo, { contentType: archivo.type });
+      if (error) return resultado({ ok: false, mensaje: MENSAJES.archivoNoSubio });
+      eventoId = permiso.datos.evento_id;
+      ruta = permiso.datos.ruta;
+    }
+    const r = await llamarApi(supabase, '/api/eventos', { accion: 'registrar', evento_id: eventoId, datos, archivo: ruta });
+    if (r.status !== 201) return resultado({ ok: false, mensaje: r.status === 401 ? MENSAJES.sesionVencidaEvento : (r.datos.error || MENSAJES.generico) });
+    resultado({ ok: true, evento_id: r.datos.evento_id });
     cargarDashboard(supabase);
   } catch (e) {
     resultado({ ok: false, mensaje: mensajeDeError(e) });
@@ -301,6 +331,7 @@ window.addEventListener('ads:login', (e) => iniciarSesion(e.detail || {}));
 window.addEventListener('ads:logout', () => cerrarSesion());
 window.addEventListener('ads:referral', (e) => referir(e.detail || {}));
 window.addEventListener('ads:modulo-completado', (e) => completarModulo(e.detail || {}));
+window.addEventListener('ads:evento-registrar', (e) => registrarEvento(e.detail || {}));
 window.addEventListener('ads:consultar-dashboard', () => {
   if (dashboardActual) emitir('ads:dashboard', dashboardActual);
   else cargarDashboard();

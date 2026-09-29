@@ -9,8 +9,8 @@ select tables_are('public', array[
   'aliados', 'aliados_perfil_organizacion', 'aliados_perfil_alcance',
   'empresas', 'facturas', 'avance_empresa', 'movimientos_puntos',
   'eventos', 'modulos', 'modulos_completados', 'canjes', 'webhook_eventos', 'reglas_puntos', 'movimientos_retenidos',
-  'clientify_cola_entidades', 'avance_conflictos'
-], 'existen exactamente las 16 tablas del modelo');
+  'clientify_cola_entidades', 'avance_conflictos', 'acciones_admin'
+], 'existen exactamente las 17 tablas del modelo');
 
 select is(
   (select count(*) from pg_tables where schemaname = 'public' and not rowsecurity),

@@ -87,7 +87,7 @@ Formulario propio del Hub. No es de Clientify.
 3. **Cuando GEENERA aprueba la solicitud** (`pendiente → activo`), se sincroniza con Clientify (ver §8, flujo A). No se sincroniza al registrarse, para no llevar al CRM solicitudes que se van a rechazar (decisión del equipo). El aliado se crea como contacto con la etiqueta de aliado (**"aliados del sol"**, o **"aliado del sol hub"** si es Cliente Embajador), el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **Ni el registro ni la aprobación fallan por culpa de Clientify.**
 4. El aliado **confirma su correo** (obligatorio antes del primer login) y **GEENERA aprueba la solicitud** (decisiones del equipo):
    - mientras `estado = 'pendiente'`, el login responde "Tu solicitud está en revisión" y no entra al Hub;
-   - un admin la aprueba con `estado = 'activo'`, `aprobado_at` y `aprobado_por` (por SQL hasta que exista el panel admin, fase 9);
+   - un admin la aprueba con `estado = 'activo'`, `aprobado_at` y `aprobado_por` desde el **panel admin** (`admin.html`, fase 9), o la rechaza (`estado = 'rechazado'`: no entra al Hub y ve "Tu solicitud no fue aprobada"; se puede aprobar después);
    - solo las cuentas `activo` entran al Hub. **Todo endpoint de `/api` debe verificar `estado = 'activo'`.**
 5. En el front, toda la lógica de Supabase vive en `js/supabase.js`: la página emite eventos `ads:*` (`ads:join-register`, `ads:login`, `ads:logout`) y el módulo responde (`ads:join-resultado`, `ads:login-resultado`, `ads:sesion`, `ads:aviso`).
 
@@ -126,7 +126,7 @@ autorizacion_datos_at   timestamptz NOT NULL
 terminos_aceptados_at   timestamptz NOT NULL
 terminos_version        text NOT NULL                       -- versión de los Términos aceptada (fecha de entrada en vigor)
 politica_datos_version  text NOT NULL                       -- versión de la Política de Tratamiento de Datos vigente al autorizar
-estado                  text NOT NULL DEFAULT 'pendiente'   -- pendiente | activo | suspendido
+estado                  text NOT NULL DEFAULT 'pendiente'   -- pendiente | activo | suspendido | rechazado
 aprobado_at             timestamptz NULL                    -- cuándo GEENERA aprobó la solicitud
 aprobado_por            uuid NULL FK aliados(id)            -- admin que la aprobó
 rol                     text NOT NULL DEFAULT 'aliado'      -- aliado | admin (equipo GEENERA)
@@ -275,6 +275,10 @@ validado_por, validado_at
 ```
 
 Otorga +100 solo cuando un **admin** lo marca `validado` y se cumplen: evento realizado, GEENERA involucrada, registro de asistentes y `empresas_perfil_count >= 5`.
+
+**Implementado (fase 9):**
+- El **aliado** reporta el evento desde el Hub (pantalla Puntos Sol, "Reporta un evento"): `POST /api/eventos` con `accion: 'subir'` da una URL firmada de un solo uso para el registro de asistentes (bucket privado `eventos`, 10 MB, PDF/JPG/PNG/XLSX/CSV, ruta `{aliado_id}/{evento_id}/{archivo}`) y `accion: 'registrar'` llama a `public.registrar_evento` (cuenta activa, máximo 5 por día, fecha ya pasada y del último año). Columnas nuevas: `descripcion` y `revision_nota`. El aliado ve sus eventos en `v_mis_eventos`.
+- Un **admin** lo valida o rechaza en el panel (`admin_validar_evento`, `admin_rechazar_evento`): validar exige las 4 condiciones y otorga `evento_validado` (+100, clave `evento:{id}`, `vinculo = 'eventos'`); rechazar exige motivo, que el aliado ve.
 
 ### 4.9 `modulos` (catálogo) y `modulos_completados`
 
@@ -733,6 +737,18 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   - El aliado solo puede **leer** sus propias filas (`aliado_id = auth.uid()`).
   - Las **escrituras** de puntos, avance, eventos, canjes y sincronización se hacen solo desde el servidor con `SUPABASE_SECRET_KEY` (nunca en el cliente), o con funciones `SECURITY DEFINER` controladas.
 - Rol `admin` (equipo GEENERA) para validar eventos, registrar baja calidad reiterada, hacer ajustes y resolver conflictos. Las acciones de admin quedan auditadas en `creado_por`.
+
+**Panel de administración (fase 9):**
+- Página separada `admin.html` + `js/admin.js` (el Hub no se toca). Usa la misma sesión de Supabase; solo entra una cuenta con `rol = 'admin'` y `estado = 'activo'` (las demás ven "Sin acceso"). Pestañas: Resumen, Solicitudes, Aliados (historial, ajustes, baja calidad, suspender/reactivar), Eventos, Conflictos de Clientify y Auditoría.
+- **Lecturas:** vistas `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_acciones` (`security_invoker` y `where es_admin()`: un aliado no ve filas; ninguna expone `aliados.id`, los admins aparecen por su `codigo_aliado`).
+- **Escrituras:** un solo endpoint `POST /api/admin { accion, ... }` (acciones `aprobar`, `rechazar`, `suspender`, `reactivar`, `ajuste`, `baja_calidad`, `validar_evento`, `rechazar_evento`, `resolver_conflicto` y `archivo_evento`, que da una URL firmada de 5 min). Toma al admin del token (`adminDeLaSesion` en `lib/sesion.js`) y llama a `public.admin_*` (solo `service_role`), que vuelven a verificar al admin con `interno.exigir_admin`, identifican al aliado por `codigo_aliado` y registran la acción en **`acciones_admin`** (solo inserción). Errores con prefijo estable: `no_autorizado`, `no_permitido`, `aliado_inexistente`, `evento_inexistente`, `conflicto_inexistente`, `estado_invalido`, `dato_invalido`, `evento_incompleto`.
+- **Reglas:** rechazar, suspender y reactivar exigen motivo; un admin no se suspende a sí mismo ni a otro admin; el ajuste exige justificación (mín. 10 caracteres), va de ±1 a ±5000, respeta el piso en 0 y usa una clave que genera el panel (un doble clic no lo duplica); la baja calidad reiterada es −20 y máximo una por aliado y día; resolver un conflicto exige nota y puede aceptar el valor de Clientify en `avance_empresa` (cambia la calidad, no los puntos) y registrar un ajuste en la misma transacción.
+- **El panel no cambia roles** (decisión del equipo). Un admin se asigna por SQL, después de que la persona se registre en el Hub y confirme su correo:
+  ```sql
+  update public.aliados set rol = 'admin', estado = 'activo', aprobado_at = coalesce(aprobado_at, now())
+  where lower(correo) = '<correo>';
+  ```
+- Funciones de Vercel: con `/api/admin` y `/api/eventos` son 11 (el plan Hobby admite 12).
 - Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS`, `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo). **Nunca** se escriben en el código ni en commits.
   - **Production** apunta al proyecto `aliados-prod`; **Preview** y **Development** apuntan a `aliados-dev`.
   - `SUPABASE_PUBLISHABLE_KEY` es la *publishable key* (o la *anon key* legacy). `SUPABASE_SECRET_KEY` es la *secret key* (o la *service_role* legacy). **`SUPABASE_SECRET_KEY` solo se usa dentro de `/api`, jamás en el navegador.**
@@ -816,6 +832,9 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Las secciones del Hub sin datos reales todavía se muestran con datos de demostración y la etiqueta "Demostración" (§9).
 - Academy: en la base solo se guarda el curso completado; el avance por lección vive en el navegador del aliado (§9).
 - El Hub no muestra los requisitos de calidad por nivel, pero el nivel sí los aplica (§6.3, §9).
+- El panel de administración es una página separada (`admin.html`) y no permite cambiar roles (§10).
+- Los eventos los reporta el aliado desde el Hub y un admin los valida (§4.8).
+- Una solicitud rechazada queda en `estado = 'rechazado'` (no se borra la cuenta) y se puede aprobar después (§3).
 
 ## 14. Preguntas abiertas
 

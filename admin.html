@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet">
-<!-- Panel de administración (CLAUDE.md §10, fase 9). Lee las vistas v_admin_* con la sesión del admin;
+<!-- Panel de administración (CLAUDE.md §10, fases 9 y 10). Lee las vistas v_admin_* con la sesión del admin;
      las acciones pasan por POST /api/admin (ver js/admin.js). -->
 <script type="module" src="./js/admin.js"></script>
 <style>
@@ -75,7 +75,7 @@
   .centro { min-height:70vh; display:grid; place-items:center; }
   .acceso { width:min(400px,100%); display:flex; flex-direction:column; gap:12px; }
   .acceso label, dialog label { display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:600; color:var(--mut); }
-  .acceso input, dialog input, dialog textarea { padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--soft); }
+  .acceso input, dialog input, dialog textarea, dialog select { padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--soft); }
   .mensaje { font-size:13.5px; color:var(--bad); min-height:1.2em; }
   dialog { border:1px solid var(--line); border-radius:16px; background:var(--panel); color:var(--fg); width:min(480px,calc(100% - 32px)); padding:22px; }
   dialog::backdrop { background:rgba(0,0,0,.45); }
@@ -163,6 +163,25 @@
       <p class="nota">Clientify cambió un valor que ya era definitivo. No cambia puntos ni calidad hasta que lo resuelvas: puedes aceptar el valor de Clientify (cambia la calidad) y, si corresponde, registrar un ajuste de puntos.</p>
       <div class="barra"><label class="casilla" style="font-size:14px"><input type="checkbox" id="ver-resueltos"> Ver también los resueltos</label></div>
       <div class="tarjeta tabla" id="conflictos"></div>
+    </section>
+
+    <section data-pestana="canjes" hidden>
+      <h1>Canjes</h1>
+      <p class="nota">Los canjes llegan del proveedor por POST /api/canjes. Si el proveedor no entregó la recompensa, anula el canje: se devuelven los puntos disponibles (no cambia el nivel) y el aliado ve el motivo.</p>
+      <div class="barra">
+        <input type="search" id="buscar-canje" placeholder="Código, nombre, recompensa o referencia">
+        <select id="filtro-canjes" aria-label="Estado de los canjes">
+          <option value="">Todos</option><option value="confirmado">Confirmados</option><option value="anulado">Anulados</option>
+        </select>
+      </div>
+      <div class="tarjeta tabla" id="canjes"></div>
+    </section>
+
+    <section data-pestana="recompensas" hidden>
+      <h1>Recompensas</h1>
+      <p class="nota">Catálogo que pueden canjear los proveedores. El código es el que usa el proveedor y no cambia. Cambiar los puntos o el nivel solo afecta los canjes futuros. Una recompensa con proveedor solo la puede canjear ese proveedor.</p>
+      <div class="barra"><button class="btn primario" data-accion="nueva_recompensa">Nueva recompensa</button></div>
+      <div class="tarjeta tabla" id="recompensas"></div>
     </section>
 
     <section data-pestana="auditoria" hidden>

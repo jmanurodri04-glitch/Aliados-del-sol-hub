@@ -96,6 +96,22 @@ test('admin: archivo_evento devuelve una URL firmada de 5 minutos', async () => 
   assert.deepEqual(sb.llamadas[0], { firmada: 'eventos', ruta: 'x/y/a.pdf', seg: 300 });
 });
 
+test('admin: anular un canje y guardar una recompensa (fase 10)', async () => {
+  const sb = supabaseFalso();
+  let res = respuesta();
+  await admin(pedido({ accion: 'anular_canje', canje_id: CLAVE, motivo: 'El proveedor no entregó' }), res, sb);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(sb.llamadas[0], { nombre: 'admin_anular_canje', args: { p_admin: ADMIN.id, p_canje: CLAVE, p_motivo: 'El proveedor no entregó' } });
+  res = respuesta();
+  await admin(pedido({ accion: 'guardar_recompensa', datos: { codigo: 'cafe', nombre: 'Bono de café', puntos: 60, extra: 'x' } }), res, sb);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(sb.llamadas[1].args, { p_admin: ADMIN.id, p_recompensa: null, p_datos: { codigo: 'cafe', nombre: 'Bono de café', puntos: 60 } });
+  res = respuesta();
+  await admin(pedido({ accion: 'guardar_recompensa', recompensa_id: 'no-es-uuid', datos: {} }), res, sb);
+  assert.equal(res.statusCode, 400);
+  assert.equal(errorDeAdmin('canje_inexistente: el canje no existe').status, 404);
+});
+
 test('admin: acción desconocida responde 400', async () => {
   const res = respuesta();
   await admin(pedido({ accion: 'borrar_todo' }), res, supabaseFalso());

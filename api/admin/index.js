@@ -5,6 +5,7 @@
 // 2. Llama a la función public.admin_* correspondiente, que vuelve a verificar al admin, aplica la regla
 //    y deja la acción en acciones_admin. Los aliados se identifican por codigo_aliado (§2).
 // 3. `archivo_evento` devuelve una URL firmada de 5 minutos para revisar el registro de asistentes.
+// Fase 10: `anular_canje` (devuelve los puntos de un canje no entregado) y `guardar_recompensa` (catálogo).
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { adminDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
@@ -15,7 +16,7 @@ const CODIGO = /^[A-Za-z0-9]{6,20}$/;
 // Errores de la base (prefijo estable) → código HTTP. El detalle de la base ya está en español.
 const ERRORES = {
   no_autorizado: 403, no_permitido: 403, aliado_inexistente: 404, evento_inexistente: 404, conflicto_inexistente: 404,
-  estado_invalido: 409, dato_invalido: 422, evento_incompleto: 422
+  canje_inexistente: 404, recompensa_inexistente: 404, estado_invalido: 409, dato_invalido: 422, evento_incompleto: 422
 };
 
 export function errorDeAdmin(mensaje) {
@@ -37,6 +38,12 @@ const uuid = (v, campo) => {
   return s;
 };
 const texto = (v) => String(v || '').slice(0, 1000);
+// Campos de una recompensa que acepta el panel; el resto del cuerpo se ignora.
+const CAMPOS_RECOMPENSA = ['codigo', 'nombre', 'descripcion', 'categoria', 'puntos', 'nivel_minimo', 'proveedor', 'activa'];
+const recompensa = (c) => {
+  const d = c.datos && typeof c.datos === 'object' ? c.datos : {};
+  return Object.fromEntries(CAMPOS_RECOMPENSA.filter((k) => d[k] !== undefined).map((k) => [k, d[k]]));
+};
 const entero = (v) => {
   const n = Number(v);
   if (!Number.isInteger(n)) throw new ErrorHttp(422, 'Los puntos deben ser un número entero.');
@@ -59,7 +66,11 @@ const ACCIONES = {
       p_admin: a, p_conflicto: uuid(c.conflicto_id, 'el conflicto'), p_nota: texto(c.nota),
       p_aceptar_valor: c.aceptar_valor === true, p_ajuste: ajuste, p_clave: ajuste ? uuid(c.clave, 'la clave del ajuste') : null
     };
-  }]
+  }],
+  anular_canje: ['admin_anular_canje', (c, a) => ({ p_admin: a, p_canje: uuid(c.canje_id, 'el canje'), p_motivo: texto(c.motivo) })],
+  guardar_recompensa: ['admin_guardar_recompensa', (c, a) => ({
+    p_admin: a, p_recompensa: c.recompensa_id ? uuid(c.recompensa_id, 'la recompensa') : null, p_datos: recompensa(c)
+  })]
 };
 
 // URL firmada de corta duración para el registro de asistentes de un evento.

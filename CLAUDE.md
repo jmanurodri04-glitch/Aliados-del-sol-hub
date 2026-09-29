@@ -120,7 +120,7 @@ racha_semana_1..4       boolean NOT NULL DEFAULT false
 racha_ultima_semana     date NULL                   -- lunes de la última semana contada
 -- Integración y cumplimiento
 clientify_contact_id    text NULL
-clientify_sync_estado   text NOT NULL DEFAULT 'pendiente'   -- pendiente | ok | error
+clientify_sync_estado   text NOT NULL DEFAULT 'pendiente'   -- pendiente | ok | error | excluido (cuenta de admin, fase 10)
 clientify_sync_error    text NULL
 autorizacion_datos_at   timestamptz NOT NULL
 terminos_aceptados_at   timestamptz NOT NULL
@@ -308,6 +308,16 @@ fecha                timestamptz
 
 Entra por un endpoint seguro `POST /api/canjes` (API key propia por proveedor), no por acceso directo a la base. El endpoint valida que `puntos <= puntos_disponibles` y que el nivel del aliado permita la recompensa; luego inserta en `canjes` y el movimiento `tipo='redimido'`. *El sistema externo aún no está definido.*
 
+**Implementado (fase 10, migración `canjes_api`):**
+- **Catálogo `recompensas`** (decisión del equipo: lo administra GEENERA desde el panel): `codigo` (el que usa el proveedor; minúsculas, números, `-` y `_`; inmutable), `nombre`, `descripcion`, `categoria`, `puntos` (1–100 000), `nivel_minimo`, `proveedor` (NULL = cualquiera; si tiene valor, solo ese proveedor la canjea) y `activa`. Cambiar puntos o nivel solo afecta canjes futuros: cada canje guarda los suyos.
+- **`canjes`** gana `recompensa_id`, `estado` (`confirmado` | `anulado`), `anulado_at`, `anulado_por`, `anulacion_motivo`. La referencia es única **por proveedor** (`UNIQUE (proveedor, referencia_externa)`). Un canje no se edita ni se borra; solo pasa una vez de confirmado a anulado.
+- **`POST /api/canjes`** (`Authorization: Bearer <key>`; `CANJES_API_KEYS` = `proveedor1:key1,proveedor2:key2`, keys de mínimo 24 caracteres, comparadas en tiempo constante). El proveedor sale de la key, nunca del cuerpo.
+  - `{ accion: 'consultar', codigo_aliado }` → `public.consultar_canjes`: `{ codigo_aliado, activo, nivel, puntos_disponibles, recompensas: [{ codigo, nombre, puntos, nivel_minimo, disponible, motivo }] }`, solo las activas de ese proveedor o de todos. Sin nombre, correo ni otros datos personales.
+  - `{ accion: 'canjear', codigo_aliado, recompensa, referencia_externa }` → `public.registrar_canje`, que en una transacción bloquea al aliado y exige cuenta activa, recompensa activa del proveedor, **nivel actual ≥ nivel mínimo**, saldo suficiente y máximo **30 canjes por hora**; inserta el canje y el movimiento `redimido` (clave `canje:{id}`, `creado_por = 'canjes_api'`, nota = nombre de la recompensa). Responde `201`; repetir la misma referencia responde `200` con el canje original y `duplicado: true` (no descuenta dos veces).
+  - Errores con código estable en el cuerpo (`{ error, codigo }`): `aliado_inexistente`/`recompensa_inexistente` 404, `aliado_no_activo`/`nivel_insuficiente`/`saldo_insuficiente`/`referencia_duplicada` 409, `dato_invalido` 422, `limite_canjes` 429; key inválida 401; sin keys configuradas 503.
+- **Anulación** (solo admin, desde el panel, motivo obligatorio de 10 caracteres): `admin_anular_canje` marca el canje `anulado` y devuelve los puntos con un `ajuste_admin` `ganado` (`vinculo = 'canjes'`, clave `canje_anulado:{id}`). La devolución suma a `puntos_disponibles` pero **no** a `puntos_nivel`, porque el canje tampoco los restó (§5.4). El aliado ve el motivo.
+- Vistas: `v_mis_canjes` y `v_recompensas` (catálogo activo con `disponible`, `falta_nivel` y `puntos_faltantes` del aliado de la sesión), `v_admin_canjes` y `v_admin_recompensas` (con uso de cada recompensa).
+
 ### 4.11 `webhook_eventos` (auditoría de integración)
 
 ```
@@ -427,6 +437,7 @@ Los Puntos Sol **nunca son negativos**, y una penalización recibida con saldo b
 - Implementar como funciones SQL `calcular_puntos_nivel(aliado)` y `calcular_puntos_disponibles(aliado)`, con tests del ejemplo anterior.
 - En la UI, el historial muestra el valor nominal ("−30 · Información falsa") y, si `puntos_aplicados < puntos`, una nota del tipo "se descontaron 10 porque tu saldo era 10".
 - La fecha que cuenta es `movimientos_puntos.fecha`, el momento en que se otorgó.
+- La devolución de un canje anulado (`ajuste_admin` con `vinculo = 'canjes'`) no cuenta para `puntos_nivel` (fase 10): el canje no restó puntos de nivel, así que su devolución tampoco los suma.
 - Recalcular en un trigger después de cada `INSERT` en `movimientos_puntos` **y** en un cron diario (00:15 Bogotá), porque `puntos_nivel` baja solo con el paso del tiempo.
   - Implementado (fase 3): `interno.recalcular_aliado(aliado)` actualiza saldos, calidad y nivel; el cron `recalcular-puntos-diario` de `pg_cron` (`15 5 * * *` UTC = 00:15 Bogotá) llama a `interno.recalcular_todos()`. La calidad también se recalcula al cambiar `avance_empresa` o al borrar una empresa.
 
@@ -531,6 +542,8 @@ Cuando GEENERA aprueba al aliado (`estado` pasa de `pendiente` a `activo`), no a
 3. Si falla, dejar `pendiente` y reintentar con un cron cada 15 min con backoff.
 
 Cuando el aliado edita su perfil, también se replica en Clientify.
+
+**Las cuentas de admin no se sincronizan** (decisión del equipo, fase 10): al volverse admin, `clientify_sync_estado = 'excluido'` (trigger `aliados_exclusion_clientify`), la cola del flujo A nunca las reclama y un resultado en curso no las saca de `excluido`. Si una cuenta deja de ser admin, vuelve a `pendiente` y entra a la cola.
 
 **Implementación (fase 4):**
 - Cola en la base: `public.clientify_reclamar_aliados(limite)` toma aliados `activo` con `clientify_sync_estado` `pendiente`/`error` cuya espera se cumplió (con préstamo de 10 min y `SKIP LOCKED`); `public.clientify_registrar_resultado(aliado, contact_id, error)` guarda el éxito o programa el reintento (15 min, 30, 1 h… máximo 24 h; columnas `clientify_sync_intentos`, `clientify_sync_proximo_at`, `clientify_sync_at`). Solo `service_role` puede ejecutarlas.
@@ -720,13 +733,14 @@ Todos ven un saludo con su **nombre completo**, su `codigo_aliado` (copiable, pa
 Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 
 **Implementado (fase 8):**
-- `js/supabase.js` carga las vistas del §4.12 al entrar, después de un referido y al completar un módulo, y emite `ads:dashboard { ok, aliado, movimientos, referidos, modulos }`; la página lo pide con `ads:consultar-dashboard`.
+- `js/supabase.js` carga las vistas del §4.12 al entrar, después de un referido y al completar un módulo, y emite `ads:dashboard { ok, aliado, movimientos, referidos, modulos, eventos, canjes, recompensas }`; la página lo pide con `ads:consultar-dashboard`.
 - En `index.html` (y su fuente en `src/`), con sesión todas las pantallas usan esos datos; sin sesión se sigue viendo la demostración. Las funciones `referidoComoOpp`, `referidoComoCartera` y `movimientoComoHistorial` convierten las vistas a las formas de las constantes de demostración, así el diseño no cambia.
 - La vista la define `tipo_aliado` y se ocultan el selector de rol y las vistas de demostración: EMI, Linker y Cliente Embajador ven el dashboard de aliado; Financieros y Agremiaciones, el de gestión (solo sus referidos), también con su nivel, puntos y código.
 - El nivel es el de la base (puntos **y** calidad, §6.3); el Hub no muestra los requisitos de calidad por nivel (decisión del equipo).
 - El historial se filtra por tipo y por semana, mes y trimestre (hora Bogotá), con la nota de descuento parcial del §5.4.
 - Agremiaciones: la distribución regional agrupa por la ciudad de la empresa referida.
 - Secciones sin datos reales todavía (series por mes, pronóstico de desembolsos, distribución por ejecutivo, Beneficios y Comisiones) conservan los datos de demostración con la etiqueta **"Demostración"**.
+- **Beneficios y canjes (fase 10):** si hay recompensas activas en el catálogo (`v_recompensas`), reemplazan las de demostración y se agrupan por su categoría; cada tarjeta muestra si está disponible, cuántos puntos faltan o qué nivel exige. El canje lo confirma el proveedor (§4.10), así que el Hub solo informa. Sin catálogo real se siguen viendo las de demostración con la etiqueta "Demostración". "Mis canjes" (`v_mis_canjes`) muestra cada canje con su estado y, si se anuló, el motivo. El historial tiene el filtro "Canjes" y un canje no cuenta como "Perdido".
 - **Academy:** los puntos de cada curso salen de `v_mis_modulos`. Al terminar la última lección se llama a `POST /api/modulos { codigo }`, que toma el aliado del token, exige cuenta activa y ejecuta `public.completar_modulo`; responde `{ codigo, nuevo, puntos, recompensa_estado, puntos_disponibles, puntos_nivel, nivel }`. En la base solo queda el curso completado; el avance por lección vive en el navegador (`localStorage`, clave `ads-aca-{codigo_aliado}`).
 
 ---
@@ -739,17 +753,18 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Rol `admin` (equipo GEENERA) para validar eventos, registrar baja calidad reiterada, hacer ajustes y resolver conflictos. Las acciones de admin quedan auditadas en `creado_por`.
 
 **Panel de administración (fase 9):**
-- Página separada `admin.html` + `js/admin.js` (el Hub no se toca). Usa la misma sesión de Supabase; solo entra una cuenta con `rol = 'admin'` y `estado = 'activo'` (las demás ven "Sin acceso"). Pestañas: Resumen, Solicitudes, Aliados (historial, ajustes, baja calidad, suspender/reactivar), Eventos, Conflictos de Clientify y Auditoría.
-- **Lecturas:** vistas `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_acciones` (`security_invoker` y `where es_admin()`: un aliado no ve filas; ninguna expone `aliados.id`, los admins aparecen por su `codigo_aliado`).
-- **Escrituras:** un solo endpoint `POST /api/admin { accion, ... }` (acciones `aprobar`, `rechazar`, `suspender`, `reactivar`, `ajuste`, `baja_calidad`, `validar_evento`, `rechazar_evento`, `resolver_conflicto` y `archivo_evento`, que da una URL firmada de 5 min). Toma al admin del token (`adminDeLaSesion` en `lib/sesion.js`) y llama a `public.admin_*` (solo `service_role`), que vuelven a verificar al admin con `interno.exigir_admin`, identifican al aliado por `codigo_aliado` y registran la acción en **`acciones_admin`** (solo inserción). Errores con prefijo estable: `no_autorizado`, `no_permitido`, `aliado_inexistente`, `evento_inexistente`, `conflicto_inexistente`, `estado_invalido`, `dato_invalido`, `evento_incompleto`.
+- Página separada `admin.html` + `js/admin.js` (el Hub no se toca). Usa la misma sesión de Supabase; solo entra una cuenta con `rol = 'admin'` y `estado = 'activo'` (las demás ven "Sin acceso"). Pestañas: Resumen, Solicitudes, Aliados (historial, ajustes, baja calidad, suspender/reactivar), Eventos, Conflictos de Clientify, Canjes (anular) y Recompensas (crear y editar el catálogo; fase 10) y Auditoría.
+- Un admin puede leer todas las filas de `aliados` (RLS), así que el front siempre lee la fila propia filtrando por el usuario de la sesión (`.eq('id', session.user.id)`), sin seleccionar ni mostrar el `id`.
+- **Lecturas:** vistas `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_acciones`, `v_admin_canjes`, `v_admin_recompensas` (`security_invoker` y `where es_admin()`: un aliado no ve filas; ninguna expone `aliados.id`, los admins aparecen por su `codigo_aliado`).
+- **Escrituras:** un solo endpoint `POST /api/admin { accion, ... }` (acciones `aprobar`, `rechazar`, `suspender`, `reactivar`, `ajuste`, `baja_calidad`, `validar_evento`, `rechazar_evento`, `resolver_conflicto`, `anular_canje`, `guardar_recompensa` y `archivo_evento`, que da una URL firmada de 5 min). Toma al admin del token (`adminDeLaSesion` en `lib/sesion.js`) y llama a `public.admin_*` (solo `service_role`), que vuelven a verificar al admin con `interno.exigir_admin`, identifican al aliado por `codigo_aliado` y registran la acción en **`acciones_admin`** (solo inserción). Errores con prefijo estable: `no_autorizado`, `no_permitido`, `aliado_inexistente`, `evento_inexistente`, `conflicto_inexistente`, `canje_inexistente`, `recompensa_inexistente`, `estado_invalido`, `dato_invalido`, `evento_incompleto`.
 - **Reglas:** rechazar, suspender y reactivar exigen motivo; un admin no se suspende a sí mismo ni a otro admin; el ajuste exige justificación (mín. 10 caracteres), va de ±1 a ±5000, respeta el piso en 0 y usa una clave que genera el panel (un doble clic no lo duplica); la baja calidad reiterada es −20 y máximo una por aliado y día; resolver un conflicto exige nota y puede aceptar el valor de Clientify en `avance_empresa` (cambia la calidad, no los puntos) y registrar un ajuste en la misma transacción.
 - **El panel no cambia roles** (decisión del equipo). Un admin se asigna por SQL, después de que la persona se registre en el Hub y confirme su correo:
   ```sql
   update public.aliados set rol = 'admin', estado = 'activo', aprobado_at = coalesce(aprobado_at, now())
   where lower(correo) = '<correo>';
   ```
-- Funciones de Vercel: con `/api/admin` y `/api/eventos` son 11 (el plan Hobby admite 12).
-- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS`, `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo). **Nunca** se escriben en el código ni en commits.
+- Funciones de Vercel: con `/api/admin`, `/api/eventos` y `/api/canjes` son **12, el máximo del plan Hobby**. Un endpoint nuevo exige unir funciones o pasar a Pro (el equipo planea pasar Vercel y Supabase a Pro; hoy Vercel está en prueba de Pro y Supabase en el plan gratuito).
+- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS` (`proveedor:key,proveedor:key`, §4.10), `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo). **Nunca** se escriben en el código ni en commits.
   - **Production** apunta al proyecto `aliados-prod`; **Preview** y **Development** apuntan a `aliados-dev`.
   - `SUPABASE_PUBLISHABLE_KEY` es la *publishable key* (o la *anon key* legacy). `SUPABASE_SECRET_KEY` es la *secret key* (o la *service_role* legacy). **`SUPABASE_SECRET_KEY` solo se usa dentro de `/api`, jamás en el navegador.**
   - En local se usan con `vercel env pull .env.local`. Verifica que `.env*.local` esté en `.gitignore`.
@@ -835,6 +850,10 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - El panel de administración es una página separada (`admin.html`) y no permite cambiar roles (§10).
 - Los eventos los reporta el aliado desde el Hub y un admin los valida (§4.8).
 - Una solicitud rechazada queda en `estado = 'rechazado'` (no se borra la cuenta) y se puede aprobar después (§3).
+- Las cuentas de admin no se sincronizan con Clientify (`clientify_sync_estado = 'excluido'`) (§8, flujo A).
+- Canjes: el catálogo de recompensas lo crea y edita GEENERA desde el panel; los puntos y el nivel mínimo salen de ahí (§4.10).
+- El proveedor puede consultar el nivel, el saldo y las recompensas disponibles de un aliado por su código, sin datos personales (§4.10).
+- Un admin puede anular un canje no entregado: se devuelven los puntos disponibles, no los de nivel (§4.10, §5.4).
 
 ## 14. Preguntas abiertas
 
@@ -852,7 +871,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 3. ~~Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?~~ Resuelta: sí a ambas (§3).
 4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
 5. ~~Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?~~ Resuelta: sí ven puntos y nivel; la distribución regional usa la ciudad de la empresa referida (§9).
-6. Sistema externo de canjes: quién lo opera y cómo se autentica (se asume API key por proveedor).
+6. Sistema externo de canjes: quién lo opera. **Implementado del lado del Hub (fase 10):** API key por proveedor y catálogo en el panel (§4.10). Pendiente: definir el proveedor, generar su key y cargar el catálogo real.
 7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: se adjunta a la ficha de la empresa (§8, flujo B).
 8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).
 9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.

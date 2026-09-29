@@ -1801,7 +1801,7 @@
           <div style="display:flex;flex-direction:column;gap:20px">
             <div style="display:flex;flex-direction:column;gap:9px">
               <h1 style="margin:0;font-size:clamp(28px,3.6vw,38px);font-weight:700;letter-spacing:-.025em">Beneficios</h1>
-              <sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Demostración</span></sc-if>
+              <sc-if value="{{ beneDemoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Demostración</span></sc-if>
               <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);max-width:52ch;line-height:1.5">Tus puntos reconocen la calidad de lo que refieres y de lo que aprendes. Son independientes de tus comisiones.</p>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;max-width:640px">
@@ -1871,6 +1871,20 @@
             </div>
           </sc-for>
         </div>
+
+        <sc-if value="{{ esReal }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:12px;padding:22px 24px;margin-bottom:52px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
+          <b style="font-size:17px;font-weight:600">Mis canjes</b>
+          <sc-for list="{{ misCanjes }}" as="k" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid var(--w-06,rgba(255,255,255,.06))">
+              <span style="display:flex;align-items:center;justify-content:space-between;gap:10px"><b style="font-size:14.5px;font-weight:600">{{ k.nombre }}</b><span style="flex:none;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:600;background:{{ k.stBg }};color:{{ k.stColor }}">{{ k.estado }}</span></span>
+              <span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ k.meta }}</span>
+              <sc-if value="{{ k.hasNota }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:var(--t2,#C9C5BE)">GEENERA: {{ k.nota }}</span></sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ misCanjesVacio }}" hint-placeholder-val="{{ false }}"><span style="font-size:13.5px;color:var(--mut3,#7C7873)">Aún no has canjeado recompensas.</span></sc-if>
+        </div>
+        </sc-if>
 
         <h2 style="margin:0 0 16px;font-size:20px;font-weight:600;letter-spacing:-.015em">Qué desbloquea cada nivel</h2>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;padding-bottom:52px">
@@ -2099,7 +2113,7 @@
 
         <sc-if value="{{ esReal }}" hint-placeholder-val="{{ false }}">
         <div data-screen-label="Eventos aliados" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;padding-top:36px;align-items:start">
-          <div style=display:flex;flex-direction:column;gap:16px;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022));border-color:rgba(255,202,5,.22)">
+          <div style="display:flex;flex-direction:column;gap:16px;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022));border-color:rgba(255,202,5,.22)">
             <span style="display:flex;flex-direction:column;gap:6px">
               <span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold,#8E7A45)">Eventos aliados</span>
               <b style="font-size:19px;font-weight:700;letter-spacing:-.02em">Reporta un evento que organizaste</b>
@@ -2137,7 +2151,7 @@
               </div>
             </sc-if>
           </div>
-          <div style=display:flex;flex-direction:column;gap:16px;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
+          <div style="display:flex;flex-direction:column;gap:16px;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
             <b style="font-size:17px;font-weight:600">Mis eventos</b>
             <sc-for list="{{ misEventos }}" as="ev" hint-placeholder-count="2">
               <div style="display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--w-06,rgba(255,255,255,.06))">
@@ -3662,8 +3676,8 @@ function movimientoComoHistorial(m) {
   const parcial = m.tipo === 'perdido' && m.puntos_aplicados < m.puntos;
   return {
     d: fechaCorta(m.fecha, true), t: Date.parse(m.fecha), empresa: m.empresa || '',
-    action: m.descripcion + (m.modulo ? ' · ' + m.modulo : ''), pts: signo * m.puntos,
-    kind: VINCULO_HISTORIAL[m.vinculo] || 'Oportunidades',
+    action: m.descripcion + (m.modulo ? ' · ' + m.modulo : '') + (m.vinculo === 'canjes' && m.nota ? ' · ' + m.nota : ''), pts: signo * m.puntos,
+    kind: VINCULO_HISTORIAL[m.vinculo] || 'Oportunidades', redimido: m.tipo === 'redimido',
     motivo: parcial ? 'Se descontaron ' + m.puntos_aplicados + ' porque tu saldo era ' + m.puntos_aplicados + '.' : ''
   };
 }
@@ -4111,11 +4125,17 @@ class Component extends DCLogic {
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
 
-    const cats = ['Destacados', 'Gastronomía', 'Experiencias', 'Descuentos', 'Equipos'].map(k => ({
+    /* Catálogo real (fase 10): si GEENERA ya creó recompensas en el panel, reemplazan a las de demostración. */
+    const recompensasReales = real && real.recompensas && real.recompensas.length ? real.recompensas : null;
+    const catNames = recompensasReales
+      ? ['Todas'].concat(recompensasReales.map(r => r.categoria).filter((v, i, a) => v && a.indexOf(v) === i))
+      : ['Destacados', 'Gastronomía', 'Experiencias', 'Descuentos', 'Equipos'];
+    const catSel = catNames.indexOf(s.cat) >= 0 ? s.cat : catNames[0];
+    const cats = catNames.map(k => ({
       label: k, go: () => this.setState({ cat: k }),
-      bg: s.cat === k ? 'rgba(255,202,5,.13)' : 'transparent',
-      border: s.cat === k ? 'rgba(255,202,5,.4)' : 'var(--w-10,rgba(255,255,255,.1))',
-      color: s.cat === k ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)'
+      bg: catSel === k ? 'rgba(255,202,5,.13)' : 'transparent',
+      border: catSel === k ? 'rgba(255,202,5,.4)' : 'var(--w-10,rgba(255,255,255,.1))',
+      color: catSel === k ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)'
     }));
 
     const rank = {};
@@ -4137,9 +4157,29 @@ class Component extends DCLogic {
         ptsLabel: this.n(b.pts) + ' pts', reqLabel: 'Nivel ' + b.req, tag, tagBg, tagColor, cta, ctaBg, ctaColor, ctaBorder, ctaCursor: cursor, op, ptsColor, titleColor, act: action
       };
     };
-    let catList = BENEFITS;
-    if (s.cat !== 'Destacados') catList = BENEFITS.filter(b => b.cat === s.cat);
-    const visibleBenefits = catList.map(bene);
+    /* Recompensa real (v_recompensas) → misma tarjeta que el catálogo de demostración. El canje lo confirma el
+       proveedor por POST /api/canjes; el Hub muestra si está disponible y qué falta (nivel o puntos). */
+    const beneReal = (r) => {
+      const nivel = (LEVEL_CONFIG.levels.find(l => l.id === NIVEL_HUB[r.nivel_minimo]) || {}).name || r.nivel_minimo;
+      let tag = 'Disponible', tagBg = 'rgba(95,191,139,.16)', tagColor = 'var(--g2,#7FD3A6)', cta = 'Cómo canjear', ctaBg = 'var(--btn,#F2F0EC)', ctaColor = 'var(--btnfg,#141210)', ctaBorder = 'transparent', op = 1, ptsColor = 'var(--y,#FFCA05)', titleColor = 'var(--fg,#F2F0EC)', cursor = 'pointer';
+      let action = () => this.ping('El canje lo confirma el proveedor de la recompensa con tu código ' + real.aliado.codigo_aliado + '. Descuenta ' + this.n(r.puntos) + ' Puntos Sol disponibles.');
+      if (r.falta_nivel) { tag = 'Nivel ' + nivel; tagBg = 'var(--w-10,rgba(255,255,255,.1))'; tagColor = 'var(--t4,#A8A49E)'; cta = 'Bloqueado'; ctaBg = 'transparent'; ctaColor = 'var(--mut3,#7C7873)'; ctaBorder = 'var(--w-12,rgba(255,255,255,.12))'; op = .32; titleColor = 'var(--mut,#9A968F)'; ptsColor = 'var(--mut3,#7C7873)'; cursor = 'not-allowed'; action = () => this.ping('Se desbloquea en el nivel ' + nivel + '.'); }
+      else if (!r.disponible) { tag = 'Faltan ' + this.n(r.puntos_faltantes); tagBg = 'rgba(249,165,26,.16)'; tagColor = 'var(--o,#F9A51A)'; cta = 'Cómo ganar'; ctaBg = 'transparent'; ctaColor = 'var(--o,#F9A51A)'; ctaBorder = 'rgba(249,165,26,.4)'; op = .55; action = () => this.go('puntos'); }
+      return {
+        name: r.nombre, partner: 'GEENERA', logoUrl: 'none', hasLogo: false, noLogo: true, aud: r.descripcion || '', hasAud: !!r.descripcion, cat: r.categoria || 'Recompensa',
+        ph: 'recompensa', imgUrl: 'none', phOp: 1, ptsLabel: this.n(r.puntos) + ' pts', reqLabel: 'Nivel ' + nivel,
+        tag, tagBg, tagColor, cta, ctaBg, ctaColor, ctaBorder, ctaCursor: cursor, op, ptsColor, titleColor, act: action
+      };
+    };
+    let visibleBenefits;
+    if (recompensasReales) visibleBenefits = recompensasReales.filter(r => catSel === 'Todas' || r.categoria === catSel).map(beneReal);
+    else visibleBenefits = (catSel === 'Destacados' ? BENEFITS : BENEFITS.filter(b => b.cat === catSel)).map(bene);
+    const ESTADO_CANJE = { confirmado: ['Canjeado', TONES.ok], anulado: ['Anulado · puntos devueltos', TONES.bad] };
+    const misCanjes = (real && real.canjes ? real.canjes : []).map(k => {
+      const e = ESTADO_CANJE[k.estado] || ESTADO_CANJE.confirmado;
+      return { nombre: k.recompensa, meta: fechaCorta(k.fecha, true) + ' · ' + this.n(k.puntos) + ' Puntos Sol', estado: e[0], stBg: e[1][0], stColor: e[1][1],
+        nota: k.anulacion_motivo || '', hasNota: !!k.anulacion_motivo };
+    });
 
     const settingsDefs = [['Notificaciones de oportunidades', 'Cambios de estado y solicitudes de información'], ['Novedades de beneficios', 'Nuevos beneficios y cupos que se liberan'], ['Resumen semanal por correo', 'Tus puntos, avances y siguiente hito'], ['Verificación en dos pasos', 'Código al celular al iniciar sesión']];
     const settings = settingsDefs.map(([t, d], i) => {
@@ -4174,7 +4214,7 @@ class Component extends DCLogic {
     });
 
     /* ---- Historial de Puntos Sol ---- */
-    const histFilters = ['Todos', 'Ganados', 'Perdidos', 'Oportunidades', 'Racha', 'Academy', 'Eventos'];
+    const histFilters = ['Todos', 'Ganados', 'Perdidos', 'Oportunidades', 'Racha', 'Academy', 'Eventos', 'Canjes'];
     const hf = s.histFilter || 'Todos';
     /* Con sesión: el libro mayor real, filtrable por semana, mes y trimestre (hora Bogotá, CLAUDE.md §9). */
     const desdeHist = real ? inicioPeriodo(s.histPeriod) : null;
@@ -4188,7 +4228,7 @@ class Component extends DCLogic {
     const histRaw = histBase.filter(h => {
       if (hf === 'Todos') return true;
       if (hf === 'Ganados') return h.pts > 0;
-      if (hf === 'Perdidos') return h.pts < 0;
+      if (hf === 'Perdidos') return h.pts < 0 && !h.redimido; /* un canje no es una penalización */
       return h.kind === hf;
     });
     const historyRows = histRaw.map((h, i) => {
@@ -4815,6 +4855,7 @@ class Component extends DCLogic {
       }),
       timeline,
       cats, visibleBenefits, mobileBenefits: BENEFITS.slice(1, 5).map(bene),
+      beneDemoTag: !!real && !recompensasReales, misCanjes, misCanjesVacio: misCanjes.length === 0,
       earnRules: POINTS_CONFIG.opportunity.map(m => ({ pts: m.pts, label: m.label, note: m.desc })).concat([
         { pts: POINTS_CONFIG.academy.pts, label: 'Módulo de Academy', note: 'Según el módulo · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' Puntos Sol al mes' },
         { pts: STREAK_CONFIG.bonus, label: STREAK_CONFIG.name, note: STREAK_CONFIG.rule }

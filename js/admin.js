@@ -1,4 +1,4 @@
-// Panel de administración (CLAUDE.md §3, §4.8, §5, §5.1, §10; fase 9).
+// Panel de administración (CLAUDE.md §3, §4.8, §4.10, §5, §5.1, §10; fases 9 y 10).
 //
 // Lee con la sesión del admin las vistas v_admin_* (security_invoker + es_admin(): un aliado no ve filas) y
 // hace cada acción con POST /api/admin, que toma al admin del token y deja la acción auditada.
@@ -10,19 +10,23 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const TIPOS = { emi: 'EMI', linker: 'Linker', cliente_embajador: 'Cliente Embajador', financiero: 'Financiero', agremiaciones: 'Agremiaciones' };
 const NIVELES = { bronce: 'Bronce', plata: 'Plata', oro: 'Oro', platino: 'Platino', diamante: 'Diamante', circulo_solar: 'Círculo Solar' };
 const ESTADOS = { activo: ['Activo', 'ok'], pendiente: ['Pendiente', 'w'], suspendido: ['Suspendido', 'bad'], rechazado: ['Rechazado', 'bad'],
-  validado: ['Validado', 'ok'] };
+  validado: ['Validado', 'ok'], confirmado: ['Confirmado', 'ok'], anulado: ['Anulado', 'bad'], excluido: ['Excluido', ''] };
 const ACCIONES = { aprobar_aliado: 'Aprobó la solicitud', rechazar_aliado: 'Rechazó la solicitud', suspender_aliado: 'Suspendió la cuenta',
   reactivar_aliado: 'Reactivó la cuenta', ajuste_puntos: 'Ajuste de puntos', baja_calidad: 'Baja calidad reiterada (−20)',
-  validar_evento: 'Validó un evento (+100)', rechazar_evento: 'Rechazó un evento', resolver_conflicto: 'Resolvió un conflicto' };
+  validar_evento: 'Validó un evento (+100)', rechazar_evento: 'Rechazó un evento', resolver_conflicto: 'Resolvió un conflicto',
+  anular_canje: 'Anuló un canje', guardar_recompensa: 'Guardó una recompensa' };
 const VARIABLES = { calificado: 'Calificado', perfecto: 'Referido perfecto', fuera_perfil: 'Fuera del perfil', oportunidad_tecnica: 'Evaluación técnica',
   propuesta_comercial: 'Propuesta comercial', negocio_cerrado: 'Negocio cerrado', informacion_falsa: 'Información falsa', integridad_informacion: 'Integridad' };
-const PESTANAS = [['resumen', 'Resumen'], ['solicitudes', 'Solicitudes'], ['aliados', 'Aliados'], ['eventos', 'Eventos'], ['conflictos', 'Conflictos'], ['auditoria', 'Auditoría']];
+const PESTANAS = [['resumen', 'Resumen'], ['solicitudes', 'Solicitudes'], ['aliados', 'Aliados'], ['eventos', 'Eventos'], ['conflictos', 'Conflictos'],
+  ['canjes', 'Canjes'], ['recompensas', 'Recompensas'], ['auditoria', 'Auditoría']];
 
 const $ = (id) => document.getElementById(id);
 let supabase = null;
 let pestana = 'resumen';
 let aliados = [];
 let resumen = null;
+let canjes = [];
+let recompensas = [];
 
 // Utilidades ----------------------------------------------------------------------------------------------------
 
@@ -38,7 +42,7 @@ function fecha(v, conHora) {
   return new Date(v.length === 10 ? v + 'T12:00:00-05:00' : v).toLocaleString('es-CO', opciones);
 }
 const chip = (estado, etiqueta) => { const e = ESTADOS[estado] || [estado, '']; return `<span class="chip ${e[1]}">${esc(etiqueta || e[0])}</span>`; };
-const SYNC = { ok: 'activo', error: 'suspendido', pendiente: 'pendiente' };
+const SYNC = { ok: 'activo', error: 'suspendido', pendiente: 'pendiente', excluido: 'excluido' };
 function aviso(texto) {
   const t = $('toast'); t.textContent = texto; t.hidden = false;
   clearTimeout(aviso.t); aviso.t = setTimeout(() => { t.hidden = true; }, 3600);
@@ -69,7 +73,7 @@ async function leer(consulta) {
 }
 
 // Diálogo de confirmación con campos ------------------------------------------------------------------------------
-// campos: [{ id, etiqueta, tipo: 'texto' | 'area' | 'numero' | 'casilla', obligatorio, minimo, ayuda }]
+// campos: [{ id, etiqueta, tipo: 'texto' | 'area' | 'numero' | 'casilla' | 'lista', obligatorio, minimo, ayuda, valor, opciones }]
 function pedir({ titulo, texto, campos = [], confirmar = 'Confirmar', peligro = false, accion }) {
   const d = $('dialogo');
   $('dialogo-titulo').textContent = titulo;
@@ -78,14 +82,17 @@ function pedir({ titulo, texto, campos = [], confirmar = 'Confirmar', peligro = 
   $('dialogo-ok').textContent = confirmar;
   $('dialogo-ok').className = 'btn ' + (peligro ? 'peligro' : 'primario');
   $('dialogo-campos').innerHTML = campos.map((c) => {
-    if (c.tipo === 'casilla') return `<label class="casilla"><input type="checkbox" id="campo-${c.id}"> ${esc(c.etiqueta)}</label>`;
+    if (c.tipo === 'casilla') return `<label class="casilla"><input type="checkbox" id="campo-${c.id}" ${c.valor ? 'checked' : ''}> ${esc(c.etiqueta)}</label>`;
+    const valor = c.valor == null ? '' : c.valor;
     const control = c.tipo === 'area'
-      ? `<textarea id="campo-${c.id}" rows="3" maxlength="1000"></textarea>`
-      : `<input id="campo-${c.id}" ${c.tipo === 'numero' ? 'type="number" step="1"' : 'type="text" maxlength="1000"'}>`;
+      ? `<textarea id="campo-${c.id}" rows="3" maxlength="1000">${esc(valor)}</textarea>`
+      : c.tipo === 'lista'
+        ? `<select id="campo-${c.id}">${c.opciones.map(([v, t]) => `<option value="${esc(v)}" ${v === valor ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`
+        : `<input id="campo-${c.id}" ${c.tipo === 'numero' ? 'type="number" step="1"' : 'type="text" maxlength="1000"'} value="${esc(valor)}" ${c.soloLectura ? 'readonly' : ''}>`;
     return `<label>${esc(c.etiqueta)}${c.ayuda ? `<span class="sub">${esc(c.ayuda)}</span>` : ''}${control}</label>`;
   }).join('');
   d.showModal();
-  const primero = d.querySelector('input, textarea'); if (primero) primero.focus();
+  const primero = d.querySelector('input:not([readonly]), textarea'); if (primero) primero.focus();
 
   $('dialogo-cancelar').onclick = () => d.close();
   $('dialogo-form').onsubmit = async (ev) => {
@@ -145,7 +152,8 @@ async function cargarResumen() {
     ['Pipeline originado', millones(r.pipeline_originado)], ['Potencia (kWp)', numero(r.potencia_kwp)],
     ['Calidad promedio', r.calidad_promedio == null ? '—' : Math.round(r.calidad_promedio) + ' %'], ['Puntos otorgados este mes', numero(r.puntos_otorgados_mes)],
     ['Rachas 4x4 completas', numero(r.rachas_completas)], ['Eventos por revisar', numero(r.eventos_pendientes), r.eventos_pendientes > 0],
-    ['Conflictos abiertos', numero(r.conflictos_abiertos), r.conflictos_abiertos > 0]
+    ['Conflictos abiertos', numero(r.conflictos_abiertos), r.conflictos_abiertos > 0],
+    ['Canjes este mes', numero(r.canjes_mes)], ['Puntos redimidos este mes', numero(r.puntos_redimidos_mes)], ['Recompensas activas', numero(r.recompensas_activas)]
   ];
   const porTipo = Object.entries(r.activos_por_tipo || {}).map(([t, n]) => `${esc(TIPOS[t] || t)}: ${numero(n)}`).join(' · ');
   $('resumen').innerHTML = kpis.map(([k, v, alerta]) => `<div class="tarjeta kpi ${alerta ? 'alerta' : ''}"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')
@@ -274,14 +282,80 @@ async function cargarConflictos() {
 
 async function cargarAuditoria() {
   const filas = await leer(supabase.from('v_admin_acciones').select('*').order('created_at', { ascending: false }).limit(200));
-  const detalle = (d) => [d.motivo, d.nota, d.puntos != null ? `${d.puntos > 0 ? '+' : ''}${d.puntos} (aplicados ${d.aplicados})` : null,
-    d.nombre_evento, d.variable ? VARIABLES[d.variable] || d.variable : null].filter(Boolean).map(esc).join(' · ');
+  const detalle = (d) => [d.motivo, d.nota, d.puntos != null && d.aplicados !== undefined ? `${d.puntos > 0 ? '+' : ''}${d.puntos} (aplicados ${d.aplicados})` : null,
+    d.nombre_evento, d.variable ? VARIABLES[d.variable] || d.variable : null,
+    d.recompensa ? `${d.recompensa} (${d.puntos} puntos devueltos)` : null,
+    d.nombre && d.nueva !== undefined ? `${d.nueva ? 'Nueva: ' : ''}${d.nombre} · ${d.puntos} puntos${d.activa === false ? ' · inactiva' : ''}` : null].filter(Boolean).map(esc).join(' · ');
   $('auditoria').innerHTML = filas.length ? `<table><thead><tr><th>Fecha</th><th>Admin</th><th>Acción</th><th>Aliado</th><th>Detalle</th></tr></thead><tbody>${
     filas.map((x) => `<tr><td>${fecha(x.created_at, true)}</td><td class="codigo">${esc(x.admin_codigo)}</td><td>${esc(ACCIONES[x.accion] || x.accion)}</td>
-      <td class="codigo">${esc(x.aliado_codigo || '—')}</td><td>${detalle(x.detalle || {})}</td></tr>`).join('')}</tbody></table>` : '<p class="vacio">Aún no hay acciones registradas.</p>';
+      <td class="codigo">${esc(x.aliado_codigo || (x.objetivo || '—'))}</td><td>${detalle(x.detalle || {})}</td></tr>`).join('')}</tbody></table>` : '<p class="vacio">Aún no hay acciones registradas.</p>';
 }
 
-const CARGAR = { resumen: async () => {}, solicitudes: cargarSolicitudes, aliados: cargarAliados, eventos: cargarEventos, conflictos: cargarConflictos, auditoria: cargarAuditoria };
+// Canjes y recompensas (fase 10) -----------------------------------------------------------------------------------------
+
+async function cargarCanjes() {
+  canjes = await leer(supabase.from('v_admin_canjes').select('*').order('fecha', { ascending: false }).limit(1000));
+  pintarCanjes();
+}
+function pintarCanjes() {
+  const q = $('buscar-canje').value.trim().toLowerCase();
+  const estado = $('filtro-canjes').value;
+  const lista = canjes.filter((c) => (!estado || c.estado === estado)
+    && (!q || [c.codigo_aliado, c.nombre_completo, c.recompensa, c.recompensa_codigo, c.referencia_externa, c.proveedor]
+      .some((v) => String(v || '').toLowerCase().includes(q)))).slice(0, 300);
+  $('canjes').innerHTML = lista.length ? `<table><thead><tr><th>Fecha</th><th>Aliado</th><th>Recompensa</th><th>Puntos</th><th>Proveedor</th><th>Estado</th><th></th></tr></thead><tbody>${
+    lista.map((c) => `<tr>
+      <td>${fecha(c.fecha, true)}</td>
+      <td>${esc(c.nombre_completo)}<span class="codigo">${esc(c.codigo_aliado)}</span></td>
+      <td><b>${esc(c.recompensa)}</b>${c.recompensa_codigo ? `<span class="sub">${esc(c.recompensa_codigo)}${c.nivel_requerido ? ' · nivel ' + esc(NIVELES[c.nivel_requerido] || c.nivel_requerido) : ''}</span>` : ''}</td>
+      <td><b>${numero(c.puntos)}</b></td>
+      <td>${esc(c.proveedor)}<span class="sub">ref. ${esc(c.referencia_externa)}</span></td>
+      <td>${chip(c.estado)}${c.anulacion_motivo ? `<span class="sub">${esc(c.anulacion_motivo)}</span>` : ''}${c.anulado_por ? `<span class="sub">por ${esc(c.anulado_por)} · ${fecha(c.anulado_at)}</span>` : ''}</td>
+      <td>${c.estado === 'confirmado' ? `<button class="btn peligro" data-accion="anular_canje" data-canje="${esc(c.canje_id)}" data-nombre="${esc(c.recompensa)}" data-puntos="${esc(c.puntos)}" data-codigo-canje="${esc(c.codigo_aliado)}">Anular</button>` : ''}</td>
+    </tr>`).join('')}</tbody></table>` : '<p class="vacio">No hay canjes con ese filtro.</p>';
+}
+
+async function cargarRecompensas() {
+  recompensas = await leer(supabase.from('v_admin_recompensas').select('*').order('activa', { ascending: false }).order('puntos'));
+  $('recompensas').innerHTML = recompensas.length ? `<table><thead><tr><th>Recompensa</th><th>Puntos</th><th>Nivel mínimo</th><th>Proveedor</th><th>Canjes</th><th>Estado</th><th></th></tr></thead><tbody>${
+    recompensas.map((r) => `<tr>
+      <td><b>${esc(r.nombre)}</b><span class="codigo">${esc(r.codigo)}</span>${r.categoria ? `<span class="sub">${esc(r.categoria)}</span>` : ''}${r.descripcion ? `<span class="sub">${esc(r.descripcion)}</span>` : ''}</td>
+      <td><b>${numero(r.puntos)}</b></td><td>${esc(NIVELES[r.nivel_minimo] || r.nivel_minimo)}</td>
+      <td>${esc(r.proveedor || 'Todos')}</td>
+      <td>${numero(r.canjes_confirmados)}<span class="sub">${numero(r.puntos_redimidos)} puntos</span></td>
+      <td>${r.activa ? chip('activo', 'Activa') : chip('', 'Inactiva')}</td>
+      <td><button class="btn" data-accion="editar_recompensa" data-recompensa="${esc(r.recompensa_id)}">Editar</button></td>
+    </tr>`).join('')}</tbody></table>` : '<p class="vacio">Aún no hay recompensas. Crea la primera con «Nueva recompensa».</p>';
+}
+
+function formularioRecompensa(r) {
+  const nueva = !r;
+  pedir({
+    titulo: nueva ? 'Nueva recompensa' : 'Editar recompensa',
+    texto: nueva ? 'El código lo usa el proveedor para canjear y no se puede cambiar después.' : 'Los cambios solo afectan los canjes futuros.',
+    campos: [
+      { id: 'codigo', etiqueta: 'Código', tipo: 'texto', obligatorio: true, minimo: 2, valor: r ? r.codigo : '', soloLectura: !nueva, ayuda: nueva ? 'Minúsculas, números, guion y guion bajo (p. ej. bono-cafe).' : '' },
+      { id: 'nombre', etiqueta: 'Nombre', tipo: 'texto', obligatorio: true, minimo: 3, valor: r ? r.nombre : '' },
+      { id: 'puntos', etiqueta: 'Puntos', tipo: 'numero', obligatorio: true, valor: r ? r.puntos : '' },
+      { id: 'nivel_minimo', etiqueta: 'Nivel mínimo', tipo: 'lista', valor: r ? r.nivel_minimo : 'bronce', opciones: Object.entries(NIVELES) },
+      { id: 'categoria', etiqueta: 'Categoría (opcional)', tipo: 'texto', valor: r ? r.categoria : '' },
+      { id: 'proveedor', etiqueta: 'Proveedor (opcional)', tipo: 'texto', valor: r ? r.proveedor : '', ayuda: 'Vacío: cualquier proveedor puede canjearla.' },
+      { id: 'descripcion', etiqueta: 'Descripción (opcional)', tipo: 'area', valor: r ? r.descripcion : '' },
+      { id: 'activa', etiqueta: 'Activa (se puede canjear)', tipo: 'casilla', valor: r ? r.activa : true }
+    ],
+    confirmar: nueva ? 'Crear' : 'Guardar',
+    accion: async (v) => {
+      const datos = { codigo: v.codigo.toLowerCase(), nombre: v.nombre, puntos: Number(v.puntos), nivel_minimo: v.nivel_minimo,
+        categoria: v.categoria, proveedor: v.proveedor.toLowerCase(), descripcion: v.descripcion, activa: v.activa };
+      await llamarAdmin('guardar_recompensa', { recompensa_id: r ? r.recompensa_id : null, datos });
+      await recargar();
+      return nueva ? 'Recompensa creada.' : 'Recompensa guardada.';
+    }
+  });
+}
+
+const CARGAR = { resumen: async () => {}, solicitudes: cargarSolicitudes, aliados: cargarAliados, eventos: cargarEventos, conflictos: cargarConflictos,
+  canjes: cargarCanjes, recompensas: cargarRecompensas, auditoria: cargarAuditoria };
 
 // Acciones --------------------------------------------------------------------------------------------------------------
 
@@ -293,7 +367,7 @@ async function alHacerClic(ev) {
   const ir = ev.target.closest('[data-ir]');
   if (ir) return irA(ir.dataset.ir);
   if (!b) { if (fila) abrirAliado(fila.dataset.abrir).catch((e) => aviso(e.message)); return; }
-  const { accion, codigo, nombre, evento, conflicto, variable } = b.dataset;
+  const { accion, codigo, nombre, evento, conflicto, variable, canje, puntos, recompensa } = b.dataset;
   const tras = async (msg) => { await recargar(); if (pestana === 'aliados' && codigo) await abrirAliado(codigo); return msg; };
 
   if (accion === 'aprobar') pedir({ titulo: 'Aprobar solicitud', texto: `${nombre} podrá entrar al Hub y se creará su contacto en Clientify.`, confirmar: 'Aprobar',
@@ -325,6 +399,11 @@ async function alHacerClic(ev) {
     accion: async (v) => { await llamarAdmin('validar_evento', { evento_id: evento, nota: v.nota }); return tras('Evento validado: +100.'); } });
   if (accion === 'rechazar_evento') pedir({ titulo: 'Rechazar evento', texto: `«${nombre}» no sumará puntos. El aliado verá el motivo.`, campos: [MOTIVO], confirmar: 'Rechazar', peligro: true,
     accion: async (v) => { await llamarAdmin('rechazar_evento', { evento_id: evento, motivo: v.motivo }); return tras('Evento rechazado.'); } });
+  if (accion === 'anular_canje') pedir({ titulo: 'Anular canje', texto: `«${nombre}» de ${b.dataset.codigoCanje}: se devuelven ${puntos} puntos disponibles. El aliado verá el motivo.`,
+    campos: [{ id: 'motivo', etiqueta: 'Motivo', tipo: 'area', obligatorio: true, minimo: 10, ayuda: 'Por qué no se entregó la recompensa.' }], confirmar: 'Anular y devolver puntos', peligro: true,
+    accion: async (v) => { const r = await llamarAdmin('anular_canje', { canje_id: canje, motivo: v.motivo }); await recargar(); return `Canje anulado: se devolvieron ${r.puntos_devueltos} puntos.`; } });
+  if (accion === 'nueva_recompensa') formularioRecompensa(null);
+  if (accion === 'editar_recompensa') formularioRecompensa(recompensas.find((r) => r.recompensa_id === recompensa));
   if (accion === 'resolver') {
     const clave = crypto.randomUUID();
     pedir({ titulo: 'Resolver conflicto', texto: `${nombre} · ${variable}.`,
@@ -342,7 +421,11 @@ async function alHacerClic(ev) {
 // Inicio y sesión ---------------------------------------------------------------------------------------------------
 
 async function entrarAlPanel() {
-  const { data: yo, error } = await supabase.from('aliados').select('nombre_completo, codigo_aliado, rol, estado').maybeSingle();
+  // Un admin puede leer todas las filas de `aliados` (RLS): se filtra por el usuario de la sesión.
+  const { data: sesion } = await supabase.auth.getSession();
+  const usuario = sesion && sesion.session && sesion.session.user;
+  if (!usuario) return vista('vista-login');
+  const { data: yo, error } = await supabase.from('aliados').select('nombre_completo, codigo_aliado, rol, estado').eq('id', usuario.id).maybeSingle();
   if (error || !yo || yo.rol !== 'admin' || yo.estado !== 'activo') return vista('vista-sin-acceso');
   $('quien').hidden = false;
   $('quien-nombre').textContent = `${yo.nombre_completo} · ${yo.codigo_aliado}`;
@@ -367,6 +450,8 @@ async function iniciar() {
   $('filtro-estado').addEventListener('change', pintarAliados);
   $('filtro-eventos').addEventListener('change', () => cargarEventos().catch((e) => aviso(e.message)));
   $('ver-resueltos').addEventListener('change', () => cargarConflictos().catch((e) => aviso(e.message)));
+  $('buscar-canje').addEventListener('input', pintarCanjes);
+  $('filtro-canjes').addEventListener('change', pintarCanjes);
   $('salir').addEventListener('click', async () => { await supabase.auth.signOut(); location.reload(); });
   $('form-login').addEventListener('submit', async (ev) => {
     ev.preventDefault();

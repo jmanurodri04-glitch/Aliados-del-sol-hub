@@ -14,7 +14,7 @@
 //   ads:evento-registrar {datos, archivo?} ads:evento-resultado { ok, mensaje?, evento_id? }
 //
 // El dashboard (fase 8) sale de las vistas v_aliado_dashboard, v_mis_movimientos, v_mis_referidos y
-// v_mis_modulos (y v_mis_eventos, fase 9), que solo devuelven lo del aliado de la sesión. Se recarga al entrar, después de un
+// v_mis_modulos (y v_mis_eventos, fase 9; v_mis_canjes y v_recompensas, fase 10), que solo devuelven lo del aliado de la sesión. Se recarga al entrar, después de un
 // referido y al completar un módulo.
 //
 // En el navegador solo se usan la URL y la publishable key (GET /api/config); la seguridad la da RLS.
@@ -104,11 +104,16 @@ function mensajeDeError(error) {
   return MENSAJES.generico;
 }
 
-// Datos visibles del aliado de la sesión. Nunca se lee ni se expone `id` (CLAUDE.md §2).
+// Datos visibles del aliado de la sesión. Nunca se lee ni se expone `id` (CLAUDE.md §2): solo se filtra por el
+// usuario de la sesión, porque un admin puede leer todas las filas de `aliados` (RLS).
 async function leerAliado(supabase) {
+  const { data: sesion } = await supabase.auth.getSession();
+  const usuario = sesion && sesion.session && sesion.session.user;
+  if (!usuario) return null;
   const { data, error } = await supabase
     .from('aliados')
     .select('codigo_aliado, nombre_completo, tipo_aliado, estado, nivel, puntos_nivel, puntos_disponibles')
+    .eq('id', usuario.id)
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -240,19 +245,22 @@ async function cargarDashboard(supabaseDado) {
   try {
     const supabase = supabaseDado || await obtenerCliente();
     if (!sesionActual.activa) return;
-    const [aliado, movimientos, referidos, modulos, eventos] = await Promise.all([
+    const [aliado, movimientos, referidos, modulos, eventos, canjes, recompensas] = await Promise.all([
       supabase.from('v_aliado_dashboard').select('*').maybeSingle(),
       supabase.from('v_mis_movimientos').select('*').order('fecha', { ascending: false }).order('secuencia', { ascending: false }).limit(500),
       supabase.from('v_mis_referidos').select('*').order('created_at', { ascending: false }),
       supabase.from('v_mis_modulos').select('*').order('orden'),
-      supabase.from('v_mis_eventos').select('*').order('fecha', { ascending: false })
+      supabase.from('v_mis_eventos').select('*').order('fecha', { ascending: false }),
+      supabase.from('v_mis_canjes').select('*').order('fecha', { ascending: false }).limit(200),
+      supabase.from('v_recompensas').select('*').order('puntos')
     ]);
-    const error = aliado.error || movimientos.error || referidos.error || modulos.error || eventos.error;
+    const error = aliado.error || movimientos.error || referidos.error || modulos.error || eventos.error || canjes.error || recompensas.error;
     if (error || !aliado.data) {
       emitir('ads:dashboard', { ok: false, mensaje: MENSAJES.generico });
       return;
     }
-    dashboardActual = { ok: true, aliado: aliado.data, movimientos: movimientos.data, referidos: referidos.data, modulos: modulos.data, eventos: eventos.data };
+    dashboardActual = { ok: true, aliado: aliado.data, movimientos: movimientos.data, referidos: referidos.data, modulos: modulos.data, eventos: eventos.data,
+      canjes: canjes.data, recompensas: recompensas.data };
     emitir('ads:dashboard', dashboardActual);
   } catch (e) {
     emitir('ads:dashboard', { ok: false, mensaje: mensajeDeError(e) });

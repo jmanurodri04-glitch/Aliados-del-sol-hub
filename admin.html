@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel GEENERA · Aliados del Sol</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Panel de administración (CLAUDE.md §10, fases 9 y 10). Lee las vistas v_admin_* con la sesión del admin;
+     las acciones pasan por POST /api/admin (ver js/admin.js). -->
+<script type="module" src="./js/admin.js"></script>
+<style>
+  :root {
+    --bg:#F7F3EC; --panel:#FFFDF9; --fg:#1B1915; --mut:#665F55; --mut2:#8C8375; --line:rgba(27,25,21,.12);
+    --soft:rgba(27,25,21,.04); --y:#A86E06; --o:#B85A0C; --g:#2E8A57; --bad:#B4533F; --btn:#1B1915; --btnfg:#F7F3EC;
+    --ok-bg:rgba(46,138,87,.12); --w-bg:rgba(184,90,12,.12); --bad-bg:rgba(180,83,63,.12); --n-bg:rgba(27,25,21,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#07070A; --panel:#111014; --fg:#F2F0EC; --mut:#9A968F; --mut2:#6B6762; --line:rgba(255,255,255,.09);
+      --soft:rgba(255,255,255,.03); --y:#FFCA05; --o:#F9A51A; --g:#5FBF8B; --bad:#E8836B; --btn:#F2F0EC; --btnfg:#141210;
+      --ok-bg:rgba(95,191,139,.14); --w-bg:rgba(249,165,26,.13); --bad-bg:rgba(201,123,110,.14); --n-bg:rgba(255,255,255,.07);
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:'Titillium Web',system-ui,sans-serif; font-size:15px; line-height:1.45; }
+  button, input, textarea, select { font:inherit; color:inherit; }
+  [hidden] { display:none !important; }
+  .envoltura { max-width:1240px; margin:0 auto; padding:0 16px 80px; }
+  header { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); }
+  header .envoltura { display:flex; align-items:center; gap:14px; padding-top:14px; padding-bottom:14px; flex-wrap:wrap; }
+  .marca { display:flex; flex-direction:column; line-height:1.1; }
+  .marca b { font-size:17px; letter-spacing:-.01em; }
+  .marca span { font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--y); }
+  .quien { margin-left:auto; display:flex; align-items:center; gap:12px; font-size:13.5px; color:var(--mut); }
+  nav { display:flex; gap:4px; flex-wrap:wrap; padding:16px 0 4px; }
+  nav button { padding:8px 14px; border:1px solid var(--line); border-radius:99px; background:transparent; cursor:pointer; font-weight:600; font-size:14px; color:var(--mut); }
+  nav button[aria-current="page"] { border-color:var(--y); color:var(--y); background:var(--w-bg); }
+  nav .contador { display:inline-block; min-width:20px; margin-left:6px; padding:0 6px; border-radius:99px; background:var(--o); color:#1A1200; font-size:12px; text-align:center; }
+  h1 { font-size:clamp(24px,3vw,32px); letter-spacing:-.02em; margin:26px 0 6px; }
+  .nota { color:var(--mut); margin:0 0 18px; max-width:70ch; }
+  .tarjeta { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+  .kpi { display:flex; flex-direction:column; gap:4px; }
+  .kpi span { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--mut2); }
+  .kpi b { font-size:26px; letter-spacing:-.02em; }
+  .kpi.alerta b { color:var(--o); }
+  .barra { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .barra input, .barra select { padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); min-width:220px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--mut2); padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td { padding:10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr.fila-click { cursor:pointer; }
+  tr.fila-click:hover td { background:var(--soft); }
+  .tabla { overflow-x:auto; }
+  .codigo { font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:13px; color:var(--y); }
+  .sub { display:block; font-size:12.5px; color:var(--mut); }
+  .chip { display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px; font-weight:600; white-space:nowrap; background:var(--n-bg); color:var(--mut); }
+  .chip.ok { background:var(--ok-bg); color:var(--g); }
+  .chip.w { background:var(--w-bg); color:var(--o); }
+  .chip.bad { background:var(--bad-bg); color:var(--bad); }
+  .acciones { display:flex; gap:6px; flex-wrap:wrap; }
+  .btn { padding:7px 13px; border:1px solid var(--line); border-radius:9px; background:transparent; cursor:pointer; font-weight:600; font-size:13.5px; white-space:nowrap; }
+  .btn:hover { border-color:var(--y); }
+  .btn.primario { background:var(--btn); color:var(--btnfg); border-color:var(--btn); }
+  .btn.peligro { color:var(--bad); border-color:color-mix(in srgb, var(--bad) 45%, transparent); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .vacio { padding:28px; text-align:center; color:var(--mut); }
+  .detalle { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin-top:16px; }
+  .campos { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px 18px; }
+  .campos div span { display:block; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--mut2); }
+  .centro { min-height:70vh; display:grid; place-items:center; }
+  .acceso { width:min(400px,100%); display:flex; flex-direction:column; gap:12px; }
+  .acceso label, dialog label { display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:600; color:var(--mut); }
+  .acceso input, dialog input, dialog textarea, dialog select { padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--soft); }
+  .mensaje { font-size:13.5px; color:var(--bad); min-height:1.2em; }
+  dialog { border:1px solid var(--line); border-radius:16px; background:var(--panel); color:var(--fg); width:min(480px,calc(100% - 32px)); padding:22px; }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  dialog form { display:flex; flex-direction:column; gap:12px; }
+  dialog h2 { margin:0; font-size:19px; }
+  dialog .fila { display:flex; gap:8px; justify-content:flex-end; }
+  .casilla { flex-direction:row !important; align-items:center; gap:8px !important; }
+  #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); padding:11px 18px; border-radius:12px; background:var(--btn); color:var(--btnfg); font-weight:600; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,.25); max-width:calc(100% - 32px); z-index:20; }
+</style>
+</head>
+<body>
+<header>
+  <div class="envoltura">
+    <div class="marca"><span>GEENERA</span><b>Aliados del Sol · Panel</b></div>
+    <div class="quien" id="quien" hidden><span id="quien-nombre"></span><button class="btn" id="salir">Cerrar sesión</button></div>
+  </div>
+</header>
+
+<div class="envoltura">
+  <!-- Estados de acceso -->
+  <section id="vista-cargando" class="centro"><p class="nota">Cargando…</p></section>
+
+  <section id="vista-login" class="centro" hidden>
+    <form class="tarjeta acceso" id="form-login">
+      <h1 style="margin:0">Panel de administración</h1>
+      <p class="nota" style="margin:0">Solo para el equipo GEENERA. Entra con tu cuenta del Hub.</p>
+      <label>Correo<input type="email" id="login-correo" autocomplete="email" required></label>
+      <label>Contraseña<input type="password" id="login-clave" autocomplete="current-password" required></label>
+      <span class="mensaje" id="login-mensaje" role="alert"></span>
+      <button class="btn primario" type="submit" id="login-boton">Entrar</button>
+    </form>
+  </section>
+
+  <section id="vista-sin-acceso" class="centro" hidden>
+    <div class="tarjeta acceso">
+      <h1 style="margin:0">Sin acceso</h1>
+      <p class="nota" style="margin:0">Tu cuenta no tiene permisos de administración. Si crees que es un error, pide acceso al equipo GEENERA.</p>
+      <a class="btn" href="/">Ir al Hub</a>
+    </div>
+  </section>
+
+  <!-- Panel -->
+  <main id="vista-panel" hidden>
+    <nav id="pestanas" aria-label="Secciones del panel"></nav>
+
+    <section data-pestana="resumen">
+      <h1>Resumen</h1>
+      <p class="nota">Estado general del programa. Los valores de Clientify (cotizado, pipeline y kWp) vienen de la última sincronización.</p>
+      <div class="kpis" id="resumen"></div>
+    </section>
+
+    <section data-pestana="solicitudes" hidden>
+      <h1>Solicitudes</h1>
+      <p class="nota">Al aprobar, la cuenta queda activa: el aliado puede entrar al Hub y se crea su contacto en Clientify. Una solicitud rechazada se puede aprobar después.</p>
+      <div class="tarjeta tabla" id="solicitudes"></div>
+    </section>
+
+    <section data-pestana="aliados" hidden>
+      <h1>Aliados</h1>
+      <p class="nota">Busca por nombre, correo o código. Abre un aliado para ver su historial, ajustar puntos o cambiar su estado.</p>
+      <div class="barra">
+        <input type="search" id="buscar-aliado" placeholder="Nombre, correo o código">
+        <select id="filtro-estado" aria-label="Estado">
+          <option value="">Todos los estados</option><option value="activo">Activos</option><option value="pendiente">Pendientes</option>
+          <option value="suspendido">Suspendidos</option><option value="rechazado">Rechazados</option>
+        </select>
+      </div>
+      <div class="tarjeta tabla" id="aliados"></div>
+      <div id="aliado-detalle"></div>
+    </section>
+
+    <section data-pestana="eventos" hidden>
+      <h1>Eventos</h1>
+      <p class="nota">Un evento suma +100 solo si se realizó, GEENERA estuvo involucrada, hay registro de asistentes y asistieron mínimo 5 empresas dentro del perfil.</p>
+      <div class="barra">
+        <select id="filtro-eventos" aria-label="Estado de los eventos">
+          <option value="pendiente">Por revisar</option><option value="">Todos</option><option value="validado">Validados</option><option value="rechazado">Rechazados</option>
+        </select>
+      </div>
+      <div class="tarjeta tabla" id="eventos"></div>
+    </section>
+
+    <section data-pestana="conflictos" hidden>
+      <h1>Conflictos de Clientify</h1>
+      <p class="nota">Clientify cambió un valor que ya era definitivo. No cambia puntos ni calidad hasta que lo resuelvas: puedes aceptar el valor de Clientify (cambia la calidad) y, si corresponde, registrar un ajuste de puntos.</p>
+      <div class="barra"><label class="casilla" style="font-size:14px"><input type="checkbox" id="ver-resueltos"> Ver también los resueltos</label></div>
+      <div class="tarjeta tabla" id="conflictos"></div>
+    </section>
+
+    <section data-pestana="canjes" hidden>
+      <h1>Canjes</h1>
+      <p class="nota">Los canjes llegan del proveedor por POST /api/canjes. Si el proveedor no entregó la recompensa, anula el canje: se devuelven los puntos disponibles (no cambia el nivel) y el aliado ve el motivo.</p>
+      <div class="barra">
+        <input type="search" id="buscar-canje" placeholder="Código, nombre, recompensa o referencia">
+        <select id="filtro-canjes" aria-label="Estado de los canjes">
+          <option value="">Todos</option><option value="confirmado">Confirmados</option><option value="anulado">Anulados</option>
+        </select>
+      </div>
+      <div class="tarjeta tabla" id="canjes"></div>
+    </section>
+
+    <section data-pestana="recompensas" hidden>
+      <h1>Recompensas</h1>
+      <p class="nota">Catálogo que pueden canjear los proveedores. El código es el que usa el proveedor y no cambia. Cambiar los puntos o el nivel solo afecta los canjes futuros. Una recompensa con proveedor solo la puede canjear ese proveedor.</p>
+      <div class="barra"><button class="btn primario" data-accion="nueva_recompensa">Nueva recompensa</button></div>
+      <div class="tarjeta tabla" id="recompensas"></div>
+    </section>
+
+    <section data-pestana="auditoria" hidden>
+      <h1>Auditoría</h1>
+      <p class="nota">Últimas 200 acciones del panel. No se pueden editar ni borrar.</p>
+      <div class="tarjeta tabla" id="auditoria"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dialogo">
+  <form method="dialog" id="dialogo-form">
+    <h2 id="dialogo-titulo"></h2>
+    <p class="nota" id="dialogo-texto" style="margin:0"></p>
+    <div id="dialogo-campos"></div>
+    <span class="mensaje" id="dialogo-mensaje" role="alert"></span>
+    <div class="fila">
+      <button class="btn" value="cancelar" type="button" id="dialogo-cancelar">Cancelar</button>
+      <button class="btn primario" value="ok" type="submit" id="dialogo-ok">Confirmar</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" hidden></div>
+</body>
+</html>

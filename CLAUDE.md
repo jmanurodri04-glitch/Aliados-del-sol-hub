@@ -3,6 +3,7 @@
 > Contexto permanente para Claude Code. Léelo completo antes de cualquier tarea en este repositorio.
 > Idioma del proyecto: español (UI, nombres de tablas y columnas en `snake_case` español).
 > Zona horaria de negocio: **America/Bogota** (semanas lunes–domingo, meses calendario).
+> Guía para personas (funcionamiento, decisiones, tablas, planes y puesta en marcha): `docs/GUIA_HUB.md` y su PDF `docs/Guia_integral_Aliados_del_Sol_Hub.pdf`. Actualízala cuando cambie algo de lo que describe.
 
 ---
 
@@ -15,7 +16,7 @@
 ### Stack y arquitectura técnica
 
 - **Frontend:** se mantiene estático. Supabase se usa en el navegador con `@supabase/supabase-js`, cargado como módulo ES desde CDN (`https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm`). En el navegador solo se usa la URL y la *publishable key*; la seguridad la da RLS.
-- **Backend:** son **Vercel Functions** en la carpeta `/api` de la raíz, con Node.js 18 o superior y ESM. Vercel las detecta sin configuración, también en proyectos estáticos. Ahí viven las claves secretas y toda la integración con Clientify.
+- **Backend:** son **Vercel Functions** en la carpeta `/api` de la raíz, con **Node.js 22** (`engines: 22.x`, lo exige `@supabase/supabase-js` 2.117) y ESM. Vercel las detecta sin configuración, también en proyectos estáticos. Ahí viven las claves secretas y toda la integración con Clientify.
   - Código compartido en `/lib` (por ejemplo `lib/clientify/mapeo.ts`, o `.js` si no se agrega TypeScript).
   - Dependencias de servidor (`@supabase/supabase-js`, etc.) en `package.json`.
 - **Configuración pública por entorno:** como no hay build, el front **no puede leer variables de entorno**. Crea `GET /api/config`, que devuelve `{ supabaseUrl, supabasePublishableKey }` desde `process.env`. Así Preview usa `dev` y Production usa `prod` sin cambiar el código. El front lo consulta una vez al cargar.
@@ -47,7 +48,7 @@
 1. **Prefijo por tipo:** `FI` = AdS Financieros · `EM` = AdS EMI · `LK` = AdS Linker · `CE` = AdS Cliente Embajador · `AG` = AdS Agremiaciones.
 2. **Iniciales del nombre completo:** primera letra de cada palabra, en mayúscula y sin tildes (`Á→A`, `Ñ→N`, `Ü→U`).
    - Ejemplo: "Juan José Pérez León" → `JJPL`.
-   - *Propuesta, por confirmar:* ignorar partículas (`de`, `del`, `la`, `las`, `los`, `y`) y usar máximo 4 iniciales.
+   - Se ignoran las partículas (`de`, `del`, `la`, `las`, `los`, `y`) y se usan máximo 4 iniciales (decisión del equipo). Si no queda ninguna letra, se usa `X`.
 3. **Aleatorio:** 8 caracteres del alfabeto sin caracteres confusos: `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (sin `0 O 1 I L`).
 4. **Unicidad:** se genera en la base de datos (función SQL en el trigger de alta). Si hay colisión, se regenera en bucle hasta que sea única, respaldado por el índice `UNIQUE`.
 5. Una vez creado es **inmutable**, aunque el aliado cambie de nombre o de tipo, porque ya está en Clientify y en materiales compartidos.
@@ -64,28 +65,34 @@ Formulario propio del Hub. No es de Clientify.
 |---|---|---|
 | Nombre completo | Sí | Todos |
 | Email | Sí | Todos |
-| Celular | Sí | Todos |
+| Celular (selector de país; se guarda en formato internacional `+57…`) | Sí | Todos |
 | Regional / ciudad | No | Todos |
 | Tipo de aliado | Sí | Todos: `financiero`, `emi`, `linker`, `cliente_embajador`, `agremiaciones` |
 | Organización | Sí | `financiero`, `agremiaciones` |
 | Cargo | Sí | `financiero`, `agremiaciones` |
 | ¿Cómo llegas a las empresas? | Sí | `emi`, `linker`, `cliente_embajador` |
 | Contraseña + confirmación | Sí | Todos |
+| Aceptación de los Términos y condiciones (checkbox sin marcar por defecto) | Sí | Todos |
 | Autorización de tratamiento de datos (checkbox sin marcar por defecto) | Sí | Todos |
 
 ### Flujo de registro
 
 1. El front llama a `supabase.auth.signUp({ email, password, options: { data: {...campos} } })`.
    - **La contraseña la gestiona exclusivamente Supabase Auth** (hash bcrypt). **Nunca** se guarda en tablas propias ni en logs.
-2. Un trigger `on auth.users insert` → `handle_new_aliado()`:
-   - crea la fila en `aliados` y genera `codigo_aliado`;
+2. Un trigger `on auth.users insert` → `interno.handle_new_aliado()`:
+   - valida los datos en el servidor; si algo falta, **se rechaza todo el registro** (no quedan usuarios de Auth sin aliado);
+   - crea la fila en `aliados` con `estado = 'pendiente'` y genera `codigo_aliado`;
    - crea la fila en `aliados_perfil_organizacion` o en `aliados_perfil_alcance` según el tipo;
-   - guarda `autorizacion_datos_at`.
-3. Se sincroniza con Clientify (ver §8, flujo A). El aliado se crea como contacto con la etiqueta **"Aliado del Sol"**, el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **El registro del aliado nunca falla por culpa de Clientify.**
-4. El aliado puede iniciar sesión con email y contraseña.
-   - *Por confirmar:* ¿se exige verificación de email antes del primer login? (recomendado). ¿GEENERA debe aprobar la solicitud?
+   - guarda `autorizacion_datos_at`, `terminos_aceptados_at` y las versiones aceptadas (`terminos_version`, `politica_datos_version`);
+   - `rol` y `estado` **nunca** se toman de los metadatos del navegador.
+3. **Cuando GEENERA aprueba la solicitud** (`pendiente → activo`), se sincroniza con Clientify (ver §8, flujo A). No se sincroniza al registrarse, para no llevar al CRM solicitudes que se van a rechazar (decisión del equipo). El aliado se crea como contacto con la etiqueta de aliado (**"aliados del sol"**, o **"aliado del sol hub"** si es Cliente Embajador), el tipo y `ID_aliado = codigo_aliado`. Si falla, `clientify_sync_estado = 'pendiente'` y se reintenta por cron. **Ni el registro ni la aprobación fallan por culpa de Clientify.**
+4. El aliado **confirma su correo** (obligatorio antes del primer login) y **GEENERA aprueba la solicitud** (decisiones del equipo):
+   - mientras `estado = 'pendiente'`, el login responde "Tu solicitud está en revisión" y no entra al Hub;
+   - un admin la aprueba con `estado = 'activo'`, `aprobado_at` y `aprobado_por` desde el **panel admin** (`admin.html`, fase 9), o la rechaza (`estado = 'rechazado'`: no entra al Hub y ve "Tu solicitud no fue aprobada"; se puede aprobar después);
+   - solo las cuentas `activo` entran al Hub. **Todo endpoint de `/api` debe verificar `estado = 'activo'`.**
+5. En el front, toda la lógica de Supabase vive en `js/supabase.js`: la página emite eventos `ads:*` (`ads:join-register`, `ads:login`, `ads:logout`) y el módulo responde (`ads:join-resultado`, `ads:login-resultado`, `ads:sesion`, `ads:aviso`).
 
-Validar en front **y** en servidor: formato de email, celular colombiano, contraseñas iguales y mínimo 8 caracteres, campos condicionales según el tipo.
+Validar en front **y** en servidor: formato de email, celular (formato internacional E.164; si es de Colombia, 10 dígitos que empiezan por 3), contraseñas iguales y mínimo 8 caracteres, campos condicionales según el tipo, aceptación de términos y autorización de datos.
 
 ---
 
@@ -114,10 +121,15 @@ racha_semana_1..4       boolean NOT NULL DEFAULT false
 racha_ultima_semana     date NULL                   -- lunes de la última semana contada
 -- Integración y cumplimiento
 clientify_contact_id    text NULL
-clientify_sync_estado   text NOT NULL DEFAULT 'pendiente'   -- pendiente | ok | error
+clientify_sync_estado   text NOT NULL DEFAULT 'pendiente'   -- pendiente | ok | error | excluido (cuenta de admin, fase 10)
 clientify_sync_error    text NULL
 autorizacion_datos_at   timestamptz NOT NULL
-estado                  text NOT NULL DEFAULT 'activo'      -- activo | suspendido
+terminos_aceptados_at   timestamptz NOT NULL
+terminos_version        text NOT NULL                       -- versión de los Términos aceptada (fecha de entrada en vigor)
+politica_datos_version  text NOT NULL                       -- versión de la Política de Tratamiento de Datos vigente al autorizar
+estado                  text NOT NULL DEFAULT 'pendiente'   -- pendiente | activo | suspendido | rechazado
+aprobado_at             timestamptz NULL                    -- cuándo GEENERA aprobó la solicitud
+aprobado_por            uuid NULL FK aliados(id)            -- admin que la aprobó
 rol                     text NOT NULL DEFAULT 'aliado'      -- aliado | admin (equipo GEENERA)
 created_at, updated_at  timestamptz
 ```
@@ -160,9 +172,15 @@ es_perfecto            boolean NOT NULL             -- calculado al guardar (ver
 clientify_contact_id   text NULL
 clientify_company_id   text NULL
 clientify_deal_id      text NULL
-clientify_sync_estado  text NOT NULL DEFAULT 'pendiente'
+clientify_sync_estado  text NOT NULL DEFAULT 'pendiente'   -- pendiente | ok | error (cola del flujo B)
+clientify_sync_error, clientify_sync_intentos, clientify_sync_proximo_at, clientify_sync_at   -- reintentos del flujo B
+autorizacion_contacto_at timestamptz NULL           -- declaración Ley 1581 del aliado; obligatoria si origen = 'hub'
 created_at, updated_at timestamptz
 ```
+
+Un contacto solo puede referirse **una vez** en todo el programa: índice único `lower(correo)` (gana el primer aliado).
+
+Los leads del formulario público (`origen = 'clientify_form'`) pueden llegar sin empresa, sector, teléfono, correo o valor de la factura; para `origen = 'hub'` esos campos siguen siendo obligatorios (CHECK `empresas_campos_hub`).
 
 **Referido perfecto:** los **10 campos** completos: empresa, sector, subsector, ciudad, nombre_contacto, cargo, telefono, correo, valor_factura y **factura adjunta**. `observaciones` no cuenta. Si falta alguno, `es_perfecto = false` (imperfecto).
 
@@ -178,9 +196,10 @@ nombre_archivo   text NOT NULL
 fecha_carga      timestamptz NOT NULL DEFAULT now()
 validacion       text NOT NULL DEFAULT 'pendiente'   -- pendiente | revisado
 aprobado         estado_triple NOT NULL DEFAULT 'revision'
+clientify_subida_at timestamptz NULL     -- cuándo se adjuntó a la empresa en Clientify
 ```
 
-El bucket de Storage es **privado** y se accede con URLs firmadas de corta duración. Límite sugerido: 10 MB; tipos PDF, JPG y PNG.
+El bucket de Storage es **privado** y se accede con URLs firmadas de corta duración. Límite: 10 MB; tipos PDF, JPG y PNG (lo impone el bucket). No tiene políticas: el navegador sube con una URL firmada de un solo uso y solo el servidor lee.
 
 ### 4.6 `avance_empresa` (espejo del avance en Clientify), 1:1 con `empresas`
 
@@ -229,10 +248,16 @@ clave_unica       text UNIQUE NOT NULL    -- IDEMPOTENCIA (ver §5.1)
 fecha             timestamptz NOT NULL DEFAULT now()
 creado_por        text NOT NULL           -- 'sistema' | 'webhook_clientify' | 'admin:{id}' | 'canjes_api'
 nota              text NULL
+secuencia         bigint IDENTITY         -- orden determinista cuando dos movimientos tienen la misma fecha
 ```
 
 - Es **solo inserción**: no se hacen UPDATE ni DELETE. Las correcciones se registran como un movimiento nuevo con motivo `ajuste_admin`.
 - Cada movimiento dispara el recálculo de `aliados.puntos_nivel`, `puntos_disponibles` y `nivel`.
+- **Cómo registrar un movimiento** (fase 3): se inserta con `ON CONFLICT (clave_unica) DO NOTHING` indicando `aliado_id`, `tipo`, `motivo`, `vinculo`, `vinculo_id`, `clave_unica` y `creado_por`. **La base de datos hace el resto:**
+  - toma `puntos` del catálogo `reglas_puntos` (§5) y rechaza un valor distinto; solo `ajuste_admin` y `canje` llevan `puntos` explícito;
+  - calcula `puntos_aplicados` (piso en 0 para `perdido`; rechaza un `redimido` mayor al saldo) bloqueando la fila del aliado;
+  - recalcula la caché del aliado. Nunca se escriben a mano `puntos_*`, `calidad_referidos` ni `nivel`.
+- **Cuenta no activa (decisión del equipo):** si el aliado está `suspendido` o `pendiente`, sus movimientos no entran al libro: quedan en `movimientos_retenidos` y se acreditan automáticamente cuando la cuenta vuelve a `activo`, en su orden original y con la fecha de la reactivación (la nota guarda la fecha original). Mientras no esté activo no puede canjear. Los `ajuste_admin` se aplican siempre.
 - El dashboard filtra los ganados y perdidos por semana, mes y trimestre usando `fecha`.
 
 ### 4.8 `eventos`
@@ -252,12 +277,19 @@ validado_por, validado_at
 
 Otorga +100 solo cuando un **admin** lo marca `validado` y se cumplen: evento realizado, GEENERA involucrada, registro de asistentes y `empresas_perfil_count >= 5`.
 
+**Implementado (fase 9):**
+- El **aliado** reporta el evento desde el Hub (pantalla Puntos Sol, "Reporta un evento"): `POST /api/eventos` con `accion: 'subir'` da una URL firmada de un solo uso para el registro de asistentes (bucket privado `eventos`, 10 MB, PDF/JPG/PNG/XLSX/CSV, ruta `{aliado_id}/{evento_id}/{archivo}`) y `accion: 'registrar'` llama a `public.registrar_evento` (cuenta activa, máximo 5 por día, fecha ya pasada y del último año). Columnas nuevas: `descripcion` y `revision_nota`. El aliado ve sus eventos en `v_mis_eventos`.
+- Un **admin** lo valida o rechaza en el panel (`admin_validar_evento`, `admin_rechazar_evento`): validar exige las 4 condiciones y otorga `evento_validado` (+100, clave `evento:{id}`, `vinculo = 'eventos'`); rechazar exige motivo, que el aliado ve.
+
 ### 4.9 `modulos` (catálogo) y `modulos_completados`
 
 ```
-modulos:             id, nombre, orden, activo
+modulos:             id, codigo text UNIQUE NOT NULL,           -- id del curso en la Academy del Hub (c11, c12…)
+                     nombre, orden, activo,
+                     puntos int NOT NULL DEFAULT 0 CHECK (0..20) -- 0 = sin puntos (fase 7)
 modulos_completados: id, aliado_id FK, modulo_id FK, fecha_completado timestamptz,
-                     recompensa_estado text DEFAULT 'pendiente',  -- pendiente | otorgada
+                     puntos int NOT NULL                          -- valor del módulo al completarlo
+                     recompensa_estado text DEFAULT 'pendiente',  -- pendiente | otorgada | no_aplica
                      fecha_otorgada timestamptz NULL,
                      UNIQUE (aliado_id, modulo_id)                -- un módulo se premia una sola vez
 ```
@@ -277,15 +309,41 @@ fecha                timestamptz
 
 Entra por un endpoint seguro `POST /api/canjes` (API key propia por proveedor), no por acceso directo a la base. El endpoint valida que `puntos <= puntos_disponibles` y que el nivel del aliado permita la recompensa; luego inserta en `canjes` y el movimiento `tipo='redimido'`. *El sistema externo aún no está definido.*
 
+**Implementado (fase 10, migración `canjes_api`):**
+- **Catálogo `recompensas`** (decisión del equipo: lo administra GEENERA desde el panel): `codigo` (el que usa el proveedor; minúsculas, números, `-` y `_`; inmutable), `nombre`, `descripcion`, `categoria`, `puntos` (1–100 000), `nivel_minimo`, `proveedor` (NULL = cualquiera; si tiene valor, solo ese proveedor la canjea) y `activa`. Cambiar puntos o nivel solo afecta canjes futuros: cada canje guarda los suyos.
+- **`canjes`** gana `recompensa_id`, `estado` (`confirmado` | `anulado`), `anulado_at`, `anulado_por`, `anulacion_motivo`. La referencia es única **por proveedor** (`UNIQUE (proveedor, referencia_externa)`). Un canje no se edita ni se borra; solo pasa una vez de confirmado a anulado.
+- **`POST /api/canjes`** (`Authorization: Bearer <key>`; `CANJES_API_KEYS` = `proveedor1:key1,proveedor2:key2`, keys de mínimo 24 caracteres, comparadas en tiempo constante). El proveedor sale de la key, nunca del cuerpo.
+  - `{ accion: 'consultar', codigo_aliado }` → `public.consultar_canjes`: `{ codigo_aliado, activo, nivel, puntos_disponibles, recompensas: [{ codigo, nombre, puntos, nivel_minimo, disponible, motivo }] }`, solo las activas de ese proveedor o de todos. Sin nombre, correo ni otros datos personales.
+  - `{ accion: 'canjear', codigo_aliado, recompensa, referencia_externa }` → `public.registrar_canje`, que en una transacción bloquea al aliado y exige cuenta activa, recompensa activa del proveedor, **nivel actual ≥ nivel mínimo**, saldo suficiente y máximo **30 canjes por hora**; inserta el canje y el movimiento `redimido` (clave `canje:{id}`, `creado_por = 'canjes_api'`, nota = nombre de la recompensa). Responde `201`; repetir la misma referencia responde `200` con el canje original y `duplicado: true` (no descuenta dos veces).
+  - Errores con código estable en el cuerpo (`{ error, codigo }`): `aliado_inexistente`/`recompensa_inexistente` 404, `aliado_no_activo`/`nivel_insuficiente`/`saldo_insuficiente`/`referencia_duplicada` 409, `dato_invalido` 422, `limite_canjes` 429; key inválida 401; sin keys configuradas 503.
+- **Anulación** (solo admin, desde el panel, motivo obligatorio de 10 caracteres): `admin_anular_canje` marca el canje `anulado` y devuelve los puntos con un `ajuste_admin` `ganado` (`vinculo = 'canjes'`, clave `canje_anulado:{id}`). La devolución suma a `puntos_disponibles` pero **no** a `puntos_nivel`, porque el canje tampoco los restó (§5.4). El aliado ve el motivo.
+- Vistas: `v_mis_canjes` y `v_recompensas` (catálogo activo con `disponible`, `falta_nivel` y `puntos_faltantes` del aliado de la sesión), `v_admin_canjes` y `v_admin_recompensas` (con uso de cada recompensa).
+
 ### 4.11 `webhook_eventos` (auditoría de integración)
 
 ```
-id, fuente ('clientify'), payload jsonb, recibido_at, procesado_at NULL, error text NULL
+id, fuente ('clientify'), payload jsonb, recibido_at, procesado_at NULL, error text NULL,
+entidad ('contacto' | 'oportunidad'), entidad_id, accion        -- fase 6
 ```
+
+- `error` guarda también los **avisos** de un evento procesado (Status o fase desconocidos, `ID_aliado` inexistente, conflictos).
+- El payload crudo se vacía a los **90 días** (`interno.depurar_webhooks_clientify()`, cron `depurar-webhooks-clientify` el día 1 de cada mes) porque trae datos personales (decisión del equipo).
+- Los eventos de contactos u oportunidades **ajenos al programa** (resultado "ignorado") se vacían **al procesarlos** (`{"descartado": true}`): Clientify envía los cambios de todas sus oportunidades y no se guardan datos que no son del programa (decisión del equipo).
+
+**Tablas de la fase 6:**
+- `clientify_cola_entidades` (PK `entidad, entidad_id`): contactos y oportunidades por reprocesar; varios eventos de la misma entidad quedan en una sola fila. Solo el servidor.
+- `avance_conflictos`: cambios de Clientify sobre un valor que ya era definitivo (§5.1). No cambian puntos ni calidad; los resuelve un admin con `ajuste_admin` (panel de la fase 9). Un admin puede leerlos.
 
 ### 4.12 Vista `v_aliado_dashboard`
 
 Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre, tipo, puntos, nivel, racha, calidad, conteos y sumas por tipo. **No expone `id`.**
+
+**Implementado (fase 8, migración `vistas_dashboard`):** cuatro vistas `security_invoker` que además filtran por `auth.uid()` (cada aliado, también un admin, ve solo lo suyo) y no exponen `id` ni `aliado_id`. Solo lectura para `authenticated`; `anon` no tiene acceso.
+
+- `v_aliado_dashboard`: perfil, puntos, nivel, calidad y `empresas_evaluadas`, racha (con `racha_semana_actual`), conteos de referidos (total, calificados, propuesta, cerrados, no continúan, activos), indicadores de Financieros (`potencia_kwp`, `pipeline_originado`, `valor_cotizado`, en COP) y módulos (completados, pendientes, `puntos_modulos_mes`).
+- `v_mis_movimientos`: historial con valor nominal y aplicado, descripción de la regla y nombre de la empresa o del módulo.
+- `v_mis_referidos`: empresas con su avance, `etapa` visible (ids de `OPPORTUNITY_STAGE_CONFIG`: recibida, validacion, calificacion, dtp, propuesta, cerrado, noviable) y puntos netos por empresa.
+- `v_mis_modulos`: catálogo activo con los puntos de cada módulo y el estado del aliado en cada uno.
 
 ### Diferencias respecto al Excel y por qué
 
@@ -312,7 +370,7 @@ Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre,
 | `fuera_perfil` | `fuera_perfil = si` (había información suficiente para identificarlo) | **−15** | `empresa:{id}:fuera_perfil` |
 | `informacion_falsa` | `informacion_falsa = si` (empresa inexistente o datos deliberadamente incorrectos) | **−30** | `empresa:{id}:informacion_falsa` |
 | `baja_calidad_reiterada` | Admin lo registra tras retroalimentación previa | **−20** | `aliado:{id}:baja_calidad:{fecha}` |
-| `modulo_completado` | Módulo terminado (máx. 20 pts/mes, ver §5.3) | **+5** | `modulo:{modulos_completados.id}` |
+| `modulo_completado` | Módulo terminado (máx. 20 pts/mes, ver §5.3) | **según el módulo** (hoy +5) | `modulo:{modulos_completados.id}` |
 | `evento_validado` | Evento validado por admin | **+100** | `evento:{id}` |
 | `racha_solar` | Racha 4x4 completada | **+75** | `racha:{aliado_id}:{lunes_semana_4}` |
 | `ajuste_admin` | Corrección manual justificada | ± | `ajuste:{uuid}` |
@@ -347,18 +405,23 @@ Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre,
   - si `racha_ultima_semana = S − 7 días`, se marca la siguiente `semana_n = true`;
   - si no, la racha **reinicia**: `semana_1 = true` y las demás en `false`.
   - Luego `racha_ultima_semana = S`.
-- **Al completar 4 de 4:** se inserta `racha_solar` (+75) y en la semana siguiente todo vuelve a `0 0 0 0`.
-- **Cron semanal** (lunes 00:05 Bogotá): si `racha_ultima_semana` es anterior a la semana recién terminada, la racha se reinicia a `0 0 0 0`.
+- **Al completar 4 de 4:** se inserta `racha_solar` (+75). La racha se ve completa el resto de esa semana y el cron del lunes siguiente la vuelve a `0 0 0 0` (decisión del equipo).
+- **Cron semanal** (lunes 00:05 Bogotá): vuelve a `0 0 0 0` la racha completada la semana anterior y la de quien no calificó ninguna empresa en la semana recién terminada.
 - **Garantía:** no puede existir más de un `racha_solar` por aliado en 28 días. Se valida en la función antes de insertar.
+- Una calificación retenida mientras la cuenta no estaba activa (§4.7) no cuenta para la racha (decisión del equipo).
+- Implementación: trigger `movimientos_puntos_racha` sobre el movimiento `empresa_calificada`, `interno.actualizar_racha` e `interno.reiniciar_rachas` (migración `racha_solar`).
 
-### 5.3 Módulos (+5 cada uno, máximo 20 por mes calendario)
+### 5.3 Módulos (puntos por módulo, máximo 20 puntos por mes calendario)
 
-- Completar un módulo crea una fila en `modulos_completados` con `recompensa_estado = 'pendiente'`.
-- La función `otorgar_modulos_pendientes(aliado)` corre al completar un módulo y en un **cron el día 1 de cada mes a las 00:05**. Hace lo siguiente:
-  - cuenta los movimientos `modulo_completado` del mes en curso;
-  - otorga pendientes en orden FIFO hasta llegar a 4 en el mes (20 puntos);
+- **Cada módulo tiene su propio valor** en `modulos.puntos` (0 = contenido sin puntos, máximo 20). El tope mensual es de **20 puntos**, no de un número de módulos (decisión del equipo). La regla `modulo_completado` de `reglas_puntos` no tiene valor fijo.
+- El catálogo `modulos` usa `codigo`, el mismo identificador de los cursos de la Academy del Hub (`c11`, `c12`…).
+- Completar un módulo (`public.completar_modulo(aliado, codigo)`, que llama el servidor con el aliado de la sesión) crea una fila en `modulos_completados` con el valor del módulo en ese momento y `recompensa_estado = 'pendiente'`, o `'no_aplica'` si el módulo no da puntos.
+- La función `otorgar_modulos_pendientes(aliado)` corre al completar un módulo, al activarse la cuenta y en un **cron el día 1 de cada mes a las 00:05**. Hace lo siguiente:
+  - suma los puntos de los movimientos `modulo_completado` del mes en curso;
+  - otorga pendientes en orden FIFO mientras quepan completos en el tope de 20 puntos del mes; un módulo que no cabe espera al mes siguiente, y los que llegaron después también esperan;
   - marca `otorgada` y `fecha_otorgada = now()`.
-- Ejemplo: 8 módulos en septiembre dan 20 puntos en septiembre, los otros 4 quedan pendientes y se otorgan el 1 de octubre. Total visible: 40 puntos al cabo de dos meses.
+- Ejemplo: 8 módulos de 5 puntos en septiembre dan 20 puntos en septiembre, los otros 4 quedan pendientes y se otorgan el 1 de octubre. Total visible: 40 puntos al cabo de dos meses.
+- Una cuenta que no está activa no recibe puntos de módulos: quedan pendientes hasta que se active.
 - El dashboard muestra los módulos con "recompensa pendiente".
 
 ### 5.4 Cálculos de saldo: **piso en 0 y sin memoria** (decisión del equipo)
@@ -375,7 +438,9 @@ Los Puntos Sol **nunca son negativos**, y una penalización recibida con saldo b
 - Implementar como funciones SQL `calcular_puntos_nivel(aliado)` y `calcular_puntos_disponibles(aliado)`, con tests del ejemplo anterior.
 - En la UI, el historial muestra el valor nominal ("−30 · Información falsa") y, si `puntos_aplicados < puntos`, una nota del tipo "se descontaron 10 porque tu saldo era 10".
 - La fecha que cuenta es `movimientos_puntos.fecha`, el momento en que se otorgó.
+- La devolución de un canje anulado (`ajuste_admin` con `vinculo = 'canjes'`) no cuenta para `puntos_nivel` (fase 10): el canje no restó puntos de nivel, así que su devolución tampoco los suma.
 - Recalcular en un trigger después de cada `INSERT` en `movimientos_puntos` **y** en un cron diario (00:15 Bogotá), porque `puntos_nivel` baja solo con el paso del tiempo.
+  - Implementado (fase 3): `interno.recalcular_aliado(aliado)` actualiza saldos, calidad y nivel; el cron `recalcular-puntos-diario` de `pg_cron` (`15 5 * * *` UTC = 00:15 Bogotá) llama a `interno.recalcular_todos()`. La calidad también se recalcula al cambiar `avance_empresa` o al borrar una empresa.
 
 ---
 
@@ -409,6 +474,7 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 | 6 | Bronce | 0 | — (cualquier caso restante) |
 
 - Se asigna el **primer** nivel cuyas dos condiciones se cumplan. Ejemplo: 1000 puntos con 60 % de calidad → **Oro**.
+- Dicho de otra forma (decisión del equipo): el nivel es el **menor** entre el que dan los puntos y el que da la calidad. Con muchos puntos y baja calidad, manda la calidad; con buena calidad y pocos puntos, mandan los puntos. Nadie queda por fuera.
 - Bronce es el nivel por defecto, así que **ningún aliado queda sin nivel.**
 - El nivel **no depende de `puntos_disponibles`**. Mucho saldo con baja calidad o sin actividad reciente puede significar Bronce.
 - Las recompensas canjeables dependen del nivel **actual**.
@@ -421,10 +487,12 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 ### 7.1 "Refiere tu empresa" (público, formulario **de Clientify**)
 
 - Ya existe y está configurado en Clientify, con sus etiquetas y su proceso. **No se modifica.**
+- Al llenarse, Clientify pone en el **referido** la etiqueta **"aliado del sol hub"** y "referido perfecto" o "referido imperfecto", dispara mensajes de WhatsApp y automatizaciones de n8n. El Hub lee esas etiquetas (el perfecto/imperfecto da +20/−5) pero **no** usa "aliado del sol hub" para reconocer aliados.
 - Los datos llegan a Clientify con `ID_aliado`. El Hub se entera por webhook (§8, flujo C):
   - crea la fila en `empresas` con `origen = 'clientify_form'` y en `avance_empresa`;
   - otorga `registro_valido` si `ID_aliado` corresponde a un aliado activo.
 - Si `ID_aliado` no existe o viene vacío, se registra en `webhook_eventos` con un error para revisión y no se otorgan puntos.
+- **Implementado (fase 6):** `public.clientify_registrar_lead(codigo, contact_id, datos)`. Si el aliado está `pendiente` o `suspendido`, la empresa se crea y el `registro_valido` queda **retenido** hasta que la cuenta vuelva a `activo` (§4.7, decisión del equipo). `perfecto` queda en `revision` y lo define la etiqueta del contacto.
 
 ### 7.2 "Nueva oportunidad" (dentro del Hub, con sesión iniciada)
 
@@ -454,28 +522,52 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 5. Envía a Clientify (§8, flujo B).
 6. Responde al front.
 
+**Implementación (fase 5):**
+- `POST /api/oportunidades/factura` `{ nombre_archivo, tipo, tamano }` valida tipo y tamaño y devuelve `{ empresa_id, ruta, token }`: una URL firmada de subida de un solo uso en `{aliado_id}/{empresa_id}/{archivo}`. El navegador sube directo a Storage (`uploadToSignedUrl`) porque Vercel limita el cuerpo de las funciones a 4,5 MB.
+- `POST /api/oportunidades` `{ empresa_id, datos, factura? }` toma el aliado del token (`lib/sesion.js`, exige `activo`) y llama a `public.registrar_oportunidad`, que en **una transacción** bloquea al aliado, aplica el **límite de 20 referidos por hora**, valida campos (correo, teléfono E.164 con la regla de Colombia, valor > 0, declaración Ley 1581), rechaza el **autorreferido** (mismo correo o celular del aliado) y los **duplicados**, verifica que la factura exista en el bucket dentro de la carpeta del aliado y de esa empresa, calcula `es_perfecto`, inserta `empresas`, `facturas` y `avance_empresa` y otorga los puntos. Los errores llevan un prefijo estable (`aliado_no_activo`, `limite_referidos`, `referido_duplicado`, `autorreferido`, `oportunidad_invalida`, `factura_invalida`) que el endpoint traduce a 403/429/409/422. Si el registro falla, se borra la factura subida.
+- Después intenta el flujo B en el momento (mejor esfuerzo); si Clientify falla, queda en la cola. Responde `201 { es_perfecto, movimientos, puntos_disponibles, puntos_nivel, nivel, clientify: 'ok' | 'pendiente' }`.
+- En el front, el formulario "Referir" emite `ads:referral { datos, archivo }` y `js/supabase.js` responde `ads:referral-resultado`; la pantalla final muestra los puntos que confirmó el servidor.
+
 ---
 
 ## 8. Integración con Clientify
 
 Autenticación con API key (`Authorization: Token ...`) en `CLIENTIFY_API_KEY`. Consulta la documentación oficial en https://developer.clientify.com/ antes de implementar cada llamada.
 
-### Flujo A — Aliado nuevo → Clientify
+### Flujo A — Aliado aprobado → Clientify
 
-Después del alta en Supabase:
+Cuando GEENERA aprueba al aliado (`estado` pasa de `pendiente` a `activo`), no al registrarse:
 
-1. Crear el contacto con la etiqueta **"Aliado del Sol"**, la etiqueta de tipo y el campo `ID_aliado = codigo_aliado`.
+1. Crear el contacto con la etiqueta de aliado (**"aliados del sol"**; **"aliado del sol hub"** si el tipo es Cliente Embajador, decisión del equipo), la etiqueta de tipo y el campo `ID_aliado = codigo_aliado`.
 2. Guardar `clientify_contact_id`.
 3. Si falla, dejar `pendiente` y reintentar con un cron cada 15 min con backoff.
 
 Cuando el aliado edita su perfil, también se replica en Clientify.
 
+**Las cuentas de admin no se sincronizan** (decisión del equipo, fase 10): al volverse admin, `clientify_sync_estado = 'excluido'` (trigger `aliados_exclusion_clientify`), la cola del flujo A nunca las reclama y un resultado en curso no las saca de `excluido`. Si una cuenta deja de ser admin, vuelve a `pendiente` y entra a la cola.
+
+**Implementación (fase 4):**
+- Cola en la base: `public.clientify_reclamar_aliados(limite)` toma aliados `activo` con `clientify_sync_estado` `pendiente`/`error` cuya espera se cumplió (con préstamo de 10 min y `SKIP LOCKED`); `public.clientify_registrar_resultado(aliado, contact_id, error)` guarda el éxito o programa el reintento (15 min, 30, 1 h… máximo 24 h; columnas `clientify_sync_intentos`, `clientify_sync_proximo_at`, `clientify_sync_at`). Solo `service_role` puede ejecutarlas.
+- Cambiar nombre, correo, celular, regional, tipo, organización o cargo de un aliado ya sincronizado lo vuelve a marcar `pendiente`.
+- `GET|POST /api/cron/clientify` procesa un lote de aliados (flujo A), otro de oportunidades (flujo B) y otro de eventos de Clientify (flujo C) en un presupuesto de 40 s; se protege con `Authorization: Bearer <CRON_SECRET>`. `/api/cron/clientify-aliados` queda como alias para no romper la URL ya guardada en el Vault (se recomienda actualizar `clientify_sync_url` a `/api/cron/clientify`).
+- **Programación (independiente del plan de Vercel):** el job `sincronizar-clientify-aliados` de `pg_cron` llama al endpoint **cada 2 minutos** (desde la fase 6, para procesar los webhooks) con `pg_net`, usando la URL y el `CRON_SECRET` guardados en el **Vault** de cada proyecto de Supabase (`clientify_sync_url`, `cron_secret` y, si el despliegue tiene Deployment Protection, `vercel_bypass_secret`). Sin esos secretos el job no hace nada. Además, `vercel.json` declara un Vercel Cron **diario** (`0 7 * * *` UTC = 02:00 Bogotá) a `/api/cron/clientify-conciliacion`, que concilia y procesa las colas (respaldo compatible con el plan Hobby). `interno.invocar_cron_hub('<endpoint>')` llama a otro `/api/cron/*` del despliegue guardado en el Vault (p. ej. el diagnóstico).
+- Código: `lib/clientify/mapeo.js` (nombres de Clientify), `lib/clientify/cliente.js` (HTTP), `lib/clientify/aliados.js` (flujo A), `lib/clientify/empresas.js` (flujo B) y `lib/clientify/cola.js` (procesamiento de ambas colas). Si ya existe un contacto con el mismo correo (p. ej. un cliente que se vuelve Cliente Embajador), **se vincula sin pisar sus datos**: solo se agregan `ID_aliado` y las etiquetas.
+- Fuera de Production (`VERCEL_ENV` ≠ `production`) se agrega `PRUEBA HUB` y **solo se sincronizan correos con `+prueba`**; los demás quedan en `error` sin llamar a Clientify.
+
 ### Flujo B — Nueva oportunidad (Hub) → Clientify
 
 1. Crear el contacto (y la empresa, si aplica) con el campo personalizado `ID_aliado = codigo_aliado`.
 2. Poner la etiqueta **"Referido perfecto"** o **"Referido imperfecto"** según `es_perfecto`, para que Clientify continúe su proceso existente. El contacto entra con el Status inicial que use su flujo actual.
-3. La factura se envía como adjunto o como enlace firmado (*confirmar qué soporta la API de Clientify*).
+3. La factura se **adjunta a la ficha de la empresa** en Clientify, donde el equipo ya guarda los documentos (decisión del equipo).
 4. Guardar el **`ID` nativo del contacto** que devuelve Clientify en `clientify_contact_id`. Es el mismo "ID" que aparece al exportar leads, y no se necesita crear ningún campo adicional. La oportunidad la crea el equipo comercial más adelante; su id se captura por webhook.
+
+**Implementación (fase 5):**
+- La empresa **siempre** se crea (o se reutiliza si ya existe con el mismo nombre) y el contacto queda vinculado a ella (`company`), con `ID_aliado`, la etiqueta de perfecto/imperfecto y un resumen del referido en la descripción.
+- Orden: empresa → factura adjunta (`POST /companies/{id}/files/`) → contacto. Cada paso se guarda aunque el siguiente falle (`clientify_company_id`, `facturas.clientify_subida_at`, `clientify_contact_id`), así el reintento no duplica nada.
+- Si el contacto ya existe en Clientify sin `ID_aliado`, se vincula a la empresa y recibe `ID_aliado` y etiquetas; si ya tiene **otro** `ID_aliado`, no se cambia la atribución: queda en `error` para revisión del equipo.
+- Cola en la base: `public.clientify_reclamar_empresas(limite, empresa)` y `public.clientify_registrar_resultado_empresa(...)`, con el mismo préstamo y backoff del flujo A; solo `service_role`. Las procesa el mismo cron `/api/cron/clientify`.
+- Fuera de Production aplica la misma regla: `PRUEBA HUB` y solo contactos con `+prueba` en el correo.
+- *Por confirmar con la API real:* los filtros `?email=` y `?name=`, el formato de `custom_fields`, el vínculo `company` y la subida multipart de archivos. Si difieren, se ajusta solo `lib/clientify/cliente.js`.
 
 **Evitar duplicados:** Clientify también dispara el webhook de "contacto creado" para este lead, y puede llegar **antes** de que el Hub guarde el `ID`. Por eso:
 
@@ -486,6 +578,8 @@ Cuando el aliado edita su perfil, también se replica en Clientify.
 ### Flujo C — Clientify → Supabase (webhook)
 
 - Configuración en Clientify: *Configuración > Integraciones > Webhooks*, eventos de crear, actualizar y eliminar para **contactos y oportunidades**.
+  - **Estado real:** solo el webhook de **oportunidades** apunta al Hub. El de contactos alimenta un flujo de **n8n** y no se cambia (decisión del equipo). Por eso los cambios de Status y etiquetas de los referidos llegan con la conciliación horaria o con cualquier evento de su oportunidad, y un lead del formulario público se descubre cuando se le crea una oportunidad (ver "Pendiente" en la implementación).
+  - Formato confirmado con los primeros eventos: `{ "hook": { "id", "event": "deal.saved", "target" }, "data": { "id", … } }`.
 - Destino: `POST /api/webhooks/clientify?token=<CLIENTIFY_WEBHOOK_SECRET>`.
 
 Pasos:
@@ -501,7 +595,19 @@ Pasos:
 6. Por cada variable que pasó de `revision` a `si` o `no`, insertar el movimiento con su `clave_unica`. Luego recalcular la calidad, los saldos, el nivel y la racha.
 7. Marcar `procesado_at` o `error`.
 
-**Conciliación nocturna** (Vercel Cron, 02:00 Bogotá): recorre los contactos y oportunidades modificados en Clientify en las últimas 48 h y reaplica el mismo proceso, que es idempotente. Así se cubren webhooks perdidos.
+**Implementación (fase 6):**
+- `POST /api/webhooks/clientify?token=…` (o con el encabezado `x-webhook-token`, pensado para n8n) valida `CLIENTIFY_WEBHOOK_SECRET` en tiempo constante, interpreta el evento (`interpretarWebhook` en `mapeo.js`) y llama a `public.webhook_clientify_recibir`, que guarda el evento y encola la entidad. Responde 200 sin procesar (500 si no pudo guardar, para que Clientify reintente). Un contacto **creado** espera 2 minutos.
+- El cron (cada 2 min) toma la cola (`clientify_reclamar_entidades`, préstamo de 5 min y `SKIP LOCKED`) y, por entidad (`lib/clientify/webhook.js`):
+  1. vuelve a consultar el contacto (una oportunidad se resuelve a su contacto) y las oportunidades candidatas: la del evento (o del escaneo) y la ya guardada en `clientify_deal_id`. Se queda con las vinculadas a ese contacto y de un embudo del programa, y usa la más avanzada. **La API no filtra oportunidades por contacto** (`/deals/?contact=` devuelve todas, confirmado con el diagnóstico);
+  2. resuelve la empresa por `clientify_contact_id`; si no existe y el contacto tiene `ID_aliado`, es un lead del formulario (§7.1). Se ignoran sin error el contacto de un aliado (se reconoce por `aliados.clientify_contact_id`; las etiquetas "aliado del sol hub" / "aliados del sol" **no** sirven porque el formulario las pone en los referidos) y los contactos sin `ID_aliado`. Si el correo del lead es el del propio aliado, se rechaza como `autorreferido`. Fuera de Production se ignoran los correos sin `+prueba`; en Production, los contactos con `PRUEBA HUB`;
+  3. deriva con `derivarAvance` (`lib/clientify/avance.js`) y aplica con `public.aplicar_avance_clientify(empresa, crudos, variables, deal_id)`, que en una transacción guarda los datos crudos, pasa de `revision` a definitivo, registra conflictos y luego inserta los movimientos en el orden de esta sección.
+  4. `clientify_resultado_entidad` cierra los eventos (con sus avisos) o programa el reintento (2 min, 4, 8… máximo 6 h).
+- **Conciliación (cada hora, minuto 7, job `conciliar-clientify`, y a las 02:00 por Vercel Cron):** `/api/cron/clientify-conciliacion` encola los contactos de las empresas que siguen en curso (`negocio_cerrado <> 'si'`) con `public.clientify_encolar_conciliacion()`, **escanea todas las oportunidades** (páginas de 100) y encola las de contactos referidos que son nuevas con más hitos que los alcanzados o que son la guardada y cambiaron de fase o estado, y procesa las colas. Así los cambios del contacto llegan con máximo 1 h de retraso aunque su webhook no apunte al Hub.
+- **Reenvío desde n8n (plan acordado para los leads del formulario):** el webhook de contactos de Clientify va a n8n. En ese flujo se agrega una rama que, si el contacto tiene la etiqueta "aliado del sol hub" o "aliados del sol" (o el campo `ID_aliado`), hace `POST` a `/api/webhooks/clientify` con el encabezado `x-webhook-token` y un cuerpo mínimo `{"hook": {"event": "contact.created"}, "data": {"id": <ID del contacto>}}` (el Hub vuelve a consultar Clientify; no hace falta enviar datos personales). La rama no debe bloquear el resto del flujo (continuar si falla). Mientras no exista, un lead del formulario que nunca tenga oportunidad no se descubre.
+- Lo ignorado (contactos u oportunidades ajenos al programa) se procesa sin error y su payload se borra (`clientify_resultado_entidad(..., p_descartar => true)`).
+- **Diagnóstico:** `/api/cron/clientify-diagnostico` (con `CRON_SECRET`) devuelve solo nombres y estructura, sin datos personales: campos personalizados, etiquetas (paginadas), embudos, fases, los valores de Status en uso, la forma de contactos y oportunidades y la estructura de los últimos webhooks. Sirve para confirmar el mapeo y responder §14 (preguntas 1 y 2). Se llama con `select interno.invocar_cron_hub('clientify-diagnostico');`.
+
+**Conciliación nocturna** (Vercel Cron, 02:00 Bogotá; ver la implementación arriba): recorre los contactos y oportunidades modificados en Clientify en las últimas 48 h y reaplica el mismo proceso, que es idempotente. Así se cubren webhooks perdidos.
 
 ### Mapeo Clientify → `avance_empresa` (decisión del equipo)
 
@@ -524,19 +630,32 @@ Supabase guarda el dato crudo (`estado_contacto_clientify`, `fase_oportunidad`�
 
 **A. Status del contacto → `calificado`**
 
-| Status en Clientify | `calificado` |
-|---|---|
-| 0. lead no calificado | `no` |
-| 3. lead caliente | `si` |
-| 4. en oportunidad | `si` (superó "caliente") |
-| 5. cliente | `si` (superó "caliente") |
-| 0. contacto alternativo, 0. lead verificado, 1. lead frío, 2. lead templado | `revision` |
-| 0. lead perdido | `revision` (decisión del equipo) |
-| 0. cliente perdido | sin cambio (ya fue `si`) |
+| Status en Clientify (interfaz) | Código en la API | `calificado` |
+|---|---|---|
+| 0. lead no calificado | `not-qualified-lead` | `no` |
+| 3. lead caliente | `hot-lead` | `si` |
+| 4. en oportunidad | `in-deal` | `si` (superó "caliente") |
+| 5. cliente | `client` | `si` (superó "caliente") |
+| 1. lead frío, 2. lead templado | `cold-lead`, `warm-lead` | `revision` |
+| 0. contacto alternativo, 0. lead verificado | `other` | `revision` |
+| 0. lead perdido | `lost-lead` | `revision` (decisión del equipo) |
+| 0. cliente perdido | `lost-client` (*por confirmar*) | sin cambio (ya fue `si`) |
+
+La API devuelve el **código** del Status (confirmado con el diagnóstico); se aceptan el código y el nombre.
 
 Comparar los textos normalizados (minúsculas, sin tildes, `trim`). El mapeo vive en `lib/clientify/mapeo.ts` para que pueda ajustarse si Clientify cambia los nombres.
 
 **B. Fase de la oportunidad → avance comercial**
+
+**Cuentan todos los embudos de proyectos** (decisión del equipo): GEENERA AUTOCONSUMO, OFF GRID, MINIGRANJAS, Care y los que se creen. Cada embudo numera distinto (en OFF GRID el diseño es la 2 y existe una 8; MINIGRANJAS y Care no tienen número), así que los hitos se identifican por el **nombre de la fase** (sin el número) y la **posición** de la fase dentro de su embudo, con el catálogo `/deals/pipelines/stages/` (`HITOS_FASE` en `mapeo.js`, `construirCatalogoFases` y `hitosDeOportunidad` en `avance.js`):
+
+| Hito | Fase (por nombre) | Regla |
+|---|---|---|
+| `oportunidad_tecnica` | "Diseño" | la fase de la oportunidad está en la posición de "Diseño" o después |
+| `propuesta_comercial` | "Presentación de oferta" | ídem |
+| `negocio_cerrado` | "Contrato" | ídem |
+
+Un embudo sin esas fases (p. ej. GEENERA_ADS, de eventos, o "Por defecto") no genera puntos de avance. Una fase que no está en el catálogo → `revision` y aviso. Las filas de abajo son las de GEENERA AUTOCONSUMO. El estado de la oportunidad se lee de `status_desc`: Open → abierta, Won → ganada, Lost y Expired → perdida.
 
 **Fases del pipeline** (la 8 no existe):
 
@@ -556,12 +675,12 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
 
 | Variable | Regla | Puntos |
 |---|---|---|
-| `oportunidad_tecnica` | `si` si `fase_num >= 3` ("3. Diseño"). `no` si `calificado = no`, o si la oportunidad se pierde antes de la fase 3. En otro caso, `revision`. | +30 al pasar a `si` |
-| `propuesta_comercial` | `si` si `fase_num >= 6` ("6. Presentación de oferta"). En otro caso, `revision`. | +50 |
-| `negocio_cerrado` | `si` si `fase_num >= 10` ("10. Contrato"). En otro caso, `revision`. | +150 |
+| `oportunidad_tecnica` | `si` si la fase es "Diseño" o posterior (en AUTOCONSUMO, `fase_num >= 3`). `no` si `calificado = no`, o si la oportunidad se pierde antes del diseño. En otro caso, `revision`. | +30 al pasar a `si` |
+| `propuesta_comercial` | `si` si la fase es "Presentación de oferta" o posterior (en AUTOCONSUMO, `>= 6`). En otro caso, `revision`. | +50 |
+| `negocio_cerrado` | `si` si la fase es "Contrato" (en AUTOCONSUMO, la 10). En otro caso, `revision`. | +150 |
 
 - Si pasan varias fases de golpe (por ejemplo de 2 a 6), se otorgan en el mismo proceso todos los movimientos pendientes (+30 y +50), cada uno con su clave única.
-- Si una empresa referida tiene **varias oportunidades**, se usa **siempre la más avanzada**, la de mayor `fase_num` (decisión del equipo). `clientify_deal_id` guarda la de esa oportunidad.
+- Si una empresa referida tiene **varias oportunidades**, se usa **siempre la más avanzada** (decisión del equipo): la que alcanzó más hitos y, a igualdad, la de fase posterior, aunque sean de embudos distintos. `clientify_deal_id` guarda la de esa oportunidad.
 
 **C. Variables derivadas**
 
@@ -570,16 +689,17 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
 | `integridad_informacion` | `no` si `calificado = no`; `si` si `calificado = si`; `revision` en otro caso |
 | `perfecto` | Etiqueta `Referido perfecto` → `si`; `Referido imperfecto` → `no`; sin etiqueta → `revision` |
 | `fuera_perfil` | `si` si `calificado = no` **y** `perfecto = si`; `no` si `calificado` es definitivo y no se cumple lo anterior; `revision` en otro caso (ver §5, aclaraciones) |
-| `informacion_falsa` | `si` si el contacto tiene la etiqueta de información falsa (*nombre exacto de la etiqueta pendiente*); `revision` si no la tiene |
+| `informacion_falsa` | `si` si el contacto tiene **cualquiera** de las etiquetas "fraude", "no existe" o "información de contacto errónea" (decisión del equipo: se aplican a casos distintos); `revision` si no tiene ninguna |
 
 **D. Datos numéricos para dashboards**
 
 | Supabase | Clientify |
 |---|---|
 | `lead_scoring` | Lead scoring nativo del contacto |
-| `potencia_instalada_kwp` | Campo **"Potencia"**, en **kWp** (*confirmar si está en el contacto o en la oportunidad*) |
-| `valor_oportunidad` | Valor o monto de la oportunidad (*confirmar el campo exacto*) |
-| `valor_cotizado` | Campo de la oportunidad (*confirmar el campo exacto*) |
+| `potencia_instalada_kwp` | Campo personalizado de la oportunidad **"Potencia (kWp)"** (confirmado con el diagnóstico) |
+| `valor_cotizado` | **Suma del "Importe"** (`amount`) de **todas** las oportunidades de proyectos del referido (decisión del equipo) |
+| `valor_oportunidad` (pipeline originado) | **Suma del "Importe"** solo de las oportunidades que se cierran y se llevan a cabo: ganadas o en "Contrato" (decisión del equipo; separa cotizaciones de cierres) |
+| `potencia_instalada_kwp` (suma) | Suma de la "Potencia (kWp)" de esas mismas oportunidades cerradas |
 | `estado_oportunidad` | Estado nativo de la oportunidad: abierta, ganada o perdida |
 
 **Reglas de implementación:**
@@ -594,6 +714,10 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
   3. insertar los movimientos, en orden: calificado → perfecto → fuera_perfil → oportunidad_tecnica → propuesta → cierre → información falsa;
   4. actualizar la racha;
   5. recalcular la calidad, los saldos y el nivel.
+- **Valor efectivo en las derivadas:** `fuera_perfil`, `integridad_informacion` y `oportunidad_tecnica = no` usan el valor vigente del Hub si ya es definitivo (p. ej. el `perfecto` de un referido del Hub); si no, el de Clientify. Con `calificado = no` y `perfecto` aún en `revision`, `fuera_perfil` queda en `revision`.
+- **Confirmado con el diagnóstico (fase 6):** estructura de contactos y oportunidades, códigos de Status, `status_desc`, `pipeline_desc`, `pipeline_stage_desc`, `amount`, `custom_fields` como `{field, value}`, etiquetas en minúscula (se comparan sin distinguir mayúsculas) y los campos del contacto que usa el formulario público ("Valor pagado en factura (COP / mes)", "Subsector Economico", ciudad en `addresses`). El lead scoring no viene en la API de contactos.
+- Los tres valores de la tabla D se calculan en el **escaneo horario** (`valoresDelReferido` en `avance.js`, `public.clientify_actualizar_valores`), porque es el único que ve todas las oportunidades de cada contacto; un evento suelto solo actualiza fase y estado. Si el escaneo no alcanzó a ver todas las oportunidades (más de 10 000), no borra valores.
+- **Racha:** la fase 6 ya guarda `fecha_calificado`; la actualización de la racha llega en la fase 7 y se reconstruirá desde esas fechas.
 
 ---
 
@@ -609,6 +733,17 @@ Todos ven un saludo con su **nombre completo**, su `codigo_aliado` (copiable, pa
 
 Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 
+**Implementado (fase 8):**
+- `js/supabase.js` carga las vistas del §4.12 al entrar, después de un referido y al completar un módulo, y emite `ads:dashboard { ok, aliado, movimientos, referidos, modulos, eventos, canjes, recompensas }`; la página lo pide con `ads:consultar-dashboard`.
+- En `index.html` (y su fuente en `src/`), con sesión todas las pantallas usan esos datos; sin sesión se sigue viendo la demostración. Las funciones `referidoComoOpp`, `referidoComoCartera` y `movimientoComoHistorial` convierten las vistas a las formas de las constantes de demostración, así el diseño no cambia.
+- La vista la define `tipo_aliado` y se ocultan el selector de rol y las vistas de demostración: EMI, Linker y Cliente Embajador ven el dashboard de aliado; Financieros y Agremiaciones, el de gestión (solo sus referidos), también con su nivel, puntos y código.
+- El nivel es el de la base (puntos **y** calidad, §6.3); el Hub no muestra los requisitos de calidad por nivel (decisión del equipo).
+- El historial se filtra por tipo y por semana, mes y trimestre (hora Bogotá), con la nota de descuento parcial del §5.4.
+- Agremiaciones: la distribución regional agrupa por la ciudad de la empresa referida.
+- Secciones sin datos reales todavía (series por mes, pronóstico de desembolsos, distribución por ejecutivo, Beneficios y Comisiones) conservan los datos de demostración con la etiqueta **"Demostración"**.
+- **Beneficios y canjes (fase 10):** si hay recompensas activas en el catálogo (`v_recompensas`), reemplazan las de demostración y se agrupan por su categoría; cada tarjeta muestra si está disponible, cuántos puntos faltan o qué nivel exige. El canje lo confirma el proveedor (§4.10), así que el Hub solo informa. Sin catálogo real se siguen viendo las de demostración con la etiqueta "Demostración". "Mis canjes" (`v_mis_canjes`) muestra cada canje con su estado y, si se anuló, el motivo. El historial tiene el filtro "Canjes" y un canje no cuenta como "Perdido".
+- **Academy:** los puntos de cada curso salen de `v_mis_modulos`. Al terminar la última lección se llama a `POST /api/modulos { codigo }`, que toma el aliado del token, exige cuenta activa y ejecuta `public.completar_modulo`; responde `{ codigo, nuevo, puntos, recompensa_estado, puntos_disponibles, puntos_nivel, nivel }`. En la base solo queda el curso completado; el avance por lección vive en el navegador (`localStorage`, clave `ads-aca-{codigo_aliado}`).
+
 ---
 
 ## 10. Seguridad
@@ -617,7 +752,20 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   - El aliado solo puede **leer** sus propias filas (`aliado_id = auth.uid()`).
   - Las **escrituras** de puntos, avance, eventos, canjes y sincronización se hacen solo desde el servidor con `SUPABASE_SECRET_KEY` (nunca en el cliente), o con funciones `SECURITY DEFINER` controladas.
 - Rol `admin` (equipo GEENERA) para validar eventos, registrar baja calidad reiterada, hacer ajustes y resolver conflictos. Las acciones de admin quedan auditadas en `creado_por`.
-- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS`. **Nunca** se escriben en el código ni en commits.
+
+**Panel de administración (fase 9):**
+- Página separada `admin.html` + `js/admin.js` (el Hub no se toca). Usa la misma sesión de Supabase; solo entra una cuenta con `rol = 'admin'` y `estado = 'activo'` (las demás ven "Sin acceso"). Pestañas: Resumen, Solicitudes, Aliados (historial, ajustes, baja calidad, suspender/reactivar), Eventos, Conflictos de Clientify, Canjes (anular) y Recompensas (crear y editar el catálogo; fase 10) y Auditoría.
+- Un admin puede leer todas las filas de `aliados` (RLS), así que el front siempre lee la fila propia filtrando por el usuario de la sesión (`.eq('id', session.user.id)`), sin seleccionar ni mostrar el `id`.
+- **Lecturas:** vistas `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_acciones`, `v_admin_canjes`, `v_admin_recompensas` (`security_invoker` y `where es_admin()`: un aliado no ve filas; ninguna expone `aliados.id`, los admins aparecen por su `codigo_aliado`).
+- **Escrituras:** un solo endpoint `POST /api/admin { accion, ... }` (acciones `aprobar`, `rechazar`, `suspender`, `reactivar`, `ajuste`, `baja_calidad`, `validar_evento`, `rechazar_evento`, `resolver_conflicto`, `anular_canje`, `guardar_recompensa` y `archivo_evento`, que da una URL firmada de 5 min). Toma al admin del token (`adminDeLaSesion` en `lib/sesion.js`) y llama a `public.admin_*` (solo `service_role`), que vuelven a verificar al admin con `interno.exigir_admin`, identifican al aliado por `codigo_aliado` y registran la acción en **`acciones_admin`** (solo inserción). Errores con prefijo estable: `no_autorizado`, `no_permitido`, `aliado_inexistente`, `evento_inexistente`, `conflicto_inexistente`, `canje_inexistente`, `recompensa_inexistente`, `estado_invalido`, `dato_invalido`, `evento_incompleto`.
+- **Reglas:** rechazar, suspender y reactivar exigen motivo; un admin no se suspende a sí mismo ni a otro admin; el ajuste exige justificación (mín. 10 caracteres), va de ±1 a ±5000, respeta el piso en 0 y usa una clave que genera el panel (un doble clic no lo duplica); la baja calidad reiterada es −20 y máximo una por aliado y día; resolver un conflicto exige nota y puede aceptar el valor de Clientify en `avance_empresa` (cambia la calidad, no los puntos) y registrar un ajuste en la misma transacción.
+- **El panel no cambia roles** (decisión del equipo). Un admin se asigna por SQL, después de que la persona se registre en el Hub y confirme su correo:
+  ```sql
+  update public.aliados set rol = 'admin', estado = 'activo', aprobado_at = coalesce(aprobado_at, now())
+  where lower(correo) = '<correo>';
+  ```
+- Funciones de Vercel: con `/api/admin`, `/api/eventos` y `/api/canjes` son **12, el máximo del plan Hobby**. Un endpoint nuevo exige unir funciones o pasar a Pro (el equipo planea pasar Vercel y Supabase a Pro; hoy Vercel está en prueba de Pro y Supabase en el plan gratuito).
+- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS` (`proveedor:key,proveedor:key`, §4.10), `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo). **Nunca** se escriben en el código ni en commits.
   - **Production** apunta al proyecto `aliados-prod`; **Preview** y **Development** apuntan a `aliados-dev`.
   - `SUPABASE_PUBLISHABLE_KEY` es la *publishable key* (o la *anon key* legacy). `SUPABASE_SECRET_KEY` es la *secret key* (o la *service_role* legacy). **`SUPABASE_SECRET_KEY` solo se usa dentro de `/api`, jamás en el navegador.**
   - En local se usan con `vercel env pull .env.local`. Verifica que `.env*.local` esté en `.gitignore`.
@@ -628,6 +776,10 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 ## 11. Legal (Colombia, Ley 1581 de 2012 y Decreto 1377 de 2013)
 
 - Autorización explícita en el registro, con la fecha guardada en `autorizacion_datos_at`, y enlace a la política de tratamiento de datos y a los términos del programa de puntos.
+- Los Términos y condiciones son **los mismos para todos los tipos de aliado**, aunque el documento diga "EMI" (decisión del equipo).
+- El footer del sitio ("Términos y condiciones" y "Política de privacidad") abre los mismos PDF vigentes.
+- Los documentos se publican en `assets/legal/` con la versión (fecha) en el nombre del archivo, porque `assets/` se cachea un año: `terminos-aliados-del-sol-2026-02-06.pdf` y `politica-tratamiento-datos-2026-09-25.pdf`. Al publicar una versión nueva se sube un archivo nuevo, se actualiza `JOIN_CONFIG.legal` en la página y las funciones `interno.version_terminos_vigente()` / `interno.version_politica_datos_vigente()` con una migración.
+- **Pendiente:** la política de beneficios (se incluirá en los términos).
 - Declaración del aliado sobre la autorización de los contactos que refiere.
 - Canal para consultar, corregir o eliminar datos, y proceso de borrado de cuenta.
 - Datos alojados en Supabase East US (EE. UU.), lo que implica transferencia internacional; se declara en la política y se valida con el asesor legal (EE. UU. figura entre los países con nivel adecuado según la SIC).
@@ -649,6 +801,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   8. dashboards por tipo;
   9. panel admin y eventos;
   10. endpoint de canjes.
+- **Tests:** `npm run test:db` (pgTAP, base local con `npx supabase start`) y `npm test` (`node --test` de `/lib` y `/api`; las pruebas de integración se omiten si no están `PRUEBAS_SUPABASE_URL`, `PRUEBAS_SUPABASE_SECRET_KEY`, `PRUEBAS_SUPABASE_PUBLISHABLE_KEY` y `PRUEBAS_DB_URL`; corren en serie porque comparten la base local).
 - Incluir tests de las reglas críticas: idempotencia de puntos, límites de nivel, tope mensual de módulos, racha (incluido el reinicio y el bloqueo de 28 días), el cálculo de calidad con `revision` y el saldo con piso en 0 sin memoria (ejemplo +10, −30, +20 = 20).
 
 ## 13. Decisiones tomadas
@@ -663,18 +816,63 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Con varias oportunidades se usa la más avanzada; `0. lead perdido` = `revision` (§8).
 - Puntos con piso en 0 y **sin memoria**: las penalizaciones no generan deuda (§5.4).
 - Cambios posteriores de un valor definitivo en Clientify se corrigen manualmente con `ajuste_admin` (§5.1).
+- Iniciales de `codigo_aliado`: se ignoran partículas y se usan máximo 4 letras (§2).
+- Registro: verificación de correo obligatoria y aprobación de GEENERA con `estado = 'pendiente'` (§3).
+- Celular internacional con selector de país; regla colombiana cuando el indicativo es +57 (§3).
+- Regional opcional; "¿Cómo llegas a las empresas?" obligatoria para EMI, Linker y Cliente Embajador (§3).
+- Nivel = el menor entre el nivel por puntos y el nivel por calidad (§6.3).
+- Los Términos y condiciones aplican a todos los tipos de aliado (§11).
+- El contacto del aliado en Clientify se crea cuando GEENERA aprueba la solicitud, no al registrarse (§3, §8 flujo A).
+- La Política de Tratamiento de Datos debe incluir la transferencia internacional (§11).
+- Un aliado suspendido (o pendiente) no gana ni pierde puntos: se retienen y se acreditan al reactivarse (§4.7).
+- La factura de una oportunidad se adjunta a la **empresa** en Clientify, y la empresa se crea siempre, vinculada al contacto (§8, flujo B).
+- Un contacto solo se refiere una vez (gana el primer aliado) y un aliado no puede referirse a sí mismo (§4.4, §7.2).
+- Máximo 20 referidos por hora por aliado (§7.2).
+- Un lead del formulario público de un aliado `pendiente` o `suspendido` se registra y sus puntos quedan retenidos hasta la reactivación (§7.1).
+- El payload crudo de los webhooks se conserva 90 días (§4.11).
+- Un cambio de Clientify sobre un valor definitivo queda en `avance_conflictos` para un admin; no cambia puntos ni calidad (§5.1, §8).
+- Cuentan todos los embudos de proyectos; los hitos se reconocen por el nombre de la fase ("Diseño", "Presentación de oferta", "Contrato") y su posición en el embudo (§8).
+- Información falsa: cualquiera de las etiquetas "fraude", "no existe" o "información de contacto errónea" (§8).
+- Valor cotizado = "Importe" de la oportunidad (`amount`) (§8).
+- Etiqueta de aliado: "aliado del sol hub" para Cliente Embajador y "aliados del sol" para los demás (§8, flujo A).
+- Los eventos de webhook ajenos al programa se borran al procesarlos (§4.11).
+- El webhook de contactos de Clientify sigue en n8n; al Hub solo llega el de oportunidades, y la conciliación corre cada hora (§8, flujo C).
+- Valor cotizado = suma del Importe de todas las oportunidades del referido; pipeline originado = suma del Importe de las que se cierran (ganadas o en "Contrato") (§8, tabla D).
+- Las etiquetas "aliado del sol hub" / "aliados del sol" marcan **referidos** (el formulario público pone "aliado del sol hub"); el contacto de un aliado se reconoce por su ID (§7.1, §8).
+- Las etiquetas de tipo ("AdS Financieros", "AdS EMI", "AdS Linker", "AdS Cliente Embajador", "AdS Agremiaciones") son las mismas del formulario público y del registro del Hub; se dejan así.
+- Racha Solar: al completar 4 de 4 se reinicia el lunes siguiente; las calificaciones retenidas no cuentan (§5.2).
+- Módulos: cada uno vale lo que indique el catálogo y el tope es de 20 puntos por mes, sin partir módulos y en orden de llegada (§5.3).
+- `empresas` exige los campos obligatorios del formulario solo para `origen = 'hub'`; el formulario público de Clientify puede traerlos incompletos (§4.4, §7.1).
+- Financieros y Agremiaciones también ven sus puntos y su nivel (§9).
+- Agremiaciones: la distribución regional se agrupa por la ciudad de la empresa referida (§9).
+- Las secciones del Hub sin datos reales todavía se muestran con datos de demostración y la etiqueta "Demostración" (§9).
+- Academy: en la base solo se guarda el curso completado; el avance por lección vive en el navegador del aliado (§9).
+- El Hub no muestra los requisitos de calidad por nivel, pero el nivel sí los aplica (§6.3, §9).
+- El panel de administración es una página separada (`admin.html`) y no permite cambiar roles (§10).
+- Los eventos los reporta el aliado desde el Hub y un admin los valida (§4.8).
+- Una solicitud rechazada queda en `estado = 'rechazado'` (no se borra la cuenta) y se puede aprobar después (§3).
+- Las cuentas de admin no se sincronizan con Clientify (`clientify_sync_estado = 'excluido'`) (§8, flujo A).
+- Canjes: el catálogo de recompensas lo crea y edita GEENERA desde el panel; los puntos y el nivel mínimo salen de ahí (§4.10).
+- El proveedor puede consultar el nivel, el saldo y las recompensas disponibles de un aliado por su código, sin datos personales (§4.10).
+- Un admin puede anular un canje no entregado: se devuelven los puntos disponibles, no los de nivel (§4.10, §5.4).
 
 ## 14. Preguntas abiertas
 
 **Necesarias antes de la fase del webhook** (no bloquean las fases 1 a 5):
 
-1. Nombre exacto de la **etiqueta de información falsa** en Clientify.
-2. Campo **"Potencia"** (en kWp): ¿está en el contacto o en la oportunidad? ¿Qué campos exactos son el valor de la oportunidad y el valor cotizado? (Claude Code puede listarlos con la API de Clientify para confirmarlo.)
+1. ~~Etiqueta de información falsa~~ Resuelta: "fraude", "no existe" e "información de contacto errónea" (§8).
+2. ~~Campo "Potencia" y valores~~ Resuelta: "Potencia (kWp)" de la oportunidad y valor cotizado = "Importe" (`amount`). **Pendiente:** ¿qué campo es el "pipeline originado" (`valor_oportunidad`)?
+10. ~~¿Qué embudos cuentan?~~ Resuelta: todos los de proyectos (§8).
+11. ~~Etiqueta de aliado~~ Resuelta: "aliado del sol hub" (Cliente Embajador) y "aliados del sol" (§8, flujo A).
+12. Leads del formulario público sin oportunidad: plan de reenvío desde n8n definido (§8, flujo C); pendiente de implementarlo en n8n.
+13. **Etiquetas del flujo A y B:** si "aliado del sol hub" / "aliados del sol" van a disparar automatizaciones de *nuevo lead*, el contacto del **aliado** (flujo A) no debería llevarlas (hoy las lleva según §8, flujo A), y el **referido del Hub** (flujo B) sí debería llevar una. Pendiente de confirmar cuál.
 
 **Generales:**
 
-3. Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?
-4. Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?
-5. Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?
-6. Sistema externo de canjes: quién lo opera y cómo se autentica (se asume API key por proveedor).
-7. Envío de la factura a Clientify: adjunto por API o enlace firmado.
+3. ~~Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?~~ Resuelta: sí a ambas (§3).
+4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
+5. ~~Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?~~ Resuelta: sí ven puntos y nivel; la distribución regional usa la ciudad de la empresa referida (§9).
+6. Sistema externo de canjes: quién lo opera. **Implementado del lado del Hub (fase 10):** API key por proveedor y catálogo en el panel (§4.10). Pendiente: definir el proveedor, generar su key y cargar el catálogo real.
+7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: se adjunta a la ficha de la empresa (§8, flujo B).
+8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).
+9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.

@@ -2,7 +2,7 @@
 
 > **Para qué sirve este documento.** Reúne en un solo lugar cómo funciona el Hub, por qué se construyó así, las decisiones del equipo, el modelo de datos y los pasos para ponerlo en producción. Si se pierde una conversación con Claude, este archivo y `CLAUDE.md` bastan para retomar el trabajo.
 >
-> **Fecha de corte:** 29 de septiembre de 2026. **Estado:** fases 1 a 10 construidas y probadas en el entorno de pruebas (`aliados-dev`). Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
+> **Fecha de corte:** 30 de septiembre de 2026. **Estado:** fases 1 a 10 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). Falta la prueba de aceptación de punta a punta (§10.1). Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
 >
 > **Documentos relacionados:** `CLAUDE.md` (contexto técnico permanente, más detallado en reglas e implementación), `docs/HANDOFF.md` y `docs/DESIGN_SYSTEM.md` (diseño del Hub).
 
@@ -19,7 +19,7 @@
 7. [Modelo de datos: tablas y columnas](#7-modelo-de-datos-tablas-y-columnas)
 8. [Seguridad y variables de entorno](#8-seguridad-y-variables-de-entorno)
 9. [Decisiones tomadas](#9-decisiones-tomadas)
-10. [Próximos pasos para poner en marcha el Hub](#10-próximos-pasos-para-poner-en-marcha-el-hub)
+10. [Del entorno de pruebas a producción: tres etapas](#10-del-entorno-de-pruebas-a-producción-tres-etapas)
 11. [Pendientes y preguntas abiertas](#11-pendientes-y-preguntas-abiertas)
 12. [Glosario](#12-glosario)
 
@@ -142,7 +142,7 @@ Como el sitio es estático y no tiene paso de *build*, el navegador **no puede l
 - Cada fase (1 a 10) se construyó en su propia rama (`fase-1-base-datos` … `fase-10-canjes`). Cada rama se construyó sobre la anterior, así que **`fase-10-canjes` contiene todo**.
 - Una rama genera un Preview en Vercel que apunta a `dev`: se puede probar la fase completa con un enlace, sin afectar producción.
 - El *pull request* hacia `main` es el punto de control: se revisa qué cambia, y al fusionarlo Vercel publica Producción.
-- **Importante:** fusionar en `main` publica el **código**, pero **no** cambia la base de `prod`. Las migraciones de la base se aplican aparte (§10, paso 3). Por eso el orden de puesta en marcha importa.
+- **Importante:** fusionar en `main` publica el **código**, pero **no** cambia la base de `prod`. Las migraciones de la base se aplican aparte (§10.2, paso 2). Por eso el orden de puesta en marcha importa.
 
 ### 3.4 ¿Por qué parte de la lógica está en la base de datos y no en el código de Vercel?
 
@@ -214,7 +214,7 @@ Hoy la cuenta está en **prueba de Pro** (quedaban 6 días al 29 de septiembre).
 | Vercel Pro (1 usuario) | 20 |
 | Supabase Pro (organización de `prod`, 1 proyecto Micro) | 25 |
 | Supabase Free (organización de `dev`) | 0 |
-| Servicio de correo SMTP (p. ej. Resend, Brevo, SES; ver §10, paso 4) | 0–20 según volumen |
+| Servicio de correo SMTP (p. ej. Resend, Brevo, SES; ver §10.2, paso 3) | 0–20 según volumen |
 | **Total aproximado** | **45–65** |
 
 ---
@@ -851,87 +851,139 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 
 ---
 
-## 10. Próximos pasos para poner en marcha el Hub
+## 10. Del entorno de pruebas a producción: tres etapas
+
+El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar la anterior:
+
+| Etapa | Dónde ocurre | Con qué datos | Objetivo | Se cierra cuando… |
+|---|---|---|---|---|
+| **1. Pruebas de aceptación en dev** | Preview de Vercel (rama `fase-10-canjes`) + `aliados-dev` + Clientify con contactos `+prueba` | Datos de prueba, desechables | Comprobar con personas reales, de punta a punta, que todo funciona como el equipo espera | Todos los casos de la lista 10.1 pasan y los errores encontrados están corregidos |
+| **2. Preparar producción** | `aliados-prod` + Vercel Production + dominio + Clientify | Ninguno todavía (base vacía) | Montar el mismo sistema ya probado, ahora en el entorno real | La configuración está completa y el primer admin entra al panel de producción |
+| **3. Piloto y apertura** | Producción | Datos reales | Confirmar que producción quedó bien conectada y abrir el registro | El piloto pasa y se comunica el enlace a los aliados |
+
+**Por qué separarlas:** en la etapa 1 los errores son baratos, porque los datos se pueden borrar y nada llega a aliados reales. En la etapa 3 cada movimiento de puntos es permanente y cada contacto en Clientify es real. La etapa 2 no debería descubrir errores de lógica, solo de configuración.
+
+**El *pull request* hacia `main` se fusiona en la etapa 2, no antes.** Fusionar publica Production. Si se fusiona antes de terminar la etapa 1 y de configurar producción, el dominio oficial mostraría un sitio sin base de datos detrás.
+
+### 10.0 Qué se ha probado hasta hoy y qué falta
+
+| Ya verificado | Cómo | Qué **no** cubre |
+|---|---|---|
+| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | Unas 500 pruebas pgTAP ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
+| Funciones `/api` | 67 pruebas automáticas con Supabase y Clientify simulados | Llamadas reales a Clientify y a Storage |
+| Pantallas del Hub y del panel | Pruebas en navegador con Supabase simulado | Datos reales, correos reales, tiempos reales de los cron |
+| Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
+| Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
+
+**Conclusión:** cada pieza está probada por separado, pero **falta la prueba de punta a punta con personas y con Clientify real**. Eso es la etapa 1, y es lo siguiente que hay que hacer.
+
+### 10.1 Etapa 1 — Pruebas de aceptación en dev
+
+**Preparación (una sola vez):**
+
+1. **Usar un Preview fijo.** Vercel da a cada rama una URL estable del tipo `https://<proyecto>-git-fase-10-canjes-<equipo>.vercel.app`. Esa URL es la que se usa en todos los pasos siguientes.
+   *Por qué:* la URL de un despliegue concreto cambia en cada *push*; la de la rama no.
+2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`).
+3. **Vault de `aliados-dev`:** `clientify_sync_url` = `<URL del Preview>/api/cron/clientify`, y `vercel_bypass_secret` si el Preview está protegido.
+   *Por qué:* los cron de dev llaman a esa URL. Si apunta a un Preview viejo, se prueba código viejo.
+4. **Webhook de oportunidades de Clientify:** apuntarlo a `<URL del Preview>/api/webhooks/clientify?token=<secreto de Preview>`.
+5. **Correos de confirmación:** el correo por defecto de Supabase solo envía a los miembros del equipo del proyecto. Hay dos opciones:
+   - configurar el SMTP propio también en dev, que además prueba el correo real (recomendado);
+   - confirmar las cuentas de prueba a mano; Claude puede hacerlo en dev.
+6. **Cuentas de prueba:** usar correos con `+prueba` (p. ej. `nombre+prueba1@geenera.com`). Solo esos llegan a Clientify desde dev, con la etiqueta `PRUEBA HUB`. Conviene una cuenta EMI, una Financiero y una Agremiaciones.
+
+**Casos de prueba** (cada uno con su resultado esperado):
+
+| # | Qué hacer | Resultado esperado |
+|---|---|---|
+| 1 | Registrarse con cada tipo de aliado e intentar entrar antes de ser aprobado | "Tu solicitud está en revisión"; aparece en Solicitudes del panel |
+| 2 | Rechazar una solicitud y aprobar otra desde el panel | El rechazado ve "no fue aprobada"; el aprobado entra al Hub; en ≤ 2 min aparece como contacto en Clientify con `ID_aliado` y `PRUEBA HUB` |
+| 3 | Nueva oportunidad **perfecta** (10 campos + factura) y otra **imperfecta** | +30 (10 + 20) y +5 (10 − 5); en Clientify quedan la empresa con la factura adjunta y el contacto con la etiqueta correcta |
+| 4 | Referir el mismo correo dos veces, y el propio correo del aliado | Rechazo por duplicado y por autorreferido; sin puntos |
+| 5 | En Clientify, pasar el contacto a "3. lead caliente" | En ≤ 1 h (o al forzar la conciliación): +30, calidad actualizada y Racha semana 1 |
+| 6 | Crear una oportunidad para ese contacto y moverla a Diseño → Presentación de oferta → Contrato | +30, +50, +150 en ≤ 2 min cada uno; el dashboard de Financieros muestra valor y kWp tras el escaneo horario |
+| 7 | Devolver el contacto a "no calificado" | No cambian los puntos; aparece un conflicto en el panel. Resolverlo con y sin ajuste |
+| 8 | Llenar el formulario público "Refiere tu empresa" con el `ID_aliado` de prueba y crearle una oportunidad | La empresa aparece en el Hub del aliado con +10 |
+| 9 | Completar cursos de la Academy hasta pasar 20 puntos en el mes | Solo 20 puntos otorgados; el resto queda "pendiente" |
+| 10 | Reportar un evento que cumple y otro que no; validar y rechazar | +100 solo al que cumple; el aliado ve el motivo del rechazo |
+| 11 | Crear recompensas en el panel y canjear con la key de prueba (Claude da el comando) | Descuenta saldo, no nivel; una referencia repetida no descuenta dos veces; la anulación devuelve el saldo |
+| 12 | Suspender a un aliado, moverle un referido en Clientify y reactivarlo | Mientras está suspendido no entra ni gana puntos; al reactivar se acreditan los retenidos |
+| 13 | Ajuste de puntos y baja calidad reiterada desde el panel | Se reflejan en el historial del aliado; queda registro en Auditoría |
+| 14 | Entrar a `admin.html` con una cuenta que no es admin | "Sin acceso" |
+| 15 | Revisar el Hub con las cuentas Financiero y Agremiaciones | Ven su dashboard de gestión, su nivel y sus puntos |
+
+**Quién hace qué:** el equipo ejecuta los casos como usuario (Hub, panel y Clientify). Claude verifica en `aliados-dev` que la base quedó como se esperaba, puede forzar la conciliación para no esperar una hora, y corrige cualquier error en una rama con su prueba.
+
+**Cierre de la etapa:**
+- Todos los casos pasan.
+- Los errores encontrados quedan corregidos y vueltos a probar.
+- Se borran de Clientify los contactos y empresas con `PRUEBA HUB`.
+
+### 10.2 Etapa 2 — Preparar producción
 
 Los pasos están en orden. Cada uno dice **qué hacer** y **por qué**.
 
-### Paso 1 — Fusionar las fases en `main`
-**Qué:** revisar y fusionar el *pull request* de `fase-10-canjes` hacia `main`, que contiene las fases 1 a 10.
-**Por qué:** hoy `main` no tiene nada de lo construido. Vercel publica Producción desde `main`. **Antes de fusionar**, confirma que las variables de *Production* apuntan a `prod` (paso 5), o que la protección de despliegues evita que alguien use la URL de producción mientras se prepara.
+**Paso 1 — Decidir los planes (§4).**
+Pasar Vercel a Pro. Crear una organización de Supabase en Pro para `aliados-prod` y dejar `aliados-dev` en una organización gratuita.
+*Por qué:* Vercel Hobby no permite uso comercial, y Supabase Free pausa el proyecto con poca actividad y no ofrece copias de seguridad descargables.
 
-### Paso 2 — Decidir los planes (§4)
-**Qué:** pasar Vercel a Pro. Crear una organización de Supabase en Pro para `aliados-prod` y dejar `aliados-dev` en una organización gratuita.
-**Por qué:** Vercel Hobby no permite uso comercial. Supabase Free pausa el proyecto tras 7 días de poca actividad y no ofrece copias descargables.
+**Paso 2 — Crear el esquema en `aliados-prod`.**
+Aplicar en orden las migraciones de `supabase/migrations/` (hoy 23). Lo recomendado es la Supabase CLI desde un computador del equipo:
+1. `npx supabase login`
+2. `npx supabase link --project-ref pysyxycrybayhrescplc`
+3. `npx supabase db push`
 
-### Paso 3 — Crear el esquema en `aliados-prod`
-**Qué:** aplicar en orden las 23 migraciones de `supabase/migrations/` al proyecto de producción. Opciones:
-- **Recomendada:** Supabase CLI desde un computador del equipo:
-  1. `npx supabase login`
-  2. `npx supabase link --project-ref pysyxycrybayhrescplc`
-  3. `npx supabase db push`
-- **Alternativa:** la integración GitHub → Supabase, para que cada fusión en `main` aplique las migraciones.
-
-Luego verificar en el panel de Supabase:
+Luego verificar:
 - que las extensiones `pg_cron`, `pg_net` y Vault estén activas;
 - que se vean las 18 tablas y los 6 cron jobs;
 - que el *Security Advisor* no muestre alertas nuevas.
 
-**Por qué:** las migraciones son la receta exacta de la base, probada en `dev`. Crear las tablas a mano en `prod` produciría diferencias difíciles de detectar. Claude no toca `prod` directamente, por decisión del equipo.
+*Por qué:* las migraciones son la receta exacta ya probada en dev. Claude no toca `prod` directamente, por decisión del equipo.
 
-### Paso 4 — Configurar la autenticación de `prod`
-**Qué:** en Supabase → Authentication:
-1. **URL Configuration:** *Site URL* = el dominio oficial del Hub; *Redirect URLs* = el mismo dominio.
-2. **Providers → Email:** confirmación de correo **activada**.
-3. **SMTP propio:** conectar un servicio de correo (Resend, Brevo, Amazon SES, Postmark…) con un remitente del dominio de GEENERA (p. ej. `no-reply@geenera.com`), con SPF, DKIM y DMARC configurados.
-4. **Rate limits:** subir el límite de correos por hora según el lanzamiento (con SMTP propio arranca en 30 por hora).
-5. Revisar y traducir las **plantillas de correo** (confirmación y recuperación de contraseña).
-6. Activar la **protección de contraseñas filtradas** (hoy es un aviso del *Security Advisor*).
+**Paso 3 — Autenticación de `prod`.**
+En Supabase → Authentication:
+- *Site URL* y *Redirect URLs* = el dominio oficial;
+- confirmación de correo activada;
+- **SMTP propio** con remitente del dominio de GEENERA (SPF, DKIM y DMARC);
+- límite de correos por hora ajustado al lanzamiento;
+- plantillas de correo en español;
+- protección de contraseñas filtradas.
 
-**Por qué:** **sin SMTP propio, Supabase solo envía correos a los miembros del equipo del proyecto** y con un límite muy bajo. Los aliados reales no recibirían el correo de confirmación y no podrían entrar.
+*Por qué:* sin SMTP propio, Supabase solo envía correos a los miembros del equipo, y los aliados reales no podrían confirmar su cuenta.
 
-### Paso 5 — Variables de entorno en Vercel
-**Qué:** en Vercel → Settings → Environment Variables, para *Production*:
+**Paso 4 — Variables de *Production* en Vercel.**
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY` de `aliados-prod`;
 - `CLIENTIFY_API_KEY`;
-- un `CLIENTIFY_WEBHOOK_SECRET` **nuevo**;
-- un `CRON_SECRET` **nuevo**;
+- `CLIENTIFY_WEBHOOK_SECRET` y `CRON_SECRET` **nuevos**, distintos de los de pruebas;
 - `CANJES_API_KEYS` cuando exista el proveedor.
 
-Para *Preview* y *Development*: los de `aliados-dev`. Después, volver a desplegar Producción.
+*Por qué:* separan el mundo real del de pruebas (§3.2), y los secretos que circularon por conversaciones deben rotarse.
 
-**Por qué:** es lo que separa el mundo de pruebas del real (§3.2). Los secretos de producción deben ser distintos de los de pruebas, y los que se compartieron en conversaciones deben rotarse.
+**Paso 5 — Dominio y protección.**
+Asignar el dominio oficial. Production queda pública y los Preview protegidos.
 
-### Paso 6 — Dominio y protección
-**Qué:**
-- Asignar el dominio oficial al proyecto en Vercel.
-- Dejar Producción **pública** y los Preview **protegidos**.
-- Si se protege algo que el cron necesita llamar, generar el *Protection Bypass for Automation*.
+**Paso 6 — Documentos legales.**
+Publicar la versión final de la Política de Tratamiento de Datos, actualizar `JOIN_CONFIG.legal` y la función de versión vigente con una migración, y hacer la revisión con el asesor legal.
+*Por qué:* la base guarda qué versión aceptó cada aliado, así que debe estar lista antes del primer registro real.
 
-**Por qué:** los aliados entran por el dominio oficial, y los Preview no deben ser visibles al público.
+**Paso 7 — Fusionar el *pull request* en `main`.**
+Con la base y las variables de producción listas, fusionar. Vercel publica Production en el dominio oficial.
+*Por qué ahora y no antes:* es el primer momento en que el sitio publicado tiene una base de producción completa detrás.
 
-### Paso 7 — Secretos del Vault en `prod`
-**Qué:** en Supabase `prod` → Vault, crear:
+**Paso 8 — Vault de `prod`.**
+Crear:
 - `clientify_sync_url` = `https://<dominio>/api/cron/clientify`;
-- `cron_secret` = el mismo valor de `CRON_SECRET` de Production;
-- `vercel_bypass_secret`, solo si Producción está protegida.
+- `cron_secret` = el mismo `CRON_SECRET` de Production;
+- `vercel_bypass_secret`, solo si Production está protegida.
 
-**Por qué:** los cron de `pg_cron` usan estos valores para llamar a Vercel. Sin ellos, la sincronización con Clientify y el procesamiento de webhooks no ocurren.
+*Por qué:* sin ellos, la sincronización con Clientify y el procesamiento de webhooks no ocurren.
 
-### Paso 8 — Webhooks de Clientify y n8n
-**Qué:**
-1. En Clientify, cambiar el webhook de **oportunidades** a `https://<dominio>/api/webhooks/clientify?token=<CLIENTIFY_WEBHOOK_SECRET de producción>`. Hoy apunta a un Preview de una rama.
-2. Mantener un webhook separado para pruebas que apunte al Preview, con el secreto de `dev`, si se sigue probando.
-3. En n8n, agregar la rama que reenvía al Hub los contactos con etiqueta de aliado (cuerpo mínimo, encabezado `x-webhook-token`; ver `CLAUDE.md` §8).
+**Paso 9 — Webhooks.**
+- En Clientify, crear o cambiar el webhook de oportunidades de producción: `https://<dominio>/api/webhooks/clientify?token=<secreto de producción>`. Si se quiere seguir probando en dev, conservar aparte el del Preview.
+- En n8n, agregar la rama que reenvía al Hub los leads del formulario público (`CLAUDE.md` §8).
 
-**Por qué:** sin el webhook, el Hub no se entera a tiempo de los avances comerciales (se enteraría solo por la conciliación horaria). Sin la rama de n8n, un lead del formulario público que nunca tenga oportunidad no se descubre.
-
-### Paso 9 — Documentos legales
-**Qué:** subir a `assets/legal/` la nueva Política de Tratamiento de Datos (con la transferencia internacional), actualizar `JOIN_CONFIG.legal` en la página y la función de versión vigente con una migración. Validar todo con el asesor legal.
-**Por qué:** la Ley 1581 exige autorización informada. La base guarda qué versión aceptó cada aliado, así que publicar la versión definitiva **antes** de abrir el registro evita tener aliados con una versión anterior.
-
-### Paso 10 — Primer admin en producción
-**Qué:**
-1. La persona se registra en el Hub de Producción y confirma su correo.
+**Paso 10 — Primer admin en producción.**
+1. La persona se registra en el sitio oficial y confirma su correo.
 2. Se ejecuta en el *SQL Editor* de `prod`:
    ```sql
    update public.aliados set rol = 'admin', estado = 'activo', aprobado_at = coalesce(aprobado_at, now())
@@ -939,34 +991,27 @@ Para *Preview* y *Development*: los de `aliados-dev`. Después, volver a despleg
    ```
 3. Se comprueba el acceso a `https://<dominio>/admin.html`.
 
-**Por qué:** el panel no asigna roles, por seguridad. La cuenta de admin queda excluida de Clientify automáticamente.
+La cuenta de admin queda excluida de Clientify automáticamente.
 
-### Paso 11 — Prueba de punta a punta con un aliado piloto
-**Qué:** con una o dos personas de confianza:
-1. Registro y confirmación de correo.
-2. Aprobación desde el panel y verificación de que aparece en Clientify con su `ID_aliado`.
-3. Una Nueva oportunidad con factura y verificación de que llega a Clientify.
-4. Avance de esa oportunidad en Clientify (calificar, Diseño) y verificación de los puntos en el Hub (hasta 1 hora de espera).
-5. Completar un curso de la Academy y reportar un evento.
+### 10.3 Etapa 3 — Piloto y apertura
 
-Al terminar, limpiar en Clientify los datos de prueba, o marcarlos, porque en Producción no se agrega `PRUEBA HUB`.
+**Paso 11 — Piloto corto en producción.**
+Con una o dos personas de confianza, repetir una versión reducida de la etapa 1: casos 1, 2, 3, 5 y 6.
+*Por qué:* **no es para probar la lógica** (eso ya se hizo en la etapa 1), sino para confirmar que la **configuración de producción** está bien conectada: dominio, correo, variables, Vault, cron y webhooks.
+En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o limpiar en Clientify los datos del piloto. Si el piloto se hace con aliados reales, sus puntos son válidos y se conservan.
 
-**Por qué:** es la única forma de confirmar que dominio, correo, variables, Vault, cron y webhooks están bien conectados en producción.
-
-### Paso 12 — Abrir el registro y operar
-**Qué:**
+**Paso 12 — Abrir el registro y operar.**
 - Comunicar el enlace "Quiero ser aliado".
-- Revisar el panel **a diario**: solicitudes, eventos por revisar y conflictos.
-- Crear el catálogo de recompensas cuando se definan los beneficios y el proveedor, y darle al proveedor su API key.
-
-**Por qué:** los aliados no entran hasta ser aprobados, así que una solicitud sin revisar es un aliado que se enfría.
+- Revisar el panel **a diario**: solicitudes, eventos y conflictos.
+- Cuando se definan los beneficios y el proveedor, cargar el catálogo de recompensas y entregarle al proveedor su API key.
 
 ### Operación continua (checklist)
 - [ ] **Diario:** revisar solicitudes, eventos y conflictos en el panel.
 - [ ] **Semanal:** revisar en `v_admin_aliados` los aliados con `clientify_sync_estado = 'error'`, y los logs de funciones en Vercel.
-- [ ] **Mensual:** revisar el uso y los costos en Vercel y Supabase, y el *Security Advisor* de Supabase.
+- [ ] **Mensual:** revisar el uso y los costos en Vercel y Supabase, y el *Security Advisor*.
 - [ ] **Con Supabase Free:** exportar la base periódicamente y entrar al panel para evitar la pausa.
-- [ ] **En cada cambio:** rama nueva → Preview → pruebas → *pull request* → migración en `prod` → fusión.
+- [ ] **En cada cambio futuro:** rama nueva → Preview y pruebas en dev (como la etapa 1, pero solo de lo que cambió) → *pull request* → migración en `prod` → fusión.
+
 
 ---
 
@@ -979,7 +1024,7 @@ Al terminar, limpiar en Clientify los datos de prueba, o marcarlos, porque en Pr
 | 3 | Etiquetas de los flujos A y B: ¿el contacto del aliado debe llevar "aliados del sol"/"aliado del sol hub" si esas etiquetas disparan automatizaciones de "nuevo lead"? | Por confirmar con el equipo comercial. |
 | 4 | Nueva versión de la Política de Tratamiento de Datos (transferencia internacional, finalidades y canal de reclamos). | Pendiente de redacción legal. |
 | 5 | Política de beneficios (se incluirá en los Términos). | Pendiente. |
-| 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (pasos 5 y 8). |
+| 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (etapa 2, pasos 4 y 9). |
 | 7 | Secciones del Hub con datos de demostración (series por mes, pronóstico de desembolsos, comisiones). | Se mantienen con la etiqueta "Demostración" hasta tener datos reales. |
 | 8 | Imágenes y logos de las recompensas reales. | El catálogo aún no guarda imágenes. |
 

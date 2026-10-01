@@ -79,10 +79,12 @@ const ACCIONES = {
   })]
 };
 
-// Invita a un operador. La base lo registra (y lo audita); luego Supabase genera el enlace con el que crea su
+// Invita a un operador. La base lo registra (y lo audita); luego Supabase genera el código con el que crea su
 // contraseña: 'invite' si el correo no tiene cuenta, 'recovery' si es una cuenta de operador que nunca la creó.
 // Si el correo ya es de un aliado, entra con la contraseña que ya tiene y no hay enlace (así un admin no puede
 // tomar la cuenta de un aliado). El enlace no se envía por correo: el panel lo muestra para copiarlo.
+// El enlace lleva a /canje.html#invitacion=<código> y el código solo se usa cuando la persona guarda su contraseña:
+// el enlace directo de Supabase se gasta con solo abrirlo, y WhatsApp lo abre para armar la vista previa.
 async function invitarOperador(supabase, cuerpo, adminId, req) {
   const datos = { correo: String(cuerpo.correo || '').trim(), nombre: String(cuerpo.nombre || '').trim(), proveedor: String(cuerpo.proveedor || '').trim() };
   const { data, error } = await supabase.rpc('admin_invitar_operador', { p_admin: adminId, p_datos: datos });
@@ -94,7 +96,9 @@ async function invitarOperador(supabase, cuerpo, adminId, req) {
   const { data: link, error: errorLink } = await supabase.auth.admin.generateLink({
     type: data.cuenta === 'nueva' ? 'invite' : 'recovery', email: data.correo, options: opciones
   });
-  const enlace = link && link.properties && link.properties.action_link;
+  const tipo = data.cuenta === 'nueva' ? 'invite' : 'recovery';
+  const p = (link && link.properties) || {};
+  const enlace = host && p.hashed_token ? `https://${host}/canje.html#invitacion=${encodeURIComponent(p.hashed_token)}&tipo=${tipo}` : p.action_link;
   if (errorLink || !enlace) throw new ErrorHttp(502, 'El operador quedó registrado, pero no pudimos crear el enlace. Vuelve a invitarlo.');
   return { ...data, enlace };
 }

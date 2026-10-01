@@ -8,7 +8,9 @@
 // consultar_qr_canje y canjear_qr, que verifican al operador por su sesión. Esta página no ve aliados.id (§2).
 //
 // El QR es un enlace a /canje.html#q=<ficha>: si se escanea con la cámara normal del celular, se abre aquí mismo.
-// Los enlaces de invitación de Supabase llegan con #access_token=…&type=invite (o recovery): se pide crear la contraseña.
+// El enlace de invitación llega con #invitacion=<código>&tipo=invite|recovery: el código solo se usa (verifyOtp) cuando
+// la persona guarda su contraseña, así la vista previa de WhatsApp no lo gasta. Se aceptan también los enlaces
+// directos de Supabase (#access_token=…&type=invite).
 // Todo texto que viene de la base se escapa antes de insertarlo en la página.
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm';
@@ -38,6 +40,7 @@ const MENSAJES = {
 const $ = (id) => document.getElementById(id);
 let supabase = null;
 let pendiente = null;      // ficha que llegó en el enlace (#q=…) antes de iniciar sesión
+let invitacion = null;     // { token, tipo } del enlace de invitación, hasta que se guarde la contraseña
 let actual = null;         // { qr, datos } del aliado escaneado
 let reintento = null;      // última acción de canje, por si falló la conexión
 let stream = null;
@@ -305,6 +308,10 @@ async function iniciar() {
     pendiente = fichaDe('#q=' + hash.get('q'));
     history.replaceState(null, '', location.pathname); // la ficha no se queda en la barra de direcciones
   }
+  if (hash.get('invitacion') && ['invite', 'recovery'].includes(hash.get('tipo'))) {
+    invitacion = { token: hash.get('invitacion'), tipo: hash.get('tipo') };
+    history.replaceState(null, '', location.pathname); // el código tampoco se queda a la vista
+  }
 
   try {
     const r = await fetch('/api/config', { headers: { accept: 'application/json' } });
@@ -354,6 +361,15 @@ async function iniciar() {
     if (clave.length < 8) { $('clave-mensaje').textContent = 'Mínimo 8 caracteres.'; return; }
     if (clave !== $('clave-2').value) { $('clave-mensaje').textContent = 'Las contraseñas no coinciden.'; return; }
     $('clave-boton').disabled = true; $('clave-mensaje').textContent = '';
+    if (invitacion) {
+      const { error: errorCodigo } = await supabase.auth.verifyOtp({ token_hash: invitacion.token, type: invitacion.tipo });
+      if (errorCodigo) {
+        $('clave-boton').disabled = false;
+        $('clave-mensaje').textContent = 'El enlace venció o ya se usó. Pide uno nuevo al equipo GEENERA.';
+        return;
+      }
+      invitacion = null;
+    }
     const { error } = await supabase.auth.updateUser({ password: clave });
     $('clave-boton').disabled = false;
     if (error) { $('clave-mensaje').textContent = 'No pudimos guardar la contraseña. Si el enlace venció, pide uno nuevo al equipo GEENERA.'; return; }
@@ -361,6 +377,7 @@ async function iniciar() {
     entrar();
   });
 
+  if (invitacion) return vista('vista-clave');
   const { data } = await supabase.auth.getSession();
   if (data.session && (tipoEnlace === 'invite' || tipoEnlace === 'recovery')) return vista('vista-clave');
   if (!data.session) {

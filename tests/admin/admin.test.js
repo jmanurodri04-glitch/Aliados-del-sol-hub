@@ -28,7 +28,8 @@ function supabaseFalso({ usuario = ADMIN, rpc = { ok: true }, rpcError = null, e
       admin: {
         generateLink: async (args) => {
           llamadas.push({ enlace: args });
-          return linkError ? { data: null, error: linkError } : { data: { properties: { action_link: 'https://enlace/' + args.type } }, error: null };
+          return linkError ? { data: null, error: linkError }
+            : { data: { properties: { action_link: 'https://supabase/verify?type=' + args.type, hashed_token: 'hash-' + args.type } }, error: null };
         }
       }
     },
@@ -132,12 +133,14 @@ test('admin: invitar operador genera el enlace según la cuenta (fase 11)', asyn
   assert.deepEqual(sb.llamadas[0], { nombre: 'admin_invitar_operador',
     args: { p_admin: ADMIN.id, p_datos: { correo: 'o@geenera.test', nombre: 'Oscar', proveedor: 'geenera' } } });
   assert.deepEqual(sb.llamadas[1], { enlace: { type: 'invite', email: 'o@geenera.test', options: { redirectTo: 'https://hub.test/canje.html' } } });
-  assert.equal(res.cuerpo.enlace, 'https://enlace/invite');
+  assert.equal(res.cuerpo.enlace, 'https://hub.test/canje.html#invitacion=hash-invite&tipo=invite',
+    'el enlace lleva a canje.html con el código: abrirlo (o su vista previa en WhatsApp) no lo gasta');
 
   sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'o@geenera.test', cuenta: 'operador' } });
   res = respuesta();
   await admin(pedidoHost(invitacion), res, sb);
   assert.equal(sb.llamadas[1].enlace.type, 'recovery', 'una cuenta de operador sin contraseña recibe un enlace para crearla');
+  assert.equal(res.cuerpo.enlace, 'https://hub.test/canje.html#invitacion=hash-recovery&tipo=recovery');
 
   sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'a@geenera.test', cuenta: 'aliado' } });
   res = respuesta();

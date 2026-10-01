@@ -2,7 +2,7 @@
 
 > **Para qué sirve este documento.** Reúne en un solo lugar cómo funciona el Hub, por qué se construyó así, las decisiones del equipo, el modelo de datos y los pasos para ponerlo en producción. Si se pierde una conversación con Claude, este archivo y `CLAUDE.md` bastan para retomar el trabajo.
 >
-> **Fecha de corte:** 30 de septiembre de 2026. **Estado:** fases 1 a 10 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). Falta la prueba de aceptación de punta a punta (§10.1). Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
+> **Fecha de corte:** 1 de octubre de 2026. **Estado:** fases 1 a 11 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). La fase 11 (canje con código QR, §5.6) además pasó la prueba real con celulares Android e iPhone. Falta la prueba de aceptación de punta a punta del resto (§10.1). Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
 >
 > **Documentos relacionados:** `CLAUDE.md` (contexto técnico permanente, más detallado en reglas e implementación), `docs/HANDOFF.md` y `docs/DESIGN_SYSTEM.md` (diseño del Hub).
 
@@ -35,8 +35,9 @@ Lo que puede hacer cada persona hoy:
 |---|---|
 | **Visitante** | Ve el sitio público, refiere una empresa por el formulario de Clientify ("Refiere tu empresa") y solicita ser aliado. |
 | **Aliado pendiente** | Se registró y confirmó su correo, pero espera la aprobación de GEENERA. No entra al Hub. |
-| **Aliado activo** | Entra al Hub: registra oportunidades ("Nueva oportunidad") con factura, sigue el avance de sus referidos, ve su historial de puntos, su nivel, su Racha Solar, hace cursos en la Academy, reporta eventos y ve sus canjes. |
-| **Admin (equipo GEENERA)** | Usa el panel `admin.html`: aprueba o rechaza solicitudes, suspende o reactiva cuentas, ajusta puntos, valida eventos, resuelve conflictos con Clientify, administra el catálogo de recompensas y anula canjes. Todo queda auditado. |
+| **Aliado activo** | Entra al Hub: registra oportunidades ("Nueva oportunidad") con factura, sigue el avance de sus referidos, ve su historial de puntos, su nivel, su Racha Solar, hace cursos en la Academy, reporta eventos, **muestra su QR para canjear** y ve sus canjes. |
+| **Admin (equipo GEENERA)** | Usa el panel `admin.html`: aprueba o rechaza solicitudes, suspende o reactiva cuentas, ajusta puntos, valida eventos, resuelve conflictos con Clientify, administra el catálogo de recompensas, **invita operadores** y anula canjes. También puede escanear QR. Todo queda auditado. |
+| **Operador de canjes** (personal de GEENERA o del proveedor) | Entra a `canje.html` desde su celular, escanea el QR del aliado, elige la recompensa y confirma. No es aliado: lo invita un admin. |
 | **Proveedor de recompensas** (sistema externo) | Consulta el saldo de un aliado por su código y registra canjes con su API key. |
 
 **Tres ideas que explican casi todo el diseño:**
@@ -335,6 +336,58 @@ flowchart LR
 
 ### 5.6 Canjes
 
+Hay **dos caminos** para canjear Puntos Sol. Los dos usan **la misma lógica** en la base de datos (cuenta activa, recompensa del proveedor, nivel actual ≥ nivel mínimo, saldo suficiente y máximo 30 canjes por hora), así que las reglas no pueden quedar distintas.
+
+#### Canje presencial con código QR (fase 11)
+
+**En palabras simples.** El aliado abre **«Mi QR para canjear»** en el Hub y le muestra el celular a quien entrega la recompensa (el **operador**). El operador lo escanea en `canje.html`, ve al aliado («Laura P.», su nivel y su saldo), toca la recompensa y confirma. Al instante el operador ve ✔ con el nuevo saldo, y el celular del aliado muestra «¡Canje registrado!».
+
+**Por qué una captura de pantalla no sirve.** El QR funciona como la clave dinámica del banco:
+- lo genera la base de datos y es imposible de adivinar;
+- vale **5 minutos** y sirve **una sola vez**;
+- el Hub muestra uno nuevo **cada 60 segundos** y cada QR nuevo anula el anterior.
+
+Así, una foto o captura del QR deja de servir en cuanto el Hub del aliado se renueva. El QR no contiene datos personales ni el identificador interno del aliado. Si el aliado se queda sin señal, el último QR sigue sirviendo hasta que vence, y la pantalla le dice hasta qué hora. Debajo del QR hay un **código de 8 letras** para escribirlo a mano si la cámara falla.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant AL as Aliado (Hub, «Mi QR»)
+  participant DB as Base de datos
+  participant OP as Operador (canje.html)
+  AL->>DB: generar_qr_canje (cada 60 s)
+  DB-->>AL: QR nuevo (5 min, un uso) + código corto
+  OP->>DB: consultar_qr_canje (escanea o escribe el código)
+  DB-->>OP: «Laura P.», nivel, saldo y recompensas de su proveedor
+  OP->>DB: canjear_qr (recompensa elegida)
+  DB->>DB: QR vigente y sin usar · cuenta activa · nivel ≥ mínimo<br/>· saldo · máx. 30/hora → canje + movimiento "redimido"
+  DB-->>OP: ✔ Canje registrado, nuevo saldo
+  AL->>DB: estado_qr_canje (cada 3 s)
+  DB-->>AL: «¡Canje registrado!» y saldo
+```
+
+**Qué pasa en los casos difíciles** (todos probados con celulares reales):
+
+| Situación | Resultado |
+|---|---|
+| Se escanea una captura de un QR que ya se renovó | «Este QR ya no es válido». |
+| Se usa un QR de más de 5 minutos | «Este QR venció». |
+| Se escanea dos veces el mismo QR | «Este QR ya se usó». No descuenta. |
+| El operador toca **Confirmar** dos veces | Un solo canje y un solo descuento. |
+| El operador pierde la señal al confirmar | «Sin conexión» y **Reintentar**: si ya había quedado, se muestra confirmado sin descontar de nuevo. |
+| Alguien prueba códigos al azar | Tras 20 códigos inexistentes en 10 minutos, la cuenta del operador se frena unos minutos. |
+| Un operador intenta canjear su propio QR | No se permite. |
+
+**Operadores.** Los invita un admin en el panel (pestaña **Operadores**) con correo, nombre y proveedor (`geenera` para el equipo propio).
+- El panel entrega un **enlace para copiar** y enviar por WhatsApp; no depende del correo. El enlace solo se usa cuando la persona crea su contraseña, así que la vista previa de WhatsApp no lo gasta. Sirve una vez y vence en 1 hora; si vence, se genera otro con **Nuevo enlace**.
+- Cada operador canjea solo las recompensas de su proveedor o las que son de todos.
+- Se puede **desactivar** (con motivo) y **reactivar**. Se puede **eliminar** solo si no ha registrado canjes; si ya registró alguno, solo se desactiva, para no perder quién los registró.
+- Los admins también pueden escanear.
+
+Instructivos de una página: `docs/instructivo-aliado-mi-qr.md` (para aliados) y `docs/instructivo-operador-canje.md` (para quien escanea), con sus PDF.
+
+#### Canje por sistema de un proveedor (API, fase 10)
+
 ```mermaid
 sequenceDiagram
   autonumber
@@ -387,6 +440,7 @@ flowchart LR
 | `reiniciar-rachas-semanal` | Supabase `pg_cron` | Lunes 00:05 | Reinicia rachas completadas o interrumpidas. |
 | `otorgar-modulos-mensual` | Supabase `pg_cron` | Día 1, 00:05 | Otorga módulos pendientes dentro del tope de 20 puntos del mes. |
 | `depurar-webhooks-clientify` | Supabase `pg_cron` | Día 1, 03:30 | Vacía los payloads de webhooks de más de 90 días (datos personales). |
+| `depurar-canjes-qr` | Supabase `pg_cron` | Diario 00:40 | Borra los QR vencidos sin usar de más de 7 días y los intentos fallidos de más de 1 día. |
 
 Los cron de Supabase que llaman a Vercel necesitan tres secretos en el **Vault** de cada proyecto: `clientify_sync_url` (URL del despliegue), `cron_secret` (igual a `CRON_SECRET` de Vercel) y, si el despliegue está protegido, `vercel_bypass_secret`. Sin ellos, el job no hace nada.
 
@@ -709,10 +763,41 @@ Mismas columnas que el libro mayor, más: `fecha_original` (cuándo ocurrió), `
 | `id`, `aliado_id` | Llave y aliado. |
 | `recompensa_id`, `recompensa` | Recompensa del catálogo y su nombre al momento del canje. |
 | `puntos`, `nivel_requerido` | Puntos descontados y nivel exigido al momento del canje. |
-| `proveedor`, `referencia_externa` | Quién lo registró y su número de operación (único por proveedor). |
+| `proveedor`, `referencia_externa` | Quién lo registró y su número de operación (único por proveedor). En un canje con QR la referencia es `qr:{id}`. |
 | `fecha` | Cuándo. |
 | `estado` | `confirmado` o `anulado`. |
 | `anulado_at`, `anulado_por`, `anulacion_motivo` | Datos de la anulación. |
+| `origen` | `api` (sistema del proveedor) o `qr` (escaneado en `canje.html`). |
+| `registrado_por` | Operador o admin que escaneó el QR (vacío en los canjes por API). |
+
+#### `operadores` — quienes registran canjes con QR (fase 11)
+
+| Columna | Qué representa |
+|---|---|
+| `id` | Llave. |
+| `usuario_id` | Su cuenta de acceso (se completa cuando crea su contraseña). |
+| `correo`, `nombre` | Datos de contacto. |
+| `proveedor` | Proveedor con el que canjea (`geenera` para el equipo propio). |
+| `activo` | Si puede registrar canjes. |
+| `invitado_por` | Admin que lo invitó. |
+| `created_at`, `updated_at` | Fechas. |
+
+Un operador **no es aliado**: no tiene puntos ni entra al Hub (si lo intenta, se le lleva a `canje.html`).
+
+#### `canjes_qr` — los QR generados
+
+| Columna | Qué representa |
+|---|---|
+| `id`, `aliado_id` | Llave y aliado dueño del QR. |
+| `ficha_hash` | Huella del QR. El QR en sí no se guarda, así que ni leyendo la tabla se puede rehacer. |
+| `codigo_corto` | Código de 8 letras para escribir a mano. |
+| `creado_at`, `vence_at` | Cuándo se generó y cuándo vence (5 minutos después). |
+| `usado_at`, `canje_id` | Cuándo se usó y en qué canje. |
+| `anulado_at` | Cuándo lo reemplazó un QR más nuevo. |
+
+#### `canjes_qr_intentos`
+
+Cada código inexistente que prueba un operador (usuario y hora). Sirve para frenar a quien pruebe códigos al azar; se borra al día siguiente.
 
 ### 7.7 Integración y auditoría
 
@@ -743,16 +828,17 @@ Mismas columnas que el libro mayor, más: `fecha_original` (cuándo ocurrió), `
 |---|---|
 | `id` | Llave. |
 | `admin_id`, `admin_codigo` | Admin que actuó (el código se conserva aunque se borre la cuenta). |
-| `accion` | Qué hizo (aprobar, rechazar, suspender, ajustar, validar evento, anular canje, guardar recompensa…). |
+| `accion` | Qué hizo (aprobar, rechazar, suspender, ajustar, validar evento, anular canje, guardar recompensa, invitar, desactivar o eliminar operador…). |
 | `aliado_id`, `aliado_codigo` | Aliado afectado, si aplica. |
-| `objetivo` | Otro objeto afectado (`evento:{id}`, `canje:{id}`, `recompensa:{codigo}`…). |
+| `objetivo` | Otro objeto afectado (`evento:{id}`, `canje:{id}`, `recompensa:{codigo}`, `operador:{id}`…). |
 | `detalle` | Motivo, puntos, valores anteriores, etc. |
 | `created_at` | Cuándo. |
 
 ### 7.8 Vistas, archivos y funciones
 
 - **Vistas del aliado** (cada una devuelve solo lo del usuario de la sesión): `v_aliado_dashboard`, `v_mis_movimientos`, `v_mis_referidos`, `v_mis_modulos`, `v_mis_eventos`, `v_mis_canjes` y `v_recompensas`. **Ninguna expone `aliados.id`.**
-- **Vistas del admin** (vacías para quien no es admin): `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_canjes`, `v_admin_recompensas` y `v_admin_acciones`.
+- **Vistas del admin** (vacías para quien no es admin): `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_canjes`, `v_admin_recompensas`, `v_admin_operadores` y `v_admin_acciones`.
+- **Páginas:** `index.html` (Hub y sitio público), `admin.html` (panel) y `canje.html` (registro de canjes con QR, fase 11).
 - **Buckets privados de Storage:**
   - `facturas`: PDF, JPG o PNG de hasta 10 MB.
   - `eventos`: PDF, imagen, Excel o CSV de hasta 10 MB.
@@ -763,7 +849,8 @@ Mismas columnas que el libro mayor, más: `fecha_original` (cuándo ocurrió), `
   - `aplicar_avance_clientify`: flujo C.
   - `completar_modulo` y `otorgar_modulos_pendientes`: Academy.
   - `registrar_evento`: eventos.
-  - `registrar_canje` y `consultar_canjes`: canjes.
+  - `registrar_canje` y `consultar_canjes`: canjes por API.
+  - `generar_qr_canje` y `estado_qr_canje` (aliado), `perfil_operador`, `consultar_qr_canje`, `canjear_qr` y `mis_canjes_registrados` (operador): canje con QR. Son las únicas que el navegador llama directamente con su sesión; cada una verifica quién la llama.
   - `admin_*`: acciones del panel.
   - `recalcular_aliado`, `calcular_nivel`, `calcular_puntos_nivel` y `calcular_puntos_disponibles`: cálculos.
 
@@ -773,7 +860,7 @@ Mismas columnas que el libro mayor, más: `fecha_original` (cuándo ocurrió), `
 
 **Principios:**
 
-- **RLS en las 18 tablas.** Un aliado solo puede **leer** sus propias filas. Las escrituras las hacen solo el servidor (clave secreta) o funciones controladas.
+- **RLS en las 21 tablas.** Un aliado solo puede **leer** sus propias filas. Las escrituras las hacen solo el servidor (clave secreta) o funciones controladas.
 - **Nunca se muestra el `id` interno.** Hacia afuera (Clientify, proveedores, pantalla) solo sale el `codigo_aliado`.
 - **Todo endpoint verifica la sesión y exige `estado = 'activo'`.** Las acciones de admin se verifican dos veces: en el endpoint y otra vez en la base.
 - **Límites anti-abuso:** 20 referidos por hora, 5 eventos por día y 30 canjes por hora por aliado.
@@ -848,6 +935,8 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Academy: en la base solo se guarda el curso completado; el avance por lección vive en el navegador.
 - El panel es una página separada (`admin.html`). Los eventos los reporta el aliado y los valida un admin.
 - El catálogo de recompensas se administra desde el panel. El proveedor puede consultar el nivel y el saldo por código, sin datos personales. Un admin puede anular un canje: se devuelve el saldo, no los puntos de nivel.
+- **Canje con QR (fase 11):** QR dinámico de 5 minutos y un solo uso, renovado cada 60 s, con código corto de respaldo. Escanean operadores invitados por un admin y ligados a un proveedor (no son aliados); los admins también. La recompensa la elige el operador; una por escaneo; el aliado no aprueba en su celular, porque mostrar el QR es su consentimiento. El operador ve el nombre corto del aliado, su código, nivel y saldo, nunca su correo ni su celular. Un operador se elimina solo si no ha registrado canjes.
+- El Hub recarga los puntos solo al volver a la pestaña o a la app (y cada 2 minutos con la página abierta).
 
 ---
 
@@ -874,6 +963,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | Pantallas del Hub y del panel | Pruebas en navegador con Supabase simulado | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
+| Canje con QR (fase 11): invitar operadores, mostrar el QR, escanear, canjear, rechazos por nivel y saldo, anular | 79 pruebas pgTAP, pruebas en navegador con cámara simulada y una **prueba real con celulares Android e iPhone** en el Preview (1 oct 2026) | Operadores y catálogo reales; pruebas de capturas de pantalla y modo avión con más personas |
 
 **Conclusión:** cada pieza está probada por separado, pero **falta la prueba de punta a punta con personas y con Clientify real**. Eso es la etapa 1, y es lo siguiente que hay que hacer.
 
@@ -890,7 +980,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 5. **Correos de confirmación:** el correo por defecto de Supabase solo envía a los miembros del equipo del proyecto. Hay dos opciones:
    - configurar el SMTP propio también en dev, que además prueba el correo real (recomendado);
    - confirmar las cuentas de prueba a mano; Claude puede hacerlo en dev.
-6. **Cuentas de prueba:** usar correos con `+prueba` (p. ej. `nombre+prueba1@geenera.com`). Solo esos llegan a Clientify desde dev, con la etiqueta `PRUEBA HUB`. Conviene una cuenta EMI, una Financiero y una Agremiaciones.
+6. **Para probar desde celulares** (canje con QR): crear en Vercel un enlace para compartir del Preview (*Share*), porque el Preview pide iniciar sesión en Vercel; y en `aliados-dev` → Authentication → URL Configuration agregar en *Redirect URLs* `https://<URL del Preview>/**`, que necesitan los enlaces de invitación de operadores.
+7. **Cuentas de prueba:** usar correos con `+prueba` (p. ej. `nombre+prueba1@geenera.com`). Solo esos llegan a Clientify desde dev, con la etiqueta `PRUEBA HUB`. Conviene una cuenta EMI, una Financiero y una Agremiaciones.
 
 **Casos de prueba** (cada uno con su resultado esperado):
 
@@ -907,6 +998,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 9 | Completar cursos de la Academy hasta pasar 20 puntos en el mes | Solo 20 puntos otorgados; el resto queda "pendiente" |
 | 10 | Reportar un evento que cumple y otro que no; validar y rechazar | +100 solo al que cumple; el aliado ve el motivo del rechazo |
 | 11 | Crear recompensas en el panel y canjear con la key de prueba (Claude da el comando) | Descuenta saldo, no nivel; una referencia repetida no descuenta dos veces; la anulación devuelve el saldo |
+| 11b | Invitar un operador desde el panel, abrir el enlace en el celular, crear su contraseña y canjear el QR de un aliado (también con el código corto); probar una recompensa de nivel mayor y otra sin saldo; mostrar una captura de pantalla vieja del QR | El aliado ve «¡Canje registrado!» y su nuevo saldo; las que no le alcanzan aparecen bloqueadas; la captura vieja responde «QR reemplazado» o «vencido» |
 | 12 | Suspender a un aliado, moverle un referido en Clientify y reactivarlo | Mientras está suspendido no entra ni gana puntos; al reactivar se acreditan los retenidos |
 | 13 | Ajuste de puntos y baja calidad reiterada desde el panel | Se reflejan en el historial del aliado; queda registro en Auditoría |
 | 14 | Entrar a `admin.html` con una cuenta que no es admin | "Sin acceso" |
@@ -928,21 +1020,21 @@ Pasar Vercel a Pro. Crear una organización de Supabase en Pro para `aliados-pro
 *Por qué:* Vercel Hobby no permite uso comercial, y Supabase Free pausa el proyecto con poca actividad y no ofrece copias de seguridad descargables.
 
 **Paso 2 — Crear el esquema en `aliados-prod`.**
-Aplicar en orden las migraciones de `supabase/migrations/` (hoy 23). Lo recomendado es la Supabase CLI desde un computador del equipo:
+Aplicar en orden las migraciones de `supabase/migrations/` (hoy 25). Lo recomendado es la Supabase CLI desde un computador del equipo:
 1. `npx supabase login`
 2. `npx supabase link --project-ref pysyxycrybayhrescplc`
 3. `npx supabase db push`
 
 Luego verificar:
 - que las extensiones `pg_cron`, `pg_net` y Vault estén activas;
-- que se vean las 18 tablas y los 6 cron jobs;
+- que se vean las 21 tablas y los 7 cron jobs;
 - que el *Security Advisor* no muestre alertas nuevas.
 
 *Por qué:* las migraciones son la receta exacta ya probada en dev. Claude no toca `prod` directamente, por decisión del equipo.
 
 **Paso 3 — Autenticación de `prod`.**
 En Supabase → Authentication:
-- *Site URL* y *Redirect URLs* = el dominio oficial;
+- *Site URL* = el dominio oficial, y en *Redirect URLs* `https://<dominio>/**` (lo usan los enlaces de invitación de operadores a `canje.html`). En `aliados-dev`, la *Site URL* puede seguir siendo la del Preview;
 - confirmación de correo activada;
 - **SMTP propio** con remitente del dominio de GEENERA (SPF, DKIM y DMARC);
 - límite de correos por hora ajustado al lanzamiento;
@@ -1003,7 +1095,10 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 **Paso 12 — Abrir el registro y operar.**
 - Comunicar el enlace "Quiero ser aliado".
 - Revisar el panel **a diario**: solicitudes, eventos y conflictos.
-- Cuando se definan los beneficios y el proveedor, cargar el catálogo de recompensas y entregarle al proveedor su API key.
+- Cargar el catálogo real de recompensas en el panel (pestaña Recompensas).
+- Invitar a los **operadores** reales desde el panel (pestaña Operadores) y enviarles el enlace por WhatsApp junto con el instructivo `docs/instructivo-operador-canje.pdf`.
+- Compartir con los aliados el instructivo `docs/instructivo-aliado-mi-qr.pdf`.
+- Si un proveedor se integra por sistema, generar su API key (`CANJES_API_KEYS`).
 
 ### Operación continua (checklist)
 - [ ] **Diario:** revisar solicitudes, eventos y conflictos en el panel.
@@ -1019,7 +1114,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 
 | # | Tema | Estado |
 |---|---|---|
-| 1 | Sistema externo de canjes: quién es el proveedor y qué recompensas habrá. | El Hub ya está listo (API y catálogo). Falta definir el proveedor, generar su key y cargar el catálogo. |
+| 1 | Canjes: quién entrega cada recompensa y qué recompensas habrá. | El Hub ya está listo: API por proveedor (fase 10) y canje con QR presencial (fase 11). Falta cargar el catálogo real, invitar a los operadores reales y, si un proveedor se integra por sistema, generar su key. |
 | 2 | Rama de n8n para reenviar los leads del formulario público. | Plan definido (`CLAUDE.md` §8); falta implementarla en n8n. |
 | 3 | Etiquetas de los flujos A y B: ¿el contacto del aliado debe llevar "aliados del sol"/"aliado del sol hub" si esas etiquetas disparan automatizaciones de "nuevo lead"? | Por confirmar con el equipo comercial. |
 | 4 | Nueva versión de la Política de Tratamiento de Datos (transferencia internacional, finalidades y canal de reclamos). | Pendiente de redacción legal. |
@@ -1027,6 +1122,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (etapa 2, pasos 4 y 9). |
 | 7 | Secciones del Hub con datos de demostración (series por mes, pronóstico de desembolsos, comisiones). | Se mantienen con la etiqueta "Demostración" hasta tener datos reales. |
 | 8 | Imágenes y logos de las recompensas reales. | El catálogo aún no guarda imágenes. |
+| 9 | El Hub es más ancho que la pantalla del celular (unos 616 px en 390 px) porque el menú lateral no se oculta. | Se puede desplazar hacia los lados; «Mi QR» ya se ajusta a la pantalla. Pendiente de corregir. |
 
 ---
 
@@ -1052,3 +1148,6 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | **pgTAP** | Herramienta de pruebas automáticas para la base de datos. |
 | **URL firmada** | Enlace temporal, de un solo uso, para subir o ver un archivo privado. |
 | **Flujo A / B / C** | Aliado aprobado → Clientify; Nueva oportunidad → Clientify; Clientify → Hub. |
+| **Operador** | Persona que entrega recompensas y registra canjes escaneando el QR del aliado en `canje.html`. No es aliado; la invita un admin. |
+| **QR dinámico / ficha** | El QR de «Mi QR» lleva una ficha aleatoria que vale 5 minutos y sirve una sola vez; el Hub la cambia cada minuto. |
+| **Código corto** | Los 8 caracteres debajo del QR, para escribirlos a mano si la cámara no lo lee. |

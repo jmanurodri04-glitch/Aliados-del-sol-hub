@@ -283,6 +283,7 @@ async function cargarDashboard(supabaseDado) {
       emitir('ads:dashboard', { ok: false, mensaje: MENSAJES.generico });
       return;
     }
+    ultimaRecarga = Date.now();
     dashboardActual = { ok: true, aliado: aliado.data, movimientos: movimientos.data, referidos: referidos.data, modulos: modulos.data, eventos: eventos.data,
       canjes: canjes.data, recompensas: recompensas.data };
     emitir('ads:dashboard', dashboardActual);
@@ -410,6 +411,18 @@ window.addEventListener('ads:consultar-dashboard', () => {
   if (dashboardActual) emitir('ads:dashboard', dashboardActual);
   else cargarDashboard();
 });
+// Los puntos pueden cambiar sin que el aliado haga nada (un admin anula un canje, Clientify avanza un referido): al
+// volver a la pestaña o a la app, y cada 2 minutos con la página visible, se recarga el dashboard (máximo cada 30 s).
+let ultimaRecarga = 0;
+function recargarSiVisible() {
+  if (!sesionActual.activa || document.visibilityState !== 'visible' || Date.now() - ultimaRecarga < 30000) return;
+  ultimaRecarga = Date.now();
+  cargarDashboard();
+}
+document.addEventListener('visibilitychange', recargarSiVisible);
+window.addEventListener('focus', recargarSiVisible);
+setInterval(recargarSiVisible, 120000);
+
 // La página puede montarse antes o después de este módulo: al montarse pregunta el estado.
 window.addEventListener('ads:consultar-sesion', () => {
   emitir('ads:sesion', sesionActual);

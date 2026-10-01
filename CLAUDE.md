@@ -91,6 +91,7 @@ Formulario propio del Hub. No es de Clientify.
    - un admin la aprueba con `estado = 'activo'`, `aprobado_at` y `aprobado_por` desde el **panel admin** (`admin.html`, fase 9), o la rechaza (`estado = 'rechazado'`: no entra al Hub y ve "Tu solicitud no fue aprobada"; se puede aprobar después);
    - solo las cuentas `activo` entran al Hub. **Todo endpoint de `/api` debe verificar `estado = 'activo'`.**
 5. En el front, toda la lógica de Supabase vive en `js/supabase.js`: la página emite eventos `ads:*` (`ads:join-register`, `ads:login`, `ads:logout`) y el módulo responde (`ads:join-resultado`, `ads:login-resultado`, `ads:sesion`, `ads:aviso`).
+6. **Excepción (fase 11):** si el correo tiene una invitación de **operador** (§4.10), el trigger de alta solo vincula la cuenta a `operadores` y no crea un aliado. La invitación solo la crea un admin; el navegador no puede marcarse como operador. Es el único caso de un usuario de Auth sin fila en `aliados`.
 
 Validar en front **y** en servidor: formato de email, celular (formato internacional E.164; si es de Colombia, 10 dígitos que empiezan por 3), contraseñas iguales y mínimo 8 caracteres, campos condicionales según el tipo, aceptación de términos y autorización de datos.
 
@@ -246,7 +247,7 @@ vinculo           text NOT NULL           -- tabla origen: 'empresas' | 'eventos
 vinculo_id        text NULL               -- id del registro origen
 clave_unica       text UNIQUE NOT NULL    -- IDEMPOTENCIA (ver §5.1)
 fecha             timestamptz NOT NULL DEFAULT now()
-creado_por        text NOT NULL           -- 'sistema' | 'webhook_clientify' | 'admin:{id}' | 'canjes_api'
+creado_por        text NOT NULL           -- 'sistema' | 'webhook_clientify' | 'admin:{id}' | 'canjes_api' | 'canjes_qr'
 nota              text NULL
 secuencia         bigint IDENTITY         -- orden determinista cuando dos movimientos tienen la misma fecha
 ```
@@ -294,7 +295,7 @@ modulos_completados: id, aliado_id FK, modulo_id FK, fecha_completado timestampt
                      UNIQUE (aliado_id, modulo_id)                -- un módulo se premia una sola vez
 ```
 
-### 4.10 `canjes` (redención de puntos; lo alimenta un sistema externo)
+### 4.10 `canjes` (redención de puntos: por API de un proveedor o con el QR del aliado)
 
 ```
 id                   uuid PK
@@ -318,6 +319,28 @@ Entra por un endpoint seguro `POST /api/canjes` (API key propia por proveedor), 
   - Errores con código estable en el cuerpo (`{ error, codigo }`): `aliado_inexistente`/`recompensa_inexistente` 404, `aliado_no_activo`/`nivel_insuficiente`/`saldo_insuficiente`/`referencia_duplicada` 409, `dato_invalido` 422, `limite_canjes` 429; key inválida 401; sin keys configuradas 503.
 - **Anulación** (solo admin, desde el panel, motivo obligatorio de 10 caracteres): `admin_anular_canje` marca el canje `anulado` y devuelve los puntos con un `ajuste_admin` `ganado` (`vinculo = 'canjes'`, clave `canje_anulado:{id}`). La devolución suma a `puntos_disponibles` pero **no** a `puntos_nivel`, porque el canje tampoco los restó (§5.4). El aliado ve el motivo.
 - Vistas: `v_mis_canjes` y `v_recompensas` (catálogo activo con `disponible`, `falta_nivel` y `puntos_faltantes` del aliado de la sesión), `v_admin_canjes` y `v_admin_recompensas` (con uso de cada recompensa).
+
+**Implementado (fase 11, canje con QR; migraciones `canjes_qr` y `eliminar_operador`). FASE FINALIZADA: probada en `aliados-dev` con pgTAP, `npm test`, navegador y prueba real con celulares Android e iPhone (1 oct 2026).**
+- **Cómo funciona:** el aliado abre **«Mi QR para canjear»** en el Hub y lo muestra; un **operador** (quien entrega la recompensa) lo escanea en **`canje.html`**, elige la recompensa entre las de su proveedor y confirma. El aliado ve «¡Canje registrado!» y su nuevo saldo sin recargar.
+- **El QR** es un enlace a `/canje.html#q=<ficha>` (lo que va tras el `#` no viaja a ningún servidor). La ficha es aleatoria (32 bytes), **vale 5 minutos, sirve una sola vez** y la base solo guarda su huella (sha256). El Hub pide una nueva **cada 60 s** y cada QR nuevo anula el anterior: una captura de pantalla deja de servir enseguida. Sin señal, el último QR sigue sirviendo hasta que vence. Debajo va un **código corto** de 8 caracteres (alfabeto sin `0 O 1 I L`) por si la cámara falla. El QR nunca contiene `aliados.id` ni datos personales.
+- **Operadores** (tabla `operadores`: `usuario_id`, `correo`, `nombre`, `proveedor`, `activo`, `invitado_por`): **no son aliados**. Los invita un admin desde el panel (pestaña Operadores); canjean solo recompensas de su proveedor (o de todos). Un **admin** también puede escanear, como proveedor `geenera`. Un operador no puede canjear su propio QR.
+  - Invitación: `POST /api/admin { accion: 'invitar_operador', correo, nombre, proveedor }` → `admin_invitar_operador` y `auth.admin.generateLink` (`invite` si el correo no tiene cuenta, `recovery` si es una cuenta de operador sin contraseña; si el correo ya es de un aliado, entra con su contraseña y **no** hay enlace, así un admin no puede tomar la cuenta de un aliado). El enlace **no** se envía por correo (no depende del SMTP): el panel lo muestra para copiarlo y enviarlo por WhatsApp.
+  - El enlace es `/canje.html#invitacion=<hashed_token>&tipo=invite|recovery` y el código solo se usa (`verifyOtp`) cuando la persona guarda su contraseña: **el enlace directo de Supabase se gastaba con la vista previa de WhatsApp** (hallado en la prueba real). Sirve una vez y vence según Supabase (1 h por defecto); si vence, «Nuevo enlace».
+  - `estado_operador` (desactivar con motivo / reactivar) y `eliminar_operador` (motivo; **solo si no registró canjes**, para no perder quién los registró; borra también su cuenta de Auth si no es aliado). Todo queda en `acciones_admin`.
+- **Tablas:** `canjes_qr` (`aliado_id`, `ficha_hash`, `codigo_corto`, `vence_at`, `usado_at`, `anulado_at` = reemplazado, `canje_id`) y `canjes_qr_intentos` (códigos inexistentes por operador). Sin políticas: solo se escriben con funciones. `canjes` gana `origen` (`api` | `qr`) y `registrado_por` (usuario de Auth del operador o admin); ninguno se edita.
+- **Funciones con la sesión del usuario** (`SECURITY DEFINER` + `auth.uid()`, ejecutables por `authenticated`; **única excepción** al patrón «escrituras solo por `/api`», para no gastar funciones de Vercel). Cada una verifica quién la llama:
+  - aliado activo: `generar_qr_canje()` (máx. 30 cada 10 min) y `estado_qr_canje(codigo)`;
+  - operador activo o admin: `perfil_operador()`, `consultar_qr_canje(qr)` (código, nombre corto tipo «Laura P.», nivel, saldo y recompensas con `disponible`/`motivo`), `canjear_qr(qr, recompensa)` y `mis_canjes_registrados()` (los del día).
+  - Un QR inexistente, vencido, usado o reemplazado **no es error**: responden `{ ok: false, codigo: 'qr_invalido' | 'qr_vencido' | 'qr_usado' | 'qr_reemplazado' }` para que el intento quede contado. Máx. **20 códigos inexistentes cada 10 min** por operador (`limite_intentos`). Errores con prefijo: `propio_qr`, `no_autorizado`, `limite_qr`, `aliado_inexistente`, más los del canje.
+- **Una sola lógica de canje:** `interno.registrar_canje_base` (cuenta activa, recompensa del proveedor, nivel ≥ mínimo, saldo, 30 canjes por hora, idempotencia por referencia) la usan `public.registrar_canje` (API, sin cambios por fuera) y `canjear_qr` (referencia `qr:{id}`, movimiento con `creado_por = 'canjes_qr'`). `interno.recompensas_para` la comparten `consultar_canjes` y `consultar_qr_canje`. Un **doble toque** en Confirmar devuelve el mismo canje (`duplicado: true`).
+- **Concurrencia:** `canjear_qr` bloquea la ficha y luego al aliado; `generar_qr_canje` no bloquea al aliado (evita el cruce de bloqueos).
+- **Limpieza:** cron `depurar-canjes-qr` (`40 5 * * *` UTC = 00:40 Bogotá) borra las fichas vencidas sin usar de más de 7 días y los intentos de más de 1 día.
+- **Front:**
+  - `js/mi-qr.js` pinta «Mi QR» encima del Hub (librería `qrcode-generator@2.0.4` de jsDelivr), ajustado al área visible del celular (`visualViewport`), con cuenta regresiva, aviso «Sin señal: este QR sirve hasta las…» y la pantalla de éxito (consulta el estado cada 3 s). `js/supabase.js` responde `ads:qr-generar` → `ads:qr` y `ads:qr-estado` → `ads:qr-estado-resultado`; una cuenta de operador que entra al Hub se envía a `canje.html`.
+  - `canje.html` + `js/canje.js`: login, crear contraseña desde la invitación, cámara (`BarcodeDetector` en Android; `jsQR@1.4.0` en iPhone), código escrito a mano, confirmación, resultado y «Tus canjes de hoy». Si se cae la conexión al confirmar, «Reintentar» es seguro (no descuenta dos veces).
+  - Panel: pestaña **Operadores** y, en Canjes, «QR · operador» o «API · ref.».
+- **Vistas:** `v_mis_canjes` y `v_admin_canjes` ganan `origen` (y `registrado_por` en la de admin); nueva `v_admin_operadores` (con canjes registrados de cada operador).
+- **Siguen siendo 12 funciones de Vercel.** `POST /api/canjes` no cambió.
 
 ### 4.11 `webhook_eventos` (auditoría de integración)
 
@@ -742,6 +765,9 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Agremiaciones: la distribución regional agrupa por la ciudad de la empresa referida.
 - Secciones sin datos reales todavía (series por mes, pronóstico de desembolsos, distribución por ejecutivo, Beneficios y Comisiones) conservan los datos de demostración con la etiqueta **"Demostración"**.
 - **Beneficios y canjes (fase 10):** si hay recompensas activas en el catálogo (`v_recompensas`), reemplazan las de demostración y se agrupan por su categoría; cada tarjeta muestra si está disponible, cuántos puntos faltan o qué nivel exige. El canje lo confirma el proveedor (§4.10), así que el Hub solo informa. Sin catálogo real se siguen viendo las de demostración con la etiqueta "Demostración". "Mis canjes" (`v_mis_canjes`) muestra cada canje con su estado y, si se anuló, el motivo. El historial tiene el filtro "Canjes" y un canje no cuenta como "Perdido".
+- **Canje con QR (fase 11):** «Mi QR para canjear» en el menú, la banda «Canjea con tu QR» en Beneficios y «Canjear con mi QR» en cada recompensa disponible (§4.10). «Mis canjes» marca los hechos con QR.
+- **Datos al día sin recargar:** al volver a la pestaña o a la app, y cada 2 min con la página visible, `js/supabase.js` recarga el dashboard (máximo cada 30 s); así se ven, por ejemplo, la anulación de un canje o los avances de Clientify.
+- **Celular:** con tema claro todo el fondo es claro (antes, lo que sobraba a la derecha se veía oscuro). **Pendiente:** el Hub aún es más ancho que la pantalla del celular (unos 616 px en 390 px) porque el menú lateral no se oculta; se puede desplazar hacia los lados.
 - **Academy:** los puntos de cada curso salen de `v_mis_modulos`. Al terminar la última lección se llama a `POST /api/modulos { codigo }`, que toma el aliado del token, exige cuenta activa y ejecuta `public.completar_modulo`; responde `{ codigo, nuevo, puntos, recompensa_estado, puntos_disponibles, puntos_nivel, nivel }`. En la base solo queda el curso completado; el avance por lección vive en el navegador (`localStorage`, clave `ads-aca-{codigo_aliado}`).
 
 ---
@@ -757,14 +783,15 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Página separada `admin.html` + `js/admin.js` (el Hub no se toca). Usa la misma sesión de Supabase; solo entra una cuenta con `rol = 'admin'` y `estado = 'activo'` (las demás ven "Sin acceso"). Pestañas: Resumen, Solicitudes, Aliados (historial, ajustes, baja calidad, suspender/reactivar), Eventos, Conflictos de Clientify, Canjes (anular) y Recompensas (crear y editar el catálogo; fase 10) y Auditoría.
 - Un admin puede leer todas las filas de `aliados` (RLS), así que el front siempre lee la fila propia filtrando por el usuario de la sesión (`.eq('id', session.user.id)`), sin seleccionar ni mostrar el `id`.
 - **Lecturas:** vistas `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_acciones`, `v_admin_canjes`, `v_admin_recompensas` (`security_invoker` y `where es_admin()`: un aliado no ve filas; ninguna expone `aliados.id`, los admins aparecen por su `codigo_aliado`).
-- **Escrituras:** un solo endpoint `POST /api/admin { accion, ... }` (acciones `aprobar`, `rechazar`, `suspender`, `reactivar`, `ajuste`, `baja_calidad`, `validar_evento`, `rechazar_evento`, `resolver_conflicto`, `anular_canje`, `guardar_recompensa` y `archivo_evento`, que da una URL firmada de 5 min). Toma al admin del token (`adminDeLaSesion` en `lib/sesion.js`) y llama a `public.admin_*` (solo `service_role`), que vuelven a verificar al admin con `interno.exigir_admin`, identifican al aliado por `codigo_aliado` y registran la acción en **`acciones_admin`** (solo inserción). Errores con prefijo estable: `no_autorizado`, `no_permitido`, `aliado_inexistente`, `evento_inexistente`, `conflicto_inexistente`, `canje_inexistente`, `recompensa_inexistente`, `estado_invalido`, `dato_invalido`, `evento_incompleto`.
+- **Escrituras:** un solo endpoint `POST /api/admin { accion, ... }` (acciones `aprobar`, `rechazar`, `suspender`, `reactivar`, `ajuste`, `baja_calidad`, `validar_evento`, `rechazar_evento`, `resolver_conflicto`, `anular_canje`, `guardar_recompensa`, `invitar_operador`, `estado_operador`, `eliminar_operador` (fase 11) y `archivo_evento`, que da una URL firmada de 5 min). Toma al admin del token (`adminDeLaSesion` en `lib/sesion.js`) y llama a `public.admin_*` (solo `service_role`), que vuelven a verificar al admin con `interno.exigir_admin`, identifican al aliado por `codigo_aliado` y registran la acción en **`acciones_admin`** (solo inserción). Errores con prefijo estable: `no_autorizado`, `no_permitido`, `aliado_inexistente`, `evento_inexistente`, `conflicto_inexistente`, `canje_inexistente`, `recompensa_inexistente`, `operador_inexistente`, `estado_invalido`, `dato_invalido`, `evento_incompleto`.
 - **Reglas:** rechazar, suspender y reactivar exigen motivo; un admin no se suspende a sí mismo ni a otro admin; el ajuste exige justificación (mín. 10 caracteres), va de ±1 a ±5000, respeta el piso en 0 y usa una clave que genera el panel (un doble clic no lo duplica); la baja calidad reiterada es −20 y máximo una por aliado y día; resolver un conflicto exige nota y puede aceptar el valor de Clientify en `avance_empresa` (cambia la calidad, no los puntos) y registrar un ajuste en la misma transacción.
 - **El panel no cambia roles** (decisión del equipo). Un admin se asigna por SQL, después de que la persona se registre en el Hub y confirme su correo:
   ```sql
   update public.aliados set rol = 'admin', estado = 'activo', aprobado_at = coalesce(aprobado_at, now())
   where lower(correo) = '<correo>';
   ```
-- Funciones de Vercel: con `/api/admin`, `/api/eventos` y `/api/canjes` son **12, el máximo del plan Hobby**. Un endpoint nuevo exige unir funciones o pasar a Pro (el equipo planea pasar Vercel y Supabase a Pro; hoy Vercel está en prueba de Pro y Supabase en el plan gratuito).
+- **Registro de canjes (fase 11):** página separada `canje.html` para operadores y admins (§4.10). Las funciones del QR son las únicas que el navegador llama directamente con su sesión; cada una verifica al usuario.
+- Funciones de Vercel: con `/api/admin`, `/api/eventos` y `/api/canjes` son **12, el máximo del plan Hobby** (la fase 11 no agregó ninguna). Un endpoint nuevo exige unir funciones o pasar a Pro (el equipo planea pasar Vercel y Supabase a Pro; hoy Vercel está en prueba de Pro y Supabase en el plan gratuito).
 - Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS` (`proveedor:key,proveedor:key`, §4.10), `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo). **Nunca** se escriben en el código ni en commits.
   - **Production** apunta al proyecto `aliados-prod`; **Preview** y **Development** apuntan a `aliados-dev`.
   - `SUPABASE_PUBLISHABLE_KEY` es la *publishable key* (o la *anon key* legacy). `SUPABASE_SECRET_KEY` es la *secret key* (o la *service_role* legacy). **`SUPABASE_SECRET_KEY` solo se usa dentro de `/api`, jamás en el navegador.**
@@ -800,7 +827,9 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   7. racha y módulos;
   8. dashboards por tipo;
   9. panel admin y eventos;
-  10. endpoint de canjes.
+  10. endpoint de canjes;
+  11. canje con QR (**finalizada**, rama `fase-11-qr-canjes`).
+- **Migraciones con el conector de Supabase:** el conector corta los envíos grandes (~60 s) y pide una confirmación que no llega cuando el SQL contiene `delete`. En esos casos se aplica por partes o la persona pega el SQL en el *SQL Editor* de `aliados-dev`, y se registra en `supabase_migrations.schema_migrations` con la versión del nombre del archivo. Las pruebas pgTAP se corren en dev dentro de un bloque que termina con un error a propósito (así todo se deshace).
 - **Tests:** `npm run test:db` (pgTAP, base local con `npx supabase start`) y `npm test` (`node --test` de `/lib` y `/api`; las pruebas de integración se omiten si no están `PRUEBAS_SUPABASE_URL`, `PRUEBAS_SUPABASE_SECRET_KEY`, `PRUEBAS_SUPABASE_PUBLISHABLE_KEY` y `PRUEBAS_DB_URL`; corren en serie porque comparten la base local).
 - Incluir tests de las reglas críticas: idempotencia de puntos, límites de nivel, tope mensual de módulos, racha (incluido el reinicio y el bloqueo de 28 días), el cálculo de calidad con `revision` y el saldo con piso en 0 sin memoria (ejemplo +10, −30, +20 = 20).
 
@@ -855,6 +884,11 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Canjes: el catálogo de recompensas lo crea y edita GEENERA desde el panel; los puntos y el nivel mínimo salen de ahí (§4.10).
 - El proveedor puede consultar el nivel, el saldo y las recompensas disponibles de un aliado por su código, sin datos personales (§4.10).
 - Un admin puede anular un canje no entregado: se devuelven los puntos disponibles, no los de nivel (§4.10, §5.4).
+- **Canje con QR (fase 11):** QR dinámico firmado por la base, de 5 minutos y un solo uso, renovado cada 60 s; código corto de respaldo (§4.10).
+- Escanean **operadores** (personal de GEENERA o del proveedor) invitados por un admin, ligados a un proveedor; no son aliados. Los admins también escanean (§4.10).
+- La recompensa la elige el operador al escanear; una por escaneo; el aliado no aprueba en su celular (mostrar el QR es su consentimiento) (§4.10).
+- El operador ve el nombre corto del aliado («Laura P.»), su código, nivel y saldo; nunca su correo ni su celular (§4.10).
+- Un operador se elimina solo si no registró canjes; si no, se desactiva (§4.10).
 
 ## 14. Preguntas abiertas
 
@@ -872,7 +906,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 3. ~~Registro: ¿verificación de email obligatoria? ¿aprobación manual de GEENERA?~~ Resuelta: sí a ambas (§3).
 4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
 5. ~~Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?~~ Resuelta: sí ven puntos y nivel; la distribución regional usa la ciudad de la empresa referida (§9).
-6. Sistema externo de canjes: quién lo opera. **Implementado del lado del Hub (fase 10):** API key por proveedor y catálogo en el panel (§4.10). Pendiente: definir el proveedor, generar su key y cargar el catálogo real.
+6. Sistema externo de canjes: quién lo opera. **Implementado del lado del Hub (fase 10):** API key por proveedor y catálogo en el panel (§4.10). **Fase 11:** el canje presencial ya funciona con QR y operadores, sin depender de un sistema externo. Pendiente: invitar a los operadores reales, cargar el catálogo real y, si un proveedor se integra por sistema, generar su key.
 7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: se adjunta a la ficha de la empresa (§8, flujo B).
 8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).
 9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.

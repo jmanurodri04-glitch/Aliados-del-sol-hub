@@ -6,6 +6,8 @@
 //    y deja la acción en acciones_admin. Los aliados se identifican por codigo_aliado (§2).
 // 3. `archivo_evento` devuelve una URL firmada de 5 minutos para revisar el registro de asistentes.
 // Fase 10: `anular_canje` (devuelve los puntos de un canje no entregado) y `guardar_recompensa` (catálogo).
+// Fase 11: `invitar_operador` (quien escanea el QR de canje; devuelve un enlace para crear la contraseña, que el
+// panel copia para enviarlo por WhatsApp o correo) y `estado_operador` (desactivar o reactivar).
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { adminDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
@@ -16,7 +18,8 @@ const CODIGO = /^[A-Za-z0-9]{6,20}$/;
 // Errores de la base (prefijo estable) → código HTTP. El detalle de la base ya está en español.
 const ERRORES = {
   no_autorizado: 403, no_permitido: 403, aliado_inexistente: 404, evento_inexistente: 404, conflicto_inexistente: 404,
-  canje_inexistente: 404, recompensa_inexistente: 404, estado_invalido: 409, dato_invalido: 422, evento_incompleto: 422
+  canje_inexistente: 404, recompensa_inexistente: 404, operador_inexistente: 404, estado_invalido: 409, dato_invalido: 422,
+  evento_incompleto: 422
 };
 
 export function errorDeAdmin(mensaje) {
@@ -70,8 +73,31 @@ const ACCIONES = {
   anular_canje: ['admin_anular_canje', (c, a) => ({ p_admin: a, p_canje: uuid(c.canje_id, 'el canje'), p_motivo: texto(c.motivo) })],
   guardar_recompensa: ['admin_guardar_recompensa', (c, a) => ({
     p_admin: a, p_recompensa: c.recompensa_id ? uuid(c.recompensa_id, 'la recompensa') : null, p_datos: recompensa(c)
+  })],
+  estado_operador: ['admin_estado_operador', (c, a) => ({
+    p_admin: a, p_operador: uuid(c.operador_id, 'el operador'), p_activo: c.activo === true, p_motivo: texto(c.motivo) || null
   })]
 };
+
+// Invita a un operador. La base lo registra (y lo audita); luego Supabase genera el enlace con el que crea su
+// contraseña: 'invite' si el correo no tiene cuenta, 'recovery' si es una cuenta de operador que nunca la creó.
+// Si el correo ya es de un aliado, entra con la contraseña que ya tiene y no hay enlace (así un admin no puede
+// tomar la cuenta de un aliado). El enlace no se envía por correo: el panel lo muestra para copiarlo.
+async function invitarOperador(supabase, cuerpo, adminId, req) {
+  const datos = { correo: String(cuerpo.correo || '').trim(), nombre: String(cuerpo.nombre || '').trim(), proveedor: String(cuerpo.proveedor || '').trim() };
+  const { data, error } = await supabase.rpc('admin_invitar_operador', { p_admin: adminId, p_datos: datos });
+  if (error) throw errorDeAdmin(error.message) || new Error('admin_invitar_operador falló');
+  if (data.cuenta === 'aliado') return { ...data, enlace: null };
+
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const opciones = host ? { redirectTo: `https://${host}/canje.html` } : {};
+  const { data: link, error: errorLink } = await supabase.auth.admin.generateLink({
+    type: data.cuenta === 'nueva' ? 'invite' : 'recovery', email: data.correo, options: opciones
+  });
+  const enlace = link && link.properties && link.properties.action_link;
+  if (errorLink || !enlace) throw new ErrorHttp(502, 'El operador quedó registrado, pero no pudimos crear el enlace. Vuelve a invitarlo.');
+  return { ...data, enlace };
+}
 
 // URL firmada de corta duración para el registro de asistentes de un evento.
 async function archivoEvento(supabase, cuerpo) {
@@ -97,6 +123,7 @@ export default async function handler(req, res, supabase = null) {
     const cuerpo = cuerpoJson(req);
 
     if (cuerpo.accion === 'archivo_evento') return res.status(200).json(await archivoEvento(supabase, cuerpo));
+    if (cuerpo.accion === 'invitar_operador') return res.status(200).json(await invitarOperador(supabase, cuerpo, admin.id, req));
 
     const accion = ACCIONES[cuerpo.accion];
     if (!accion) throw new ErrorHttp(400, 'Acción desconocida.');

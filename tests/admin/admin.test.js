@@ -18,11 +18,20 @@ function respuesta() {
   };
 }
 
-function supabaseFalso({ usuario = ADMIN, rpc = { ok: true }, rpcError = null, evento = { registro_asistentes_path: 'x/y/a.pdf' } } = {}) {
+function supabaseFalso({ usuario = ADMIN, rpc = { ok: true }, rpcError = null, evento = { registro_asistentes_path: 'x/y/a.pdf' },
+  linkError = null } = {}) {
   const llamadas = [];
   return {
     llamadas,
-    auth: { getUser: async (t) => (t === 'token' ? { data: { user: { id: usuario.id } }, error: null } : { data: null, error: {} }) },
+    auth: {
+      getUser: async (t) => (t === 'token' ? { data: { user: { id: usuario.id } }, error: null } : { data: null, error: {} }),
+      admin: {
+        generateLink: async (args) => {
+          llamadas.push({ enlace: args });
+          return linkError ? { data: null, error: linkError } : { data: { properties: { action_link: 'https://enlace/' + args.type } }, error: null };
+        }
+      }
+    },
     from: (tabla) => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: tabla === 'aliados' ? usuario : evento, error: null }) }) })
     }),
@@ -110,6 +119,57 @@ test('admin: anular un canje y guardar una recompensa (fase 10)', async () => {
   await admin(pedido({ accion: 'guardar_recompensa', recompensa_id: 'no-es-uuid', datos: {} }), res, sb);
   assert.equal(res.statusCode, 400);
   assert.equal(errorDeAdmin('canje_inexistente: el canje no existe').status, 404);
+});
+
+test('admin: invitar operador genera el enlace según la cuenta (fase 11)', async () => {
+  const pedidoHost = (cuerpo) => ({ ...pedido(cuerpo), headers: { authorization: 'Bearer token', host: 'hub.test' } });
+  const invitacion = { accion: 'invitar_operador', correo: ' o@geenera.test ', nombre: 'Oscar', proveedor: 'geenera', p_admin: 'otro' };
+
+  let sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'o@geenera.test', cuenta: 'nueva' } });
+  let res = respuesta();
+  await admin(pedidoHost(invitacion), res, sb);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(sb.llamadas[0], { nombre: 'admin_invitar_operador',
+    args: { p_admin: ADMIN.id, p_datos: { correo: 'o@geenera.test', nombre: 'Oscar', proveedor: 'geenera' } } });
+  assert.deepEqual(sb.llamadas[1], { enlace: { type: 'invite', email: 'o@geenera.test', options: { redirectTo: 'https://hub.test/canje.html' } } });
+  assert.equal(res.cuerpo.enlace, 'https://enlace/invite');
+
+  sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'o@geenera.test', cuenta: 'operador' } });
+  res = respuesta();
+  await admin(pedidoHost(invitacion), res, sb);
+  assert.equal(sb.llamadas[1].enlace.type, 'recovery', 'una cuenta de operador sin contraseña recibe un enlace para crearla');
+
+  sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'a@geenera.test', cuenta: 'aliado' } });
+  res = respuesta();
+  await admin(pedidoHost(invitacion), res, sb);
+  assert.equal(res.cuerpo.enlace, null);
+  assert.equal(sb.llamadas.length, 1, 'para un aliado no se genera ningún enlace');
+
+  sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'o@geenera.test', cuenta: 'nueva' }, linkError: { message: 'x' } });
+  res = respuesta();
+  await admin(pedidoHost(invitacion), res, sb);
+  assert.equal(res.statusCode, 502);
+});
+
+test('admin: invitar operador no llega a Auth si la base lo rechaza', async () => {
+  const sb = supabaseFalso({ rpcError: { message: 'estado_invalido: o@geenera.test ya es operador' } });
+  const res = respuesta();
+  await admin(pedido({ accion: 'invitar_operador', correo: 'o@geenera.test', nombre: 'Oscar', proveedor: 'geenera' }), res, sb);
+  assert.equal(res.statusCode, 409);
+  assert.equal(sb.llamadas.length, 1);
+});
+
+test('admin: desactivar y reactivar operadores', async () => {
+  const sb = supabaseFalso();
+  let res = respuesta();
+  await admin(pedido({ accion: 'estado_operador', operador_id: CLAVE, activo: false, motivo: 'Ya no trabaja aquí' }), res, sb);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(sb.llamadas[0], { nombre: 'admin_estado_operador',
+    args: { p_admin: ADMIN.id, p_operador: CLAVE, p_activo: false, p_motivo: 'Ya no trabaja aquí' } });
+  res = respuesta();
+  await admin(pedido({ accion: 'estado_operador', operador_id: 'x', activo: true }), res, sb);
+  assert.equal(res.statusCode, 400);
+  assert.equal(errorDeAdmin('operador_inexistente: el operador no existe').status, 404);
 });
 
 test('admin: acción desconocida responde 400', async () => {

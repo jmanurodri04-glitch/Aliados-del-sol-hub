@@ -2,7 +2,7 @@
 -- reglas del canje compartidas con POST /api/canjes y que nada exponga aliados.id.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(72);
+select plan(79);
 
 create function pg_temp.aliado(id uuid, email text, nombre text)
 returns void language sql as $$
@@ -242,6 +242,25 @@ update public.canjes_qr set vence_at = now() - interval '8 days', creado_at = no
 select interno.depurar_canjes_qr();
 select ok(not exists (select 1 from public.canjes_qr where usado_at is null) and exists (select 1 from public.canjes_qr where usado_at is not null),
   'la limpieza borra las fichas vencidas sin usar y conserva las usadas');
+
+-- Eliminar operadores (fase 11 · 02) -------------------------------------------------------------------------------------
+
+select public.admin_invitar_operador('ad000000-0000-0000-0000-00000000000a', '{"correo":"e@qr.test","nombre":"Error Invitado","proveedor":"geenera"}');
+insert into auth.users (id, email, raw_user_meta_data) values ('ad000000-0000-0000-0000-0000000000a4', 'e@qr.test', '{}');
+select throws_ok($$select public.admin_eliminar_operador('ad000000-0000-0000-0000-000000000001', (select id from public.operadores where correo = 'e@qr.test'), 'Invitado por error')$$,
+  'P0001', 'no_autorizado: se requiere una cuenta de administrador activa', 'un aliado no elimina operadores');
+select throws_ok($$select public.admin_eliminar_operador('ad000000-0000-0000-0000-00000000000a', (select id from public.operadores where correo = 'e@qr.test'), '')$$,
+  'P0001', 'dato_invalido: el motivo debe tener al menos 5 caracteres', 'eliminar exige motivo');
+select is(public.admin_eliminar_operador('ad000000-0000-0000-0000-00000000000a', (select id from public.operadores where correo = 'e@qr.test'), 'Invitado por error') ->> 'borrar_usuario',
+  'ad000000-0000-0000-0000-0000000000a4', 'un operador sin canjes se elimina y se indica qué cuenta de acceso borrar');
+select ok(not exists (select 1 from public.operadores where correo = 'e@qr.test')
+      and exists (select 1 from public.acciones_admin where accion = 'eliminar_operador' and detalle ->> 'correo' = 'e@qr.test'),
+  'el operador desaparece y la eliminación queda auditada');
+select throws_like($$select public.admin_eliminar_operador('ad000000-0000-0000-0000-00000000000a', (select id from public.operadores where correo = 'o@qr.test'), 'Invitado por error')$$,
+  'estado_invalido: o@qr.test ya registró 1 canje(s)%', 'un operador con canjes no se elimina (solo se desactiva)');
+select is(public.admin_eliminar_operador('ad000000-0000-0000-0000-00000000000a', (select id from public.operadores where correo = 'c@qr.test'), 'Ya no escanea') ->> 'borrar_usuario',
+  null, 'si el operador también es aliado, su cuenta no se borra');
+select ok(exists (select 1 from public.aliados where id = 'ad000000-0000-0000-0000-000000000003'), 'y sigue siendo aliado');
 
 select * from finish();
 rollback;

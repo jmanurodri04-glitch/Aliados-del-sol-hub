@@ -7,7 +7,8 @@
 // 3. `archivo_evento` devuelve una URL firmada de 5 minutos para revisar el registro de asistentes.
 // Fase 10: `anular_canje` (devuelve los puntos de un canje no entregado) y `guardar_recompensa` (catálogo).
 // Fase 11: `invitar_operador` (quien escanea el QR de canje; devuelve un enlace para crear la contraseña, que el
-// panel copia para enviarlo por WhatsApp o correo) y `estado_operador` (desactivar o reactivar).
+// panel copia para enviarlo por WhatsApp o correo), `estado_operador` (desactivar o reactivar) y `eliminar_operador`
+// (solo si no registró canjes; borra también su cuenta de acceso si no es aliado).
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { adminDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
@@ -103,6 +104,21 @@ async function invitarOperador(supabase, cuerpo, adminId, req) {
   return { ...data, enlace };
 }
 
+// Elimina un operador sin canjes (la base lo verifica y lo audita) y, si su cuenta de acceso era solo de operador,
+// la borra de Supabase Auth. Si ese borrado falla, la cuenta queda sin permisos: no es aliado ni operador.
+async function eliminarOperador(supabase, cuerpo, adminId) {
+  const { data, error } = await supabase.rpc('admin_eliminar_operador', {
+    p_admin: adminId, p_operador: uuid(cuerpo.operador_id, 'el operador'), p_motivo: texto(cuerpo.motivo)
+  });
+  if (error) throw errorDeAdmin(error.message) || new Error('admin_eliminar_operador falló');
+  let cuenta_borrada = false;
+  if (data.borrar_usuario) {
+    const { error: errorBorrado } = await supabase.auth.admin.deleteUser(data.borrar_usuario);
+    cuenta_borrada = !errorBorrado;
+  }
+  return { operador_id: data.operador_id, correo: data.correo, cuenta_borrada };
+}
+
 // URL firmada de corta duración para el registro de asistentes de un evento.
 async function archivoEvento(supabase, cuerpo) {
   const eventoId = uuid(cuerpo.evento_id, 'el evento');
@@ -128,6 +144,7 @@ export default async function handler(req, res, supabase = null) {
 
     if (cuerpo.accion === 'archivo_evento') return res.status(200).json(await archivoEvento(supabase, cuerpo));
     if (cuerpo.accion === 'invitar_operador') return res.status(200).json(await invitarOperador(supabase, cuerpo, admin.id, req));
+    if (cuerpo.accion === 'eliminar_operador') return res.status(200).json(await eliminarOperador(supabase, cuerpo, admin.id));
 
     const accion = ACCIONES[cuerpo.accion];
     if (!accion) throw new ErrorHttp(400, 'Acción desconocida.');

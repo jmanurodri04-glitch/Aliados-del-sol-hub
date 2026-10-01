@@ -15,7 +15,7 @@ const ACCIONES = { aprobar_aliado: 'Aprobó la solicitud', rechazar_aliado: 'Rec
   reactivar_aliado: 'Reactivó la cuenta', ajuste_puntos: 'Ajuste de puntos', baja_calidad: 'Baja calidad reiterada (−20)',
   validar_evento: 'Validó un evento (+100)', rechazar_evento: 'Rechazó un evento', resolver_conflicto: 'Resolvió un conflicto',
   anular_canje: 'Anuló un canje', guardar_recompensa: 'Guardó una recompensa', invitar_operador: 'Invitó un operador',
-  estado_operador: 'Cambió el estado de un operador' };
+  estado_operador: 'Cambió el estado de un operador', eliminar_operador: 'Eliminó un operador' };
 const VARIABLES = { calificado: 'Calificado', perfecto: 'Referido perfecto', fuera_perfil: 'Fuera del perfil', oportunidad_tecnica: 'Evaluación técnica',
   propuesta_comercial: 'Propuesta comercial', negocio_cerrado: 'Negocio cerrado', informacion_falsa: 'Información falsa', integridad_informacion: 'Integridad' };
 const PESTANAS = [['resumen', 'Resumen'], ['solicitudes', 'Solicitudes'], ['aliados', 'Aliados'], ['eventos', 'Eventos'], ['conflictos', 'Conflictos'],
@@ -370,7 +370,8 @@ async function cargarOperadores() {
       <td class="acciones">${o.activo
         ? `<button class="btn" data-accion="reinvitar_operador" data-operador="${esc(o.operador_id)}">Nuevo enlace</button>
            <button class="btn peligro" data-accion="desactivar_operador" data-operador="${esc(o.operador_id)}" data-nombre="${esc(o.nombre)}">Desactivar</button>`
-        : `<button class="btn" data-accion="reactivar_operador" data-operador="${esc(o.operador_id)}" data-nombre="${esc(o.nombre)}">Reactivar</button>`}</td>
+        : `<button class="btn" data-accion="reactivar_operador" data-operador="${esc(o.operador_id)}" data-nombre="${esc(o.nombre)}">Reactivar</button>`}
+        ${o.canjes_registrados ? '' : `<button class="btn peligro" data-accion="eliminar_operador" data-operador="${esc(o.operador_id)}" data-nombre="${esc(o.nombre)}">Eliminar</button>`}</td>
     </tr>`).join('')}</tbody></table>` : '<p class="vacio">Aún no hay operadores. Invita al primero con «Invitar operador».</p>';
 }
 
@@ -465,6 +466,10 @@ async function alHacerClic(ev) {
   if (accion === 'desactivar_operador') pedir({ titulo: 'Desactivar operador', texto: `${nombre} ya no podrá registrar canjes. Los canjes que registró se conservan.`, campos: [MOTIVO],
     confirmar: 'Desactivar', peligro: true,
     accion: async (v) => { await llamarAdmin('estado_operador', { operador_id: b.dataset.operador, activo: false, motivo: v.motivo }); await recargar(); return 'Operador desactivado.'; } });
+  if (accion === 'eliminar_operador') pedir({ titulo: 'Eliminar operador',
+    texto: `${nombre} se borra del todo, junto con su cuenta de acceso (si también es aliado, conserva su cuenta de aliado). Solo se puede porque aún no registró canjes. No se puede deshacer.`,
+    campos: [MOTIVO], confirmar: 'Eliminar', peligro: true,
+    accion: async (v) => { await llamarAdmin('eliminar_operador', { operador_id: b.dataset.operador, motivo: v.motivo }); await recargar(); return 'Operador eliminado.'; } });
   if (accion === 'reactivar_operador') pedir({ titulo: 'Reactivar operador', texto: `${nombre} podrá volver a registrar canjes.`, confirmar: 'Reactivar',
     accion: async () => { await llamarAdmin('estado_operador', { operador_id: b.dataset.operador, activo: true }); await recargar(); return 'Operador reactivado.'; } });
   if (accion === 'nueva_recompensa') formularioRecompensa(null);

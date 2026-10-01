@@ -26,6 +26,7 @@ function supabaseFalso({ usuario = ADMIN, rpc = { ok: true }, rpcError = null, e
     auth: {
       getUser: async (t) => (t === 'token' ? { data: { user: { id: usuario.id } }, error: null } : { data: null, error: {} }),
       admin: {
+        deleteUser: async (id) => { llamadas.push({ borrarUsuario: id }); return { error: null }; },
         generateLink: async (args) => {
           llamadas.push({ enlace: args });
           return linkError ? { data: null, error: linkError }
@@ -173,6 +174,29 @@ test('admin: desactivar y reactivar operadores', async () => {
   await admin(pedido({ accion: 'estado_operador', operador_id: 'x', activo: true }), res, sb);
   assert.equal(res.statusCode, 400);
   assert.equal(errorDeAdmin('operador_inexistente: el operador no existe').status, 404);
+});
+
+test('admin: eliminar un operador borra también su cuenta de acceso si no es aliado', async () => {
+  const USUARIO = 'd0000000-0000-0000-0000-000000000009';
+  let sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'o@geenera.test', borrar_usuario: USUARIO } });
+  let res = respuesta();
+  await admin(pedido({ accion: 'eliminar_operador', operador_id: CLAVE, motivo: 'Invitado por error' }), res, sb);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(sb.llamadas, [
+    { nombre: 'admin_eliminar_operador', args: { p_admin: ADMIN.id, p_operador: CLAVE, p_motivo: 'Invitado por error' } },
+    { borrarUsuario: USUARIO }]);
+  assert.equal(res.cuerpo.cuenta_borrada, true);
+
+  sb = supabaseFalso({ rpc: { operador_id: CLAVE, correo: 'a@geenera.test', borrar_usuario: null } });
+  res = respuesta();
+  await admin(pedido({ accion: 'eliminar_operador', operador_id: CLAVE, motivo: 'Ya no escanea' }), res, sb);
+  assert.equal(sb.llamadas.length, 1, 'si también es aliado, su cuenta no se toca');
+
+  sb = supabaseFalso({ rpcError: { message: 'estado_invalido: o@geenera.test ya registró 2 canje(s); desactívalo para conservar el historial' } });
+  res = respuesta();
+  await admin(pedido({ accion: 'eliminar_operador', operador_id: CLAVE, motivo: 'Invitado por error' }), res, sb);
+  assert.equal(res.statusCode, 409);
+  assert.equal(sb.llamadas.length, 1, 'con canjes no se borra ninguna cuenta');
 });
 
 test('admin: acción desconocida responde 400', async () => {

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Registrar canje · Aliados del Sol</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#07070A">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Registro de canjes con el QR del aliado (fase 11). La usa un operador (personal de GEENERA o del proveedor) o un
+     admin desde su celular: escanea el QR, elige la recompensa y confirma. Toda la lógica está en js/canje.js; las
+     reglas las aplica la base (consultar_qr_canje y canjear_qr). -->
+<script type="module" src="./js/canje.js"></script>
+<style>
+  :root {
+    --bg:#F7F3EC; --panel:#FFFDF9; --fg:#1B1915; --mut:#665F55; --mut2:#8C8375; --line:rgba(27,25,21,.12);
+    --soft:rgba(27,25,21,.04); --y:#A86E06; --o:#B85A0C; --g:#2E8A57; --bad:#B4533F; --btn:#1B1915; --btnfg:#F7F3EC;
+    --ok-bg:rgba(46,138,87,.12); --w-bg:rgba(184,90,12,.12); --bad-bg:rgba(180,83,63,.12); --n-bg:rgba(27,25,21,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#07070A; --panel:#111014; --fg:#F2F0EC; --mut:#9A968F; --mut2:#6B6762; --line:rgba(255,255,255,.09);
+      --soft:rgba(255,255,255,.03); --y:#FFCA05; --o:#F9A51A; --g:#5FBF8B; --bad:#E8836B; --btn:#F2F0EC; --btnfg:#141210;
+      --ok-bg:rgba(95,191,139,.14); --w-bg:rgba(249,165,26,.13); --bad-bg:rgba(201,123,110,.14); --n-bg:rgba(255,255,255,.07);
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:'Titillium Web',system-ui,sans-serif; font-size:16px; line-height:1.45; }
+  button, input { font:inherit; color:inherit; }
+  [hidden] { display:none !important; }
+  .envoltura { max-width:560px; margin:0 auto; padding:0 16px 48px; }
+  header { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); }
+  header .envoltura { display:flex; align-items:center; gap:12px; padding-top:12px; padding-bottom:12px; }
+  .marca { display:flex; flex-direction:column; line-height:1.1; }
+  .marca b { font-size:16px; }
+  .marca span { font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--y); }
+  .quien { margin-left:auto; text-align:right; font-size:13px; color:var(--mut); line-height:1.25; }
+  .quien button { margin-top:2px; }
+  h1 { font-size:24px; letter-spacing:-.02em; margin:22px 0 6px; }
+  .nota { color:var(--mut); margin:0 0 16px; }
+  .tarjeta { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  .pila { display:flex; flex-direction:column; gap:12px; }
+  label { display:flex; flex-direction:column; gap:5px; font-size:14px; font-weight:600; color:var(--mut); }
+  input { padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--soft); font-size:16px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; border:1px solid var(--line); border-radius:12px; background:transparent; cursor:pointer; font-weight:700; font-size:16px; text-decoration:none; }
+  .btn.primario { background:var(--btn); color:var(--btnfg); border-color:var(--btn); }
+  .btn.grande { width:100%; padding:16px; font-size:18px; }
+  .btn.chico { padding:6px 10px; font-size:13px; border-radius:9px; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .mensaje { font-size:14px; color:var(--bad); min-height:1.2em; }
+  .centro { min-height:70vh; display:grid; place-items:center; }
+  .camara { position:relative; border-radius:16px; overflow:hidden; background:#000; aspect-ratio:1/1; }
+  .camara video { width:100%; height:100%; object-fit:cover; display:block; }
+  .camara .marco { position:absolute; inset:14%; border:3px solid var(--y); border-radius:18px; box-shadow:0 0 0 999px rgba(0,0,0,.35); }
+  .camara .estado { position:absolute; left:0; right:0; bottom:10px; text-align:center; color:#fff; font-size:14px; font-weight:600; text-shadow:0 1px 4px #000; }
+  .o { text-align:center; color:var(--mut2); font-size:13px; margin:6px 0; }
+  .codigo-manual { display:flex; gap:8px; }
+  .codigo-manual input { flex:1; text-transform:uppercase; letter-spacing:.12em; font-family:ui-monospace,'SF Mono',Menlo,monospace; }
+  .aliado { display:flex; flex-direction:column; gap:4px; }
+  .aliado b { font-size:22px; }
+  .codigo { font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:13px; color:var(--y); word-break:break-all; }
+  .cifras { display:flex; gap:10px; margin-top:8px; }
+  .cifras div { flex:1; background:var(--soft); border-radius:12px; padding:10px 12px; }
+  .cifras span { display:block; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--mut2); }
+  .cifras strong { font-size:20px; }
+  .vence { font-size:13px; color:var(--mut); margin-top:6px; }
+  .recompensas { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .recompensa { display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--panel); cursor:pointer; }
+  .recompensa:not(:disabled):hover { border-color:var(--y); }
+  .recompensa:disabled { cursor:not-allowed; opacity:.55; }
+  .recompensa .txt { flex:1; display:flex; flex-direction:column; }
+  .recompensa .txt b { font-size:16px; }
+  .recompensa .txt span { font-size:13px; color:var(--mut); }
+  .recompensa .pts { font-weight:700; white-space:nowrap; }
+  .resultado { text-align:center; padding:28px 18px; }
+  .resultado .icono { font-size:56px; line-height:1; }
+  .resultado.ok .icono { color:var(--g); }
+  .resultado.error .icono { color:var(--bad); }
+  .resultado h1 { margin-top:10px; }
+  .lista { list-style:none; padding:0; margin:0; }
+  .lista li { display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .lista li:last-child { border-bottom:0; }
+  .sub { display:block; font-size:12.5px; color:var(--mut); }
+  dialog { border:1px solid var(--line); border-radius:18px; background:var(--panel); color:var(--fg); width:min(440px,calc(100% - 32px)); padding:22px; }
+  dialog::backdrop { background:rgba(0,0,0,.5); }
+  dialog h2 { margin:0 0 8px; font-size:20px; }
+  dialog .fila { display:flex; gap:8px; margin-top:18px; }
+  dialog .fila .btn { flex:1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="envoltura">
+    <div class="marca"><span>GEENERA</span><b>Registrar canje</b></div>
+    <div class="quien" id="quien" hidden><span id="quien-nombre"></span><br><button class="btn chico" id="salir">Cerrar sesión</button></div>
+  </div>
+</header>
+
+<div class="envoltura">
+  <section id="vista-cargando" class="centro"><p class="nota">Cargando…</p></section>
+
+  <section id="vista-login" class="centro" hidden>
+    <form class="tarjeta pila" id="form-login" style="width:100%">
+      <h1 style="margin:0">Registrar canjes</h1>
+      <p class="nota" style="margin:0">Para el personal que entrega las recompensas de Aliados del Sol. Entra con la cuenta que te dio GEENERA.</p>
+      <p class="nota" id="login-qr-pendiente" style="margin:0" hidden><b>Escaneaste un QR de canje.</b> Entra y lo abrimos enseguida.</p>
+      <label>Correo<input type="email" id="login-correo" autocomplete="email" required></label>
+      <label>Contraseña<input type="password" id="login-clave" autocomplete="current-password" required></label>
+      <span class="mensaje" id="login-mensaje" role="alert"></span>
+      <button class="btn primario grande" type="submit" id="login-boton">Entrar</button>
+    </form>
+  </section>
+
+  <section id="vista-clave" class="centro" hidden>
+    <form class="tarjeta pila" id="form-clave" style="width:100%">
+      <h1 style="margin:0">Crea tu contraseña</h1>
+      <p class="nota" style="margin:0">Con ella entrarás a esta página cada vez que registres canjes. Mínimo 8 caracteres.</p>
+      <label>Contraseña<input type="password" id="clave-1" autocomplete="new-password" minlength="8" required></label>
+      <label>Repítela<input type="password" id="clave-2" autocomplete="new-password" minlength="8" required></label>
+      <span class="mensaje" id="clave-mensaje" role="alert"></span>
+      <button class="btn primario grande" type="submit" id="clave-boton">Guardar y entrar</button>
+    </form>
+  </section>
+
+  <section id="vista-sin-acceso" class="centro" hidden>
+    <div class="tarjeta pila" style="width:100%">
+      <h1 style="margin:0">Sin acceso</h1>
+      <p class="nota" style="margin:0">Esta cuenta no puede registrar canjes. Si eres aliado y quieres mostrar tu QR, entra al Hub y abre «Mi QR».</p>
+      <a class="btn primario" href="/">Ir al Hub</a>
+    </div>
+  </section>
+
+  <!-- 1. Escanear -->
+  <section id="vista-escanear" hidden>
+    <h1>Escanea el QR del aliado</h1>
+    <p class="nota">Pídele al aliado que abra <b>Mi QR</b> en el Hub y apunta la cámara al código.</p>
+    <div class="camara" id="camara" hidden>
+      <video id="video" playsinline muted></video>
+      <div class="marco"></div>
+      <div class="estado" id="camara-estado">Buscando el QR…</div>
+    </div>
+    <div class="pila" style="margin-top:12px">
+      <button class="btn primario grande" id="abrir-camara">Abrir cámara</button>
+      <button class="btn" id="cerrar-camara" hidden>Cerrar cámara</button>
+      <p class="o">o escribe el código que aparece debajo del QR</p>
+      <form class="codigo-manual" id="form-codigo">
+        <input id="codigo" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="K7M2-QX9T" aria-label="Código del QR">
+        <button class="btn primario" type="submit">Buscar</button>
+      </form>
+      <span class="mensaje" id="escanear-mensaje" role="alert"></span>
+    </div>
+    <div class="tarjeta" style="margin-top:22px">
+      <b>Tus canjes de hoy</b>
+      <ul class="lista" id="hoy"></ul>
+    </div>
+  </section>
+
+  <!-- 2. Elegir la recompensa -->
+  <section id="vista-aliado" hidden>
+    <h1>Elige la recompensa</h1>
+    <div class="tarjeta">
+      <div class="aliado">
+        <b id="aliado-nombre"></b>
+        <span class="codigo" id="aliado-codigo"></span>
+        <div class="cifras">
+          <div><span>Nivel</span><strong id="aliado-nivel"></strong></div>
+          <div><span>Puntos disponibles</span><strong id="aliado-saldo"></strong></div>
+        </div>
+        <div class="vence" id="aliado-vence"></div>
+      </div>
+    </div>
+    <div class="recompensas" id="recompensas"></div>
+    <button class="btn grande" id="cancelar" style="margin-top:16px">Cancelar y escanear otro</button>
+  </section>
+
+  <!-- 3. Resultado -->
+  <section id="vista-resultado" hidden>
+    <div class="tarjeta resultado" id="resultado">
+      <div class="icono" id="resultado-icono"></div>
+      <h1 id="resultado-titulo"></h1>
+      <p class="nota" id="resultado-texto"></p>
+    </div>
+    <button class="btn primario grande" id="otro" style="margin-top:16px">Escanear otro</button>
+  </section>
+</div>
+
+<dialog id="confirmar">
+  <h2>¿Registrar el canje?</h2>
+  <p class="nota" id="confirmar-texto" style="margin:0"></p>
+  <div class="fila">
+    <button class="btn" id="confirmar-no">Volver</button>
+    <button class="btn primario" id="confirmar-si">Confirmar</button>
+  </div>
+</dialog>
+</body>
+</html>

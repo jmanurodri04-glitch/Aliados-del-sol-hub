@@ -12,6 +12,12 @@
 //   ads:consultar-dashboard             ads:dashboard       { ok, aliado?, movimientos?, referidos?, modulos? }
 //   ads:modulo-completado {codigo}      ads:modulo-resultado { ok, codigo, mensaje?, nuevo?, puntos?, recompensa_estado? }
 //   ads:evento-registrar {datos, archivo?} ads:evento-resultado { ok, mensaje?, evento_id? }
+//   ads:qr-generar                      ads:qr              { ok, ficha?, url?, codigo_corto?, vence_en?, sinConexion?, mensaje? }
+//   ads:qr-estado {codigo}              ads:qr-estado-resultado { ok, estado?, recompensa?, puntos?, puntos_disponibles?, sinConexion? }
+//
+// El QR de canje (fase 11) lo pinta js/mi-qr.js; aquí solo se llaman generar_qr_canje y estado_qr_canje con la sesión
+// del aliado. El QR es un enlace a /canje.html#q=<ficha>: la ficha vale 5 minutos y sirve una sola vez.
+// Una cuenta de operador (quien registra canjes) que entre al Hub se envía a /canje.html.
 //
 // El dashboard (fase 8) sale de las vistas v_aliado_dashboard, v_mis_movimientos, v_mis_referidos y
 // v_mis_modulos (y v_mis_eventos, fase 9; v_mis_canjes y v_recompensas, fase 10), que solo devuelven lo del aliado de la sesión. Se recarga al entrar, después de un
@@ -50,7 +56,11 @@ const MENSAJES = {
   sesionVencidaModulo: 'Tu sesión expiró. Vuelve a iniciar sesión para registrar tu avance.',
   sesionVencidaEvento: 'Tu sesión expiró. Vuelve a iniciar sesión para reportar el evento.',
   archivoNoSubio: 'No pudimos subir el registro de asistentes. Revisa tu conexión e intenta de nuevo.',
-  enlaceVencido: 'El enlace de confirmación venció o ya fue usado. Inicia sesión; si tu correo sigue sin confirmar, regístrate de nuevo para recibir otro enlace.'
+  enlaceVencido: 'El enlace de confirmación venció o ya fue usado. Inicia sesión; si tu correo sigue sin confirmar, regístrate de nuevo para recibir otro enlace.',
+  operador: 'Tu cuenta es para registrar canjes. Te llevamos a la página de canjes.',
+  sesionVencidaQR: 'Tu sesión expiró. Vuelve a iniciar sesión para ver tu QR.',
+  qrNoActivo: 'Tu cuenta no está activa: aún no puedes canjear.',
+  qrLimite: 'Generaste muchos QR seguidos. Espera unos minutos y vuelve a abrir «Mi QR».'
 };
 
 // Se lee antes de crear el cliente, porque supabase-js limpia el hash de la URL al procesarlo.
@@ -119,12 +129,26 @@ async function leerAliado(supabase) {
   return data;
 }
 
-// Solo las cuentas activas entran al Hub; las demás cierran sesión con un mensaje.
+// ¿La sesión es de un operador (fase 11)? RLS solo le deja leer su propia fila de `operadores`.
+async function esOperador(supabase) {
+  const { data: sesion } = await supabase.auth.getSession();
+  const usuario = sesion && sesion.session && sesion.session.user;
+  if (!usuario) return false;
+  const { data } = await supabase.from('operadores').select('activo').eq('usuario_id', usuario.id).maybeSingle();
+  return !!data;
+}
+
+// Solo las cuentas activas entran al Hub; las demás cierran sesión con un mensaje. Un operador va a /canje.html.
 async function resolverAcceso(supabase) {
   const aliado = await leerAliado(supabase);
   if (aliado && aliado.estado === 'activo') {
     sesionActual = { activa: true, aliado };
     return { ok: true, aliado };
+  }
+  if (!aliado && await esOperador(supabase)) {
+    sesionActual = { activa: false };
+    window.location.assign('/canje.html');
+    return { ok: false, motivo: 'operador', mensaje: MENSAJES.operador };
   }
   await supabase.auth.signOut();
   sesionActual = { activa: false };
@@ -311,6 +335,46 @@ async function registrarEvento({ datos, archivo }) {
   }
 }
 
+// QR de canje (fase 11). Un error de red se informa como sinConexion: js/mi-qr.js conserva el QR que ya muestra,
+// que sigue sirviendo hasta que vence.
+const sinRed = (error) => !navigator.onLine || /fetch|network|load failed/i.test(String((error && error.message) || ''));
+
+async function generarQR() {
+  const resultado = (d) => emitir('ads:qr', d);
+  try {
+    const supabase = await obtenerCliente();
+    if (!sesionActual.activa) return resultado({ ok: false, mensaje: MENSAJES.sesionVencidaQR });
+    const { data, error } = await supabase.rpc('generar_qr_canje');
+    if (error) {
+      const codigo = String(error.message || '').split(':')[0].trim();
+      if (codigo === 'aliado_no_activo') return resultado({ ok: false, mensaje: MENSAJES.qrNoActivo });
+      if (codigo === 'limite_qr') return resultado({ ok: false, mensaje: MENSAJES.qrLimite });
+      return resultado({ ok: false, sinConexion: sinRed(error), mensaje: sinRed(error) ? MENSAJES.sinConexion : MENSAJES.generico });
+    }
+    resultado(Object.assign({ ok: true, url: window.location.origin + '/canje.html#q=' + data.ficha }, data));
+  } catch (e) {
+    resultado({ ok: false, sinConexion: true, mensaje: MENSAJES.sinConexion });
+  }
+}
+
+async function estadoQR({ codigo }) {
+  const resultado = (d) => emitir('ads:qr-estado-resultado', d);
+  try {
+    const supabase = await obtenerCliente();
+    const { data, error } = await supabase.rpc('estado_qr_canje', { p_codigo: codigo });
+    if (error) return resultado({ ok: false, sinConexion: sinRed(error) });
+    resultado(Object.assign({ ok: true, codigo }, data));
+    // Se canjeó: el saldo y "Mis canjes" cambian.
+    if (data.estado === 'usado' && sesionActual.activa) {
+      sesionActual = { activa: true, aliado: Object.assign({}, sesionActual.aliado, { puntos_disponibles: data.puntos_disponibles }) };
+      emitir('ads:sesion', sesionActual);
+      cargarDashboard(supabase);
+    }
+  } catch (e) {
+    resultado({ ok: false, sinConexion: true });
+  }
+}
+
 // Al cargar: procesa el enlace de confirmación (si viene de uno) y restaura la sesión guardada.
 async function iniciar() {
   try {
@@ -340,6 +404,8 @@ window.addEventListener('ads:logout', () => cerrarSesion());
 window.addEventListener('ads:referral', (e) => referir(e.detail || {}));
 window.addEventListener('ads:modulo-completado', (e) => completarModulo(e.detail || {}));
 window.addEventListener('ads:evento-registrar', (e) => registrarEvento(e.detail || {}));
+window.addEventListener('ads:qr-generar', () => generarQR());
+window.addEventListener('ads:qr-estado', (e) => estadoQR(e.detail || {}));
 window.addEventListener('ads:consultar-dashboard', () => {
   if (dashboardActual) emitir('ads:dashboard', dashboardActual);
   else cargarDashboard();

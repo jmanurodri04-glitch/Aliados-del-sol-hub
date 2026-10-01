@@ -1,4 +1,4 @@
-// Panel de administración (CLAUDE.md §3, §4.8, §4.10, §5, §5.1, §10; fases 9 y 10).
+// Panel de administración (CLAUDE.md §3, §4.8, §4.10, §5, §5.1, §10; fases 9, 10 y 11).
 //
 // Lee con la sesión del admin las vistas v_admin_* (security_invoker + es_admin(): un aliado no ve filas) y
 // hace cada acción con POST /api/admin, que toma al admin del token y deja la acción auditada.
@@ -14,11 +14,12 @@ const ESTADOS = { activo: ['Activo', 'ok'], pendiente: ['Pendiente', 'w'], suspe
 const ACCIONES = { aprobar_aliado: 'Aprobó la solicitud', rechazar_aliado: 'Rechazó la solicitud', suspender_aliado: 'Suspendió la cuenta',
   reactivar_aliado: 'Reactivó la cuenta', ajuste_puntos: 'Ajuste de puntos', baja_calidad: 'Baja calidad reiterada (−20)',
   validar_evento: 'Validó un evento (+100)', rechazar_evento: 'Rechazó un evento', resolver_conflicto: 'Resolvió un conflicto',
-  anular_canje: 'Anuló un canje', guardar_recompensa: 'Guardó una recompensa' };
+  anular_canje: 'Anuló un canje', guardar_recompensa: 'Guardó una recompensa', invitar_operador: 'Invitó un operador',
+  estado_operador: 'Cambió el estado de un operador' };
 const VARIABLES = { calificado: 'Calificado', perfecto: 'Referido perfecto', fuera_perfil: 'Fuera del perfil', oportunidad_tecnica: 'Evaluación técnica',
   propuesta_comercial: 'Propuesta comercial', negocio_cerrado: 'Negocio cerrado', informacion_falsa: 'Información falsa', integridad_informacion: 'Integridad' };
 const PESTANAS = [['resumen', 'Resumen'], ['solicitudes', 'Solicitudes'], ['aliados', 'Aliados'], ['eventos', 'Eventos'], ['conflictos', 'Conflictos'],
-  ['canjes', 'Canjes'], ['recompensas', 'Recompensas'], ['auditoria', 'Auditoría']];
+  ['canjes', 'Canjes'], ['recompensas', 'Recompensas'], ['operadores', 'Operadores'], ['auditoria', 'Auditoría']];
 
 const $ = (id) => document.getElementById(id);
 let supabase = null;
@@ -27,6 +28,7 @@ let aliados = [];
 let resumen = null;
 let canjes = [];
 let recompensas = [];
+let operadores = [];
 
 // Utilidades ----------------------------------------------------------------------------------------------------
 
@@ -301,7 +303,7 @@ function pintarCanjes() {
   const q = $('buscar-canje').value.trim().toLowerCase();
   const estado = $('filtro-canjes').value;
   const lista = canjes.filter((c) => (!estado || c.estado === estado)
-    && (!q || [c.codigo_aliado, c.nombre_completo, c.recompensa, c.recompensa_codigo, c.referencia_externa, c.proveedor]
+    && (!q || [c.codigo_aliado, c.nombre_completo, c.recompensa, c.recompensa_codigo, c.referencia_externa, c.proveedor, c.registrado_por]
       .some((v) => String(v || '').toLowerCase().includes(q)))).slice(0, 300);
   $('canjes').innerHTML = lista.length ? `<table><thead><tr><th>Fecha</th><th>Aliado</th><th>Recompensa</th><th>Puntos</th><th>Proveedor</th><th>Estado</th><th></th></tr></thead><tbody>${
     lista.map((c) => `<tr>
@@ -309,7 +311,7 @@ function pintarCanjes() {
       <td>${esc(c.nombre_completo)}<span class="codigo">${esc(c.codigo_aliado)}</span></td>
       <td><b>${esc(c.recompensa)}</b>${c.recompensa_codigo ? `<span class="sub">${esc(c.recompensa_codigo)}${c.nivel_requerido ? ' · nivel ' + esc(NIVELES[c.nivel_requerido] || c.nivel_requerido) : ''}</span>` : ''}</td>
       <td><b>${numero(c.puntos)}</b></td>
-      <td>${esc(c.proveedor)}<span class="sub">ref. ${esc(c.referencia_externa)}</span></td>
+      <td>${esc(c.proveedor)}<span class="sub">${c.origen === 'qr' ? `QR · ${esc(c.registrado_por || 'operador eliminado')}` : `API · ref. ${esc(c.referencia_externa)}`}</span></td>
       <td>${chip(c.estado)}${c.anulacion_motivo ? `<span class="sub">${esc(c.anulacion_motivo)}</span>` : ''}${c.anulado_por ? `<span class="sub">por ${esc(c.anulado_por)} · ${fecha(c.anulado_at)}</span>` : ''}</td>
       <td>${c.estado === 'confirmado' ? `<button class="btn peligro" data-accion="anular_canje" data-canje="${esc(c.canje_id)}" data-nombre="${esc(c.recompensa)}" data-puntos="${esc(c.puntos)}" data-codigo-canje="${esc(c.codigo_aliado)}">Anular</button>` : ''}</td>
     </tr>`).join('')}</tbody></table>` : '<p class="vacio">No hay canjes con ese filtro.</p>';
@@ -354,8 +356,64 @@ function formularioRecompensa(r) {
   });
 }
 
+// Operadores (fase 11) -------------------------------------------------------------------------------------------------
+
+async function cargarOperadores() {
+  operadores = await leer(supabase.from('v_admin_operadores').select('*').order('activo', { ascending: false }).order('nombre'));
+  $('operadores').innerHTML = operadores.length ? `<table><thead><tr><th>Operador</th><th>Proveedor</th><th>Cuenta</th><th>Canjes</th><th>Estado</th><th></th></tr></thead><tbody>${
+    operadores.map((o) => `<tr>
+      <td><b>${esc(o.nombre)}</b><span class="sub">${esc(o.correo)}</span><span class="sub">invitado por ${esc(o.invitado_por || '—')} · ${fecha(o.created_at)}</span></td>
+      <td>${esc(o.proveedor)}</td>
+      <td>${o.cuenta_creada ? chip('activo', 'Creada') : chip('pendiente', 'Sin crear')}</td>
+      <td>${numero(o.canjes_registrados)}${o.ultimo_canje ? `<span class="sub">último ${fecha(o.ultimo_canje)}</span>` : ''}</td>
+      <td>${o.activo ? chip('activo') : chip('suspendido', 'Inactivo')}</td>
+      <td class="acciones">${o.activo
+        ? `<button class="btn" data-accion="reinvitar_operador" data-operador="${esc(o.operador_id)}">Nuevo enlace</button>
+           <button class="btn peligro" data-accion="desactivar_operador" data-operador="${esc(o.operador_id)}" data-nombre="${esc(o.nombre)}">Desactivar</button>`
+        : `<button class="btn" data-accion="reactivar_operador" data-operador="${esc(o.operador_id)}" data-nombre="${esc(o.nombre)}">Reactivar</button>`}</td>
+    </tr>`).join('')}</tbody></table>` : '<p class="vacio">Aún no hay operadores. Invita al primero con «Invitar operador».</p>';
+}
+
+// Muestra el enlace de invitación para copiarlo (no se envía por correo: el panel no depende del SMTP).
+function mostrarEnlace(r) {
+  if (!r.enlace) {
+    aviso(`${r.correo} ya tiene cuenta en el Hub: entra a canje.html con su contraseña de siempre.`);
+    return;
+  }
+  pedir({
+    titulo: 'Enlace para el operador',
+    texto: `Envíale este enlace a ${r.correo} por WhatsApp o correo. Al abrirlo crea su contraseña y queda en canje.html. Es personal: no lo compartas con nadie más.`,
+    campos: [{ id: 'enlace', etiqueta: 'Enlace', tipo: 'texto', valor: r.enlace, soloLectura: true }],
+    confirmar: 'Copiar enlace',
+    accion: async () => {
+      await navigator.clipboard.writeText(r.enlace);
+      return 'Enlace copiado.';
+    }
+  });
+}
+
+function formularioOperador(o) {
+  pedir({
+    titulo: o ? 'Nuevo enlace' : 'Invitar operador',
+    texto: o ? 'Si aún no creó su contraseña, genera un enlace nuevo.' : 'Quien escanea el QR y registra los canjes. Solo podrá canjear las recompensas de su proveedor (o de todos).',
+    campos: [
+      { id: 'correo', etiqueta: 'Correo', tipo: 'texto', obligatorio: true, minimo: 5, valor: o ? o.correo : '', soloLectura: !!o },
+      { id: 'nombre', etiqueta: 'Nombre', tipo: 'texto', obligatorio: true, minimo: 3, valor: o ? o.nombre : '' },
+      { id: 'proveedor', etiqueta: 'Proveedor', tipo: 'texto', obligatorio: true, minimo: 2, valor: o ? o.proveedor : 'geenera',
+        ayuda: '«geenera» para el equipo propio; si no, el mismo código de proveedor que usan las recompensas.' }
+    ],
+    confirmar: o ? 'Generar enlace' : 'Invitar',
+    accion: async (v) => {
+      const r = await llamarAdmin('invitar_operador', { correo: v.correo.toLowerCase(), nombre: v.nombre, proveedor: v.proveedor.toLowerCase() });
+      await recargar();
+      setTimeout(() => mostrarEnlace(r), 0);
+      return '';
+    }
+  });
+}
+
 const CARGAR = { resumen: async () => {}, solicitudes: cargarSolicitudes, aliados: cargarAliados, eventos: cargarEventos, conflictos: cargarConflictos,
-  canjes: cargarCanjes, recompensas: cargarRecompensas, auditoria: cargarAuditoria };
+  canjes: cargarCanjes, recompensas: cargarRecompensas, operadores: cargarOperadores, auditoria: cargarAuditoria };
 
 // Acciones --------------------------------------------------------------------------------------------------------------
 
@@ -402,6 +460,13 @@ async function alHacerClic(ev) {
   if (accion === 'anular_canje') pedir({ titulo: 'Anular canje', texto: `«${nombre}» de ${b.dataset.codigoCanje}: se devuelven ${puntos} puntos disponibles. El aliado verá el motivo.`,
     campos: [{ id: 'motivo', etiqueta: 'Motivo', tipo: 'area', obligatorio: true, minimo: 10, ayuda: 'Por qué no se entregó la recompensa.' }], confirmar: 'Anular y devolver puntos', peligro: true,
     accion: async (v) => { const r = await llamarAdmin('anular_canje', { canje_id: canje, motivo: v.motivo }); await recargar(); return `Canje anulado: se devolvieron ${r.puntos_devueltos} puntos.`; } });
+  if (accion === 'invitar_operador') formularioOperador(null);
+  if (accion === 'reinvitar_operador') formularioOperador(operadores.find((o) => o.operador_id === b.dataset.operador));
+  if (accion === 'desactivar_operador') pedir({ titulo: 'Desactivar operador', texto: `${nombre} ya no podrá registrar canjes. Los canjes que registró se conservan.`, campos: [MOTIVO],
+    confirmar: 'Desactivar', peligro: true,
+    accion: async (v) => { await llamarAdmin('estado_operador', { operador_id: b.dataset.operador, activo: false, motivo: v.motivo }); await recargar(); return 'Operador desactivado.'; } });
+  if (accion === 'reactivar_operador') pedir({ titulo: 'Reactivar operador', texto: `${nombre} podrá volver a registrar canjes.`, confirmar: 'Reactivar',
+    accion: async () => { await llamarAdmin('estado_operador', { operador_id: b.dataset.operador, activo: true }); await recargar(); return 'Operador reactivado.'; } });
   if (accion === 'nueva_recompensa') formularioRecompensa(null);
   if (accion === 'editar_recompensa') formularioRecompensa(recompensas.find((r) => r.recompensa_id === recompensa));
   if (accion === 'resolver') {

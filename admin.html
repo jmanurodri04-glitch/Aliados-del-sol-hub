@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet">
-<!-- Panel de administración (CLAUDE.md §10, fases 9 y 10). Lee las vistas v_admin_* con la sesión del admin;
+<!-- Panel de administración (CLAUDE.md §10, fases 9, 10 y 11). Lee las vistas v_admin_* con la sesión del admin;
      las acciones pasan por POST /api/admin (ver js/admin.js). -->
 <script type="module" src="./js/admin.js"></script>
 <style>
@@ -167,7 +167,7 @@
 
     <section data-pestana="canjes" hidden>
       <h1>Canjes</h1>
-      <p class="nota">Los canjes llegan del proveedor por POST /api/canjes. Si el proveedor no entregó la recompensa, anula el canje: se devuelven los puntos disponibles (no cambia el nivel) y el aliado ve el motivo.</p>
+      <p class="nota">Los canjes llegan por el QR del aliado (los registra un operador en canje.html) o del sistema de un proveedor por POST /api/canjes. Si la recompensa no se entregó, anula el canje: se devuelven los puntos disponibles (no cambia el nivel) y el aliado ve el motivo.</p>
       <div class="barra">
         <input type="search" id="buscar-canje" placeholder="Código, nombre, recompensa o referencia">
         <select id="filtro-canjes" aria-label="Estado de los canjes">
@@ -182,6 +182,13 @@
       <p class="nota">Catálogo que pueden canjear los proveedores. El código es el que usa el proveedor y no cambia. Cambiar los puntos o el nivel solo afecta los canjes futuros. Una recompensa con proveedor solo la puede canjear ese proveedor.</p>
       <div class="barra"><button class="btn primario" data-accion="nueva_recompensa">Nueva recompensa</button></div>
       <div class="tarjeta tabla" id="recompensas"></div>
+    </section>
+
+    <section data-pestana="operadores" hidden>
+      <h1>Operadores</h1>
+      <p class="nota">Las personas que escanean el QR del aliado y registran el canje en <b>canje.html</b> (personal de GEENERA o del proveedor). No son aliados. Al invitar a alguien recibes un enlace para que cree su contraseña: cópialo y envíaselo por WhatsApp o correo. Cada operador canjea solo las recompensas de su proveedor (o de todos). Los admins también pueden escanear, como proveedor «geenera».</p>
+      <div class="barra"><button class="btn primario" data-accion="invitar_operador">Invitar operador</button></div>
+      <div class="tarjeta tabla" id="operadores"></div>
     </section>
 
     <section data-pestana="auditoria" hidden>

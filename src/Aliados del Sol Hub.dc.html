@@ -1811,6 +1811,15 @@
           </div>
         </div>
 
+        <sc-if value="{{ hayQR }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:18px 22px;margin-bottom:14px;border:1px solid rgba(255,202,5,.45);border-radius:14px;background:rgba(255,202,5,.09)">
+          <span style="display:flex;flex-direction:column;gap:4px">
+            <b style="font-size:15.5px;font-weight:600">Canjea con tu QR</b>
+            <span style="font-size:13.5px;color:var(--mut,#9A968F)">Muéstralo a quien te entrega la recompensa. Cambia cada minuto y sirve una sola vez.</span>
+          </span>
+          <button onClick="{{ abrirQR }}" style="padding:11px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:44px">Mostrar mi QR</button>
+        </div>
+        </sc-if>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:18px 22px;margin-bottom:44px;border:1px solid rgba(255,202,5,.2);border-radius:14px;background:rgba(255,202,5,.045)">
           <span style="display:flex;flex-direction:column;gap:4px">
             <b style="font-size:15.5px;font-weight:600">Cómo se ganan y se pierden los Puntos Sol</b>
@@ -4110,6 +4119,9 @@ class Component extends DCLogic {
       const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && route === 'financiacion');
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
+    /* Fase 11: «Mi QR» abre el QR de canje (js/mi-qr.js) encima de la página; solo con sesión real. */
+    const abrirQR = () => window.dispatchEvent(new CustomEvent('ads:qr-abrir'));
+    if (real) nav.push({ label: 'Mi QR para canjear', go: abrirQR, bg: 'transparent', color: 'var(--y,#FFCA05)', fw: 600, dot: 'var(--y,#FFCA05)' });
 
     /* Catálogo real (fase 10): si GEENERA ya creó recompensas en el panel, reemplazan a las de demostración. */
     const recompensasReales = real && real.recompensas && real.recompensas.length ? real.recompensas : null;
@@ -4143,12 +4155,13 @@ class Component extends DCLogic {
         ptsLabel: this.n(b.pts) + ' pts', reqLabel: 'Nivel ' + b.req, tag, tagBg, tagColor, cta, ctaBg, ctaColor, ctaBorder, ctaCursor: cursor, op, ptsColor, titleColor, act: action
       };
     };
-    /* Recompensa real (v_recompensas) → misma tarjeta que el catálogo de demostración. El canje lo confirma el
-       proveedor por POST /api/canjes; el Hub muestra si está disponible y qué falta (nivel o puntos). */
+    /* Recompensa real (v_recompensas) → misma tarjeta que el catálogo de demostración. El Hub muestra si está
+       disponible y qué falta (nivel o puntos); para canjear, el aliado muestra su QR (fase 11) y quien entrega la
+       recompensa lo escanea y la elige. */
     const beneReal = (r) => {
       const nivel = (LEVEL_CONFIG.levels.find(l => l.id === NIVEL_HUB[r.nivel_minimo]) || {}).name || r.nivel_minimo;
-      let tag = 'Disponible', tagBg = 'rgba(95,191,139,.16)', tagColor = 'var(--g2,#7FD3A6)', cta = 'Cómo canjear', ctaBg = 'var(--btn,#F2F0EC)', ctaColor = 'var(--btnfg,#141210)', ctaBorder = 'transparent', op = 1, ptsColor = 'var(--y,#FFCA05)', titleColor = 'var(--fg,#F2F0EC)', cursor = 'pointer';
-      let action = () => this.ping('El canje lo confirma el proveedor de la recompensa con tu código ' + real.aliado.codigo_aliado + '. Descuenta ' + this.n(r.puntos) + ' Puntos Sol disponibles.');
+      let tag = 'Disponible', tagBg = 'rgba(95,191,139,.16)', tagColor = 'var(--g2,#7FD3A6)', cta = 'Canjear con mi QR', ctaBg = 'var(--btn,#F2F0EC)', ctaColor = 'var(--btnfg,#141210)', ctaBorder = 'transparent', op = 1, ptsColor = 'var(--y,#FFCA05)', titleColor = 'var(--fg,#F2F0EC)', cursor = 'pointer';
+      let action = () => window.dispatchEvent(new CustomEvent('ads:qr-abrir'));
       if (r.falta_nivel) { tag = 'Nivel ' + nivel; tagBg = 'var(--w-10,rgba(255,255,255,.1))'; tagColor = 'var(--t4,#A8A49E)'; cta = 'Bloqueado'; ctaBg = 'transparent'; ctaColor = 'var(--mut3,#7C7873)'; ctaBorder = 'var(--w-12,rgba(255,255,255,.12))'; op = .32; titleColor = 'var(--mut,#9A968F)'; ptsColor = 'var(--mut3,#7C7873)'; cursor = 'not-allowed'; action = () => this.ping('Se desbloquea en el nivel ' + nivel + '.'); }
       else if (!r.disponible) { tag = 'Faltan ' + this.n(r.puntos_faltantes); tagBg = 'rgba(249,165,26,.16)'; tagColor = 'var(--o,#F9A51A)'; cta = 'Cómo ganar'; ctaBg = 'transparent'; ctaColor = 'var(--o,#F9A51A)'; ctaBorder = 'rgba(249,165,26,.4)'; op = .55; action = () => this.go('puntos'); }
       return {
@@ -4163,7 +4176,7 @@ class Component extends DCLogic {
     const ESTADO_CANJE = { confirmado: ['Canjeado', TONES.ok], anulado: ['Anulado · puntos devueltos', TONES.bad] };
     const misCanjes = (real && real.canjes ? real.canjes : []).map(k => {
       const e = ESTADO_CANJE[k.estado] || ESTADO_CANJE.confirmado;
-      return { nombre: k.recompensa, meta: fechaCorta(k.fecha, true) + ' · ' + this.n(k.puntos) + ' Puntos Sol', estado: e[0], stBg: e[1][0], stColor: e[1][1],
+      return { nombre: k.recompensa, meta: fechaCorta(k.fecha, true) + ' · ' + this.n(k.puntos) + ' Puntos Sol' + (k.origen === 'qr' ? ' · con tu QR' : ''), estado: e[0], stBg: e[1][0], stColor: e[1][1],
         nota: k.anulacion_motivo || '', hasNota: !!k.anulacion_motivo };
     });
 
@@ -4842,6 +4855,7 @@ class Component extends DCLogic {
       timeline,
       cats, visibleBenefits, mobileBenefits: BENEFITS.slice(1, 5).map(bene),
       beneDemoTag: !!real && !recompensasReales, misCanjes, misCanjesVacio: misCanjes.length === 0,
+      hayQR: !!real, abrirQR,
       earnRules: POINTS_CONFIG.opportunity.map(m => ({ pts: m.pts, label: m.label, note: m.desc })).concat([
         { pts: POINTS_CONFIG.academy.pts, label: 'Módulo de Academy', note: 'Según el módulo · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' Puntos Sol al mes' },
         { pts: STREAK_CONFIG.bonus, label: STREAK_CONFIG.name, note: STREAK_CONFIG.rule }

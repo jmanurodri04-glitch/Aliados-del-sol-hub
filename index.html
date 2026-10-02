@@ -2826,6 +2826,61 @@
     <div style="position:relative;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut2,#8E8B86)">Aliados del Sol — by GEENERA</div>
   </div>
   <div style="display:flex;flex-direction:column;justify-content:center;gap:26px;padding:clamp(32px,5vw,56px) clamp(24px,5vw,64px);max-width:560px">
+    <sc-if value="{{ olvidoAbierto }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h2 style="margin:0;font-size:31px;font-weight:700;letter-spacing:-.025em">Recupera tu contraseña</h2>
+        <p style="margin:0;font-size:15px;color:var(--mut,#9A968F)">Escribe el correo con el que te registraste y te enviaremos un enlace para crear una contraseña nueva.</p>
+      </div>
+      <sc-if value="{{ olvidoForm }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <label style="display:flex;flex-direction:column;gap:7px">
+          <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut3,#7C7873)">Correo</span>
+          <input type="email" value="{{ olvidoEmail }}" onChange="{{ onOlvidoEmail }}" onKeyDown="{{ onOlvidoKey }}" placeholder="tu@correo.com" autocomplete="email" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none" style-focus="border-color:rgba(255,202,5,.5)">
+        </label>
+        <sc-if value="{{ olvidoHasMsg }}" hint-placeholder-val="{{ false }}">
+        <p role="alert" style="margin:0;padding:11px 14px;border:1px solid rgba(201,123,110,.4);border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:#C97B6E;font-size:13.5px;line-height:1.5">{{ olvidoMsg }}</p>
+        </sc-if>
+        <button onClick="{{ olvidoSubmit }}" style="padding:14px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:700;cursor:{{ olvidoCursor }};transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ olvidoLabel }}</button>
+      </div>
+      </sc-if>
+      <sc-if value="{{ olvidoEnviado }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display:flex;align-items:flex-start;gap:12px;padding:16px 18px;border:1px solid rgba(95,191,139,.3);border-radius:12px;background:rgba(95,191,139,.07)">
+        <span style="width:24px;height:24px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(95,191,139,.18);color:var(--g,#5FBF8B);font-size:13px;font-weight:700">✓</span>
+        <span style="display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:14.5px;font-weight:600">Revisa tu correo</span>
+          <span style="font-size:13.5px;color:var(--mut,#9A968F);line-height:1.45">Si {{ olvidoEmail }} está registrado, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam. El enlace vence en 24 horas.</span>
+        </span>
+      </div>
+      </sc-if>
+      <button onClick="{{ cerrarOlvido }}" style="align-self:flex-start;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Volver a entrar</button>
+    </div>
+    </sc-if>
+    <sc-if value="{{ claveAbierta }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h2 style="margin:0;font-size:31px;font-weight:700;letter-spacing:-.025em">Crea tu contraseña nueva</h2>
+        <p style="margin:0;font-size:15px;color:var(--mut,#9A968F)">Usa al menos 8 caracteres. Al guardarla entras con ella.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <label style="display:flex;flex-direction:column;gap:7px">
+          <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut3,#7C7873)">Contraseña nueva</span>
+          <input type="password" value="{{ claveA }}" onChange="{{ onClaveA }}" onKeyDown="{{ onClaveKey }}" placeholder="Mínimo 8 caracteres" autocomplete="new-password" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none" style-focus="border-color:rgba(255,202,5,.5)">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:7px">
+          <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut3,#7C7873)">Repítela</span>
+          <input type="password" value="{{ claveB }}" onChange="{{ onClaveB }}" onKeyDown="{{ onClaveKey }}" placeholder="Repite la contraseña" autocomplete="new-password" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none" style-focus="border-color:rgba(255,202,5,.5)">
+        </label>
+        <sc-if value="{{ claveHasMsg }}" hint-placeholder-val="{{ false }}">
+        <p role="alert" style="margin:0;padding:11px 14px;border:1px solid rgba(201,123,110,.4);border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:#C97B6E;font-size:13.5px;line-height:1.5">{{ claveMsg }}</p>
+        </sc-if>
+        <button onClick="{{ claveSubmit }}" style="padding:14px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:700;cursor:{{ claveCursor }};transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ claveLabel }}</button>
+      </div>
+      <button onClick="{{ cerrarOlvido }}" style="align-self:flex-start;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Volver a entrar</button>
+    </div>
+    </sc-if>
+    <sc-if value="{{ loginEntrar }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:26px">
     <div style="display:flex;flex-direction:column;gap:8px">
       <h2 style="margin:0;font-size:31px;font-weight:700;letter-spacing:-.025em">Entra a tu Hub</h2>
       <p style="margin:0;font-size:15px;color:var(--mut,#9A968F)">Usa el correo con el que te registraste como aliado.</p>
@@ -2839,12 +2894,15 @@
         <span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut3,#7C7873)">Contraseña</span>
         <input type="password" value="{{ loginPass }}" onChange="{{ onLoginPass }}" onKeyDown="{{ onLoginKey }}" placeholder="Tu contraseña" autocomplete="current-password" style="padding:12px 14px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:15px;outline:none" style-focus="border-color:rgba(255,202,5,.5)">
       </label>
+      <button onClick="{{ abrirOlvido }}" style="align-self:flex-end;margin-top:-6px;padding:0;border:none;background:transparent;color:var(--y,#FFCA05);font-size:13px;font-weight:600;cursor:pointer">¿Olvidaste tu contraseña?</button>
       <sc-if value="{{ loginHasMsg }}" hint-placeholder-val="{{ false }}">
       <p role="alert" style="margin:0;padding:11px 14px;border:1px solid {{ loginMsgBorder }};border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:{{ loginMsgColor }};font-size:13.5px;line-height:1.5">{{ loginMsg }}</p>
       </sc-if>
       <button onClick="{{ loginSubmit }}" style="margin-top:6px;padding:14px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:700;cursor:{{ loginCursor }};transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ loginSendLabel }}</button>
       <button onClick="{{ goHome }}" style="align-self:flex-start;margin-top:2px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Volver al sitio público</button>
     </div>
+    </div>
+    </sc-if>
     <div style="display:flex;flex-direction:column;gap:12px;padding-top:14px;border-top:1px solid var(--w-07,rgba(255,255,255,.07))">
       <span style="font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--mut4,#6B6762)">Cómo funciona ser aliado</span>
       <sc-for list="{{ onboarding }}" as="o" hint-placeholder-count="3">
@@ -3821,6 +3879,23 @@ class Component extends DCLogic {
     this.setState({ loginSending: true, loginMsg: '' });
     window.dispatchEvent(new CustomEvent('ads:login', { detail: { email, password: s.loginPass } }));
   }
+  /* Recuperar contraseña: ads:recuperar pide el enlace y ads:clave-nueva guarda la contraseña al volver del correo
+     (#recuperacion=…); el resultado llega por ads:recuperar-resultado y ads:clave-nueva-resultado (js/supabase.js). */
+  olvidoSubmit() {
+    const s = this.state; if (s.olvidoEnviando) return;
+    const email = (s.olvidoEmail || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.setState({ olvidoMsg: 'Escribe un correo válido.' }); return; }
+    this.setState({ olvidoEnviando: true, olvidoMsg: '' });
+    window.dispatchEvent(new CustomEvent('ads:recuperar', { detail: { email } }));
+  }
+  claveSubmit() {
+    const s = this.state; if (s.claveEnviando) return;
+    const a = s.claveA || '';
+    if (a.length < 8) { this.setState({ claveMsg: 'La contraseña debe tener al menos 8 caracteres.' }); return; }
+    if (a !== (s.claveB || '')) { this.setState({ claveMsg: 'Las contraseñas no coinciden.' }); return; }
+    this.setState({ claveEnviando: true, claveMsg: '' });
+    window.dispatchEvent(new CustomEvent('ads:clave-nueva', { detail: { password: a } }));
+  }
   joinVals(s) {
     const d = s.joinData || {}; const t = JOIN_CONFIG.types.find(x => x.id === d.type); const tr = !!s.joinTried;
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email || ''); const pc = phoneCountry(d.country); const phoneDigits = (d.phone || '').replace(/\D/g, ''); const phoneStartOk = !pc.start || pc.start.indexOf(phoneDigits[0]) >= 0; const phoneOk = phoneStartOk && phoneDigits.length >= pc.len[0] && phoneDigits.length <= pc.len[1];
@@ -3935,15 +4010,21 @@ class Component extends DCLogic {
     this._adsAuth = (e) => {
       const d = e.detail || {};
       if (e.type === 'ads:join-resultado') this.setState(d.ok ? { joinSending: false, joinSent: true, joinSentKind: 'register', joinConfirmar: d.confirmarCorreo !== false, joinError: '' } : { joinSending: false, joinError: d.mensaje || '' });
-      else if (e.type === 'ads:login-resultado') { if (d.ok) { this.setState({ loginSending: false, loginMsg: '', loginPass: '', sesion: d.aliado || null }); this.go('inicio'); } else this.setState({ loginSending: false, loginMsg: d.mensaje || '', loginTono: 'error', loginPass: '' }); }
+      else if (e.type === 'ads:login-resultado') {
+        const fin = { loginSending: false, loginModo: 'entrar', claveEnviando: false, claveA: '', claveB: '', claveMsg: '' };
+        if (d.ok) { this.setState(Object.assign(fin, { loginMsg: '', loginPass: '', sesion: d.aliado || null })); this.go('inicio'); if (d.claveNueva) this.ping('Guardamos tu contraseña nueva.'); }
+        else this.setState(Object.assign(fin, { loginMsg: d.mensaje || '', loginTono: d.claveNueva ? 'info' : 'error', loginPass: '' }));
+      }
+      else if (e.type === 'ads:recuperar-resultado') this.setState(d.ok ? { olvidoEnviando: false, olvidoEnviado: true, olvidoMsg: '' } : { olvidoEnviando: false, olvidoMsg: d.mensaje || '' });
+      else if (e.type === 'ads:clave-nueva-resultado') this.setState(d.vencido ? { claveEnviando: false, claveA: '', claveB: '', claveMsg: '', loginModo: 'entrar', loginMsg: d.mensaje || '', loginTono: 'error' } : { claveEnviando: false, claveMsg: d.mensaje || '' });
       else if (e.type === 'ads:sesion') this.setState(d.activa ? { sesion: d.aliado || null } : { sesion: null, datos: null });
       else if (e.type === 'ads:dashboard') { if (d.ok) this.recibirDashboard(d); else if (this.state.sesion) this.ping(d.mensaje || 'No pudimos cargar tus datos. Intenta de nuevo en unos minutos.'); }
       else if (e.type === 'ads:modulo-resultado') this.avisarModulo(d);
       else if (e.type === 'ads:evento-resultado') this.setState(d.ok ? { evtEnviando: false, evtAbierto: false, evtOk: true, evtDatos: {} } : { evtEnviando: false, evtError: d.mensaje || 'No pudimos enviar el evento.' });
       else if (e.type === 'ads:referral-resultado') this.setState(d.ok ? { refSending: false, refError: '', refTried: false, refResult: d, done: true } : { refSending: false, refError: d.mensaje || '' });
-      else if (e.type === 'ads:aviso') { this.setState({ loginMsg: d.mensaje || '', loginTono: d.tono || 'info' }); if (d.ruta) this.go(d.ruta); }
+      else if (e.type === 'ads:aviso') { this.setState({ loginMsg: d.mensaje || '', loginTono: d.tono || 'info', loginModo: d.modo || 'entrar', olvidoEnviado: false, olvidoMsg: '', claveMsg: '' }); if (d.ruta) this.go(d.ruta); }
     };
-    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:dashboard', 'ads:modulo-resultado', 'ads:evento-resultado'];
+    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:dashboard', 'ads:modulo-resultado', 'ads:evento-resultado', 'ads:recuperar-resultado', 'ads:clave-nueva-resultado'];
     this._adsEventos.forEach(n => window.addEventListener(n, this._adsAuth));
     window.dispatchEvent(new CustomEvent('ads:consultar-sesion'));
   }
@@ -4993,6 +5074,18 @@ class Component extends DCLogic {
       loginHasMsg: !!s.loginMsg, loginMsg: s.loginMsg || '',
       loginMsgColor: s.loginTono === 'error' ? '#C97B6E' : s.loginTono === 'ok' ? 'var(--y,#FFCA05)' : 'var(--t2,#C9C5BE)',
       loginMsgBorder: s.loginTono === 'error' ? 'rgba(201,123,110,.4)' : s.loginTono === 'ok' ? 'rgba(255,202,5,.35)' : 'var(--w-12,rgba(255,255,255,.12))',
+      loginEntrar: !s.loginModo || s.loginModo === 'entrar', olvidoAbierto: s.loginModo === 'olvido', claveAbierta: s.loginModo === 'clave',
+      abrirOlvido: () => this.setState({ loginModo: 'olvido', olvidoEmail: s.olvidoEmail || s.loginEmail || '', olvidoEnviado: false, olvidoMsg: '', loginMsg: '' }),
+      cerrarOlvido: () => this.setState({ loginModo: 'entrar', olvidoEnviado: false, olvidoMsg: '', claveA: '', claveB: '', claveMsg: '' }),
+      olvidoForm: !s.olvidoEnviado, olvidoEnviado: !!s.olvidoEnviado, olvidoEmail: s.olvidoEmail || '',
+      onOlvidoEmail: ev => this.setState({ olvidoEmail: ev.target.value, olvidoMsg: '' }), onOlvidoKey: ev => { if (ev.key === 'Enter') this.olvidoSubmit(); },
+      olvidoSubmit: () => this.olvidoSubmit(), olvidoLabel: s.olvidoEnviando ? 'Enviando…' : 'Enviar enlace', olvidoCursor: s.olvidoEnviando ? 'wait' : 'pointer',
+      olvidoHasMsg: !!s.olvidoMsg, olvidoMsg: s.olvidoMsg || '',
+      claveA: s.claveA || '', claveB: s.claveB || '',
+      onClaveA: ev => this.setState({ claveA: ev.target.value, claveMsg: '' }), onClaveB: ev => this.setState({ claveB: ev.target.value, claveMsg: '' }),
+      onClaveKey: ev => { if (ev.key === 'Enter') this.claveSubmit(); }, claveSubmit: () => this.claveSubmit(),
+      claveLabel: s.claveEnviando ? 'Guardando…' : 'Guardar y entrar', claveCursor: s.claveEnviando ? 'wait' : 'pointer',
+      claveHasMsg: !!s.claveMsg, claveMsg: s.claveMsg || '',
       goHerramientas: () => this.go('herramientas'), goAcademy: () => this.go('academy'),
       goSoporte: () => window.open(waLink('programa'), '_blank', 'noopener'),
       stickyHeaderOffset: s.hdrH || UI_CONFIG.stickyHeaderOffset

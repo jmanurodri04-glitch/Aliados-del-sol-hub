@@ -14,6 +14,13 @@
 //   ads:evento-registrar {datos, archivo?} ads:evento-resultado { ok, mensaje?, evento_id? }
 //   ads:qr-generar                      ads:qr              { ok, ficha?, url?, codigo_corto?, vence_en?, sinConexion?, mensaje? }
 //   ads:qr-estado {codigo}              ads:qr-estado-resultado { ok, estado?, recompensa?, puntos?, puntos_disponibles?, sinConexion? }
+//   ads:recuperar {email}               ads:recuperar-resultado { ok, mensaje? }
+//   ads:clave-nueva {password}          ads:clave-nueva-resultado { ok: false, mensaje, vencido? }  (si sale bien: ads:login-resultado con claveNueva)
+//
+// Recuperar contraseña: el correo "Restablece tu contraseña" (supabase/templates/recuperacion.html) trae
+// #recuperacion=<token_hash>. El código solo se usa (verifyOtp) cuando la persona guarda la contraseña nueva, así
+// un antivirus de correo o una vista previa que abra el enlace no lo gasta. #recuperar abre el formulario para
+// pedir el enlace (lo usan admin.html y canje.html).
 //
 // El QR de canje (fase 11) lo pinta js/mi-qr.js; aquí solo se llaman generar_qr_canje y estado_qr_canje con la sesión
 // del aliado. El QR es un enlace a /canje.html#q=<ficha>: la ficha vale 5 minutos y sirve una sola vez.
@@ -57,6 +64,9 @@ const MENSAJES = {
   sesionVencidaEvento: 'Tu sesión expiró. Vuelve a iniciar sesión para reportar el evento.',
   archivoNoSubio: 'No pudimos subir el registro de asistentes. Revisa tu conexión e intenta de nuevo.',
   enlaceVencido: 'El enlace de confirmación venció o ya fue usado. Inicia sesión; si tu correo sigue sin confirmar, regístrate de nuevo para recibir otro enlace.',
+  enlaceRecuperacion: 'El enlace para crear tu contraseña venció o ya se usó. Pide uno nuevo con «¿Olvidaste tu contraseña?».',
+  mismaContrasena: 'Usa una contraseña distinta a la anterior.',
+  claveGuardada: 'Guardamos tu contraseña nueva.',
   operador: 'Tu cuenta es para registrar canjes. Te llevamos a la página de canjes.',
   sesionVencidaQR: 'Tu sesión expiró. Vuelve a iniciar sesión para ver tu QR.',
   qrNoActivo: 'Tu cuenta no está activa: aún no puedes canjear.',
@@ -67,6 +77,9 @@ const MENSAJES = {
 const hashInicial = new URLSearchParams(window.location.hash.replace(/^#/, ''));
 const vieneDeConfirmacion = hashInicial.get('type') === 'signup';
 const errorEnEnlace = hashInicial.get('error_code') || hashInicial.get('error');
+let codigoRecuperacion = hashInicial.get('recuperacion');
+const pideRecuperar = hashInicial.has('recuperar');
+let recuperacionVerificada = false; // el código ya se usó y hay sesión: un reintento solo cambia la contraseña
 
 let clientePromesa = null;
 let sesionActual = { activa: false };
@@ -109,6 +122,7 @@ function mensajeDeError(error) {
   if (codigo === 'email_not_confirmed' || texto.includes('email not confirmed')) return MENSAJES.correoSinConfirmar;
   if (codigo === 'user_already_exists' || codigo === 'email_exists' || texto.includes('already registered')) return MENSAJES.correoRegistrado;
   if (codigo === 'weak_password') return MENSAJES.contrasenaDebil;
+  if (codigo === 'same_password') return MENSAJES.mismaContrasena;
   if (codigo === 'unexpected_failure' || texto.includes('database error')) return MENSAJES.registroInvalido;
   if (error.name === 'AuthRetryableFetchError' || error instanceof TypeError) return MENSAJES.sinConexion;
   return MENSAJES.generico;
@@ -203,6 +217,51 @@ async function iniciarSesion({ email, password }) {
     cargarDashboard(supabase);
   } catch (e) {
     emitir('ads:login-resultado', { ok: false, mensaje: mensajeDeError(e) });
+  }
+}
+
+function limpiarHash() {
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+}
+
+async function pedirRecuperacion({ email }) {
+  try {
+    const supabase = await obtenerCliente();
+    const { error } = await supabase.auth.resetPasswordForEmail((email || '').trim(), { redirectTo: window.location.origin + '/' });
+    // Supabase no revela si el correo existe; solo se informan los límites y la falta de conexión.
+    if (error && (error.status === 429 || error.name === 'AuthRetryableFetchError')) {
+      return emitir('ads:recuperar-resultado', { ok: false, mensaje: mensajeDeError(error) });
+    }
+    emitir('ads:recuperar-resultado', { ok: true });
+  } catch (e) {
+    emitir('ads:recuperar-resultado', { ok: false, mensaje: mensajeDeError(e) });
+  }
+}
+
+async function guardarClaveNueva({ password }) {
+  try {
+    const supabase = await obtenerCliente();
+    if (!recuperacionVerificada) {
+      if (!codigoRecuperacion) return emitir('ads:clave-nueva-resultado', { ok: false, vencido: true, mensaje: MENSAJES.enlaceRecuperacion });
+      const { error } = await supabase.auth.verifyOtp({ token_hash: codigoRecuperacion, type: 'recovery' });
+      // Sin conexión el código sigue sirviendo: se puede reintentar sin pedir otro enlace.
+      if (error && error.name === 'AuthRetryableFetchError') return emitir('ads:clave-nueva-resultado', { ok: false, mensaje: MENSAJES.sinConexion });
+      codigoRecuperacion = null;
+      limpiarHash();
+      if (error) return emitir('ads:clave-nueva-resultado', { ok: false, vencido: true, mensaje: MENSAJES.enlaceRecuperacion });
+      recuperacionVerificada = true;
+    }
+    const { error } = await supabase.auth.updateUser({ password: password || '' });
+    if (error) return emitir('ads:clave-nueva-resultado', { ok: false, mensaje: mensajeDeError(error) });
+    recuperacionVerificada = false;
+    // Entra con las mismas reglas del login: activo → Hub; pendiente, rechazado o suspendido → su mensaje; operador → canje.html.
+    const acceso = await resolverAcceso(supabase);
+    if (!acceso.ok) acceso.mensaje = MENSAJES.claveGuardada + ' ' + acceso.mensaje;
+    emitir('ads:login-resultado', Object.assign(acceso, { claveNueva: true }));
+    emitir('ads:sesion', sesionActual);
+    if (sesionActual.activa) cargarDashboard(supabase);
+  } catch (e) {
+    emitir('ads:clave-nueva-resultado', { ok: false, mensaje: mensajeDeError(e) });
   }
 }
 
@@ -382,6 +441,22 @@ async function iniciar() {
     const supabase = await obtenerCliente();
     const { data } = await supabase.auth.getSession();
 
+    if (codigoRecuperacion) {
+      // Enlace del correo de recuperación: se pide la contraseña nueva antes de entrar. Si había otra sesión
+      // abierta en este navegador, se cierra para no mezclar cuentas.
+      if (data.session) await supabase.auth.signOut({ scope: 'local' });
+      avisar({ mensaje: '', tono: 'info', ruta: 'login', modo: 'clave' });
+      emitir('ads:sesion', sesionActual);
+      return;
+    }
+    if (pideRecuperar) {
+      limpiarHash();
+      if (!data.session) {
+        avisar({ mensaje: '', tono: 'info', ruta: 'login', modo: 'olvido' });
+        emitir('ads:sesion', sesionActual);
+        return;
+      }
+    }
     if (errorEnEnlace) {
       avisar({ mensaje: MENSAJES.enlaceVencido, tono: 'error', ruta: 'login' });
     } else if (data.session) {
@@ -407,6 +482,8 @@ window.addEventListener('ads:modulo-completado', (e) => completarModulo(e.detail
 window.addEventListener('ads:evento-registrar', (e) => registrarEvento(e.detail || {}));
 window.addEventListener('ads:qr-generar', () => generarQR());
 window.addEventListener('ads:qr-estado', (e) => estadoQR(e.detail || {}));
+window.addEventListener('ads:recuperar', (e) => pedirRecuperacion(e.detail || {}));
+window.addEventListener('ads:clave-nueva', (e) => guardarClaveNueva(e.detail || {}));
 window.addEventListener('ads:consultar-dashboard', () => {
   if (dashboardActual) emitir('ads:dashboard', dashboardActual);
   else cargarDashboard();

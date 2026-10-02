@@ -2,7 +2,7 @@
 
 > **Para qué sirve este documento.** Reúne en un solo lugar cómo funciona el Hub, por qué se construyó así, las decisiones del equipo, el modelo de datos y los pasos para ponerlo en producción. Si se pierde una conversación con Claude, este archivo y `CLAUDE.md` bastan para retomar el trabajo.
 >
-> **Fecha de corte:** 1 de octubre de 2026. **Estado:** fases 1 a 11 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). La fase 11 (canje con código QR, §5.6) además pasó la prueba real con celulares Android e iPhone. Falta la prueba de aceptación de punta a punta del resto (§10.1). Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
+> **Fecha de corte:** 2 de octubre de 2026. **Estado:** fases 1 a 11 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). La fase 11 (canje con código QR, §5.6) además pasó la prueba real con celulares Android e iPhone. El correo propio de las cuentas (§5.9) está configurado y probado en `aliados-dev`. Falta la prueba de aceptación de punta a punta del resto (§10.1). Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
 >
 > **Documentos relacionados:** `CLAUDE.md` (contexto técnico permanente, más detallado en reglas e implementación), `docs/HANDOFF.md` y `docs/DESIGN_SYSTEM.md` (diseño del Hub).
 
@@ -215,7 +215,7 @@ Hoy la cuenta está en **prueba de Pro** (quedaban 6 días al 29 de septiembre).
 | Vercel Pro (1 usuario) | 20 |
 | Supabase Pro (organización de `prod`, 1 proyecto Micro) | 25 |
 | Supabase Free (organización de `dev`) | 0 |
-| Servicio de correo SMTP (p. ej. Resend, Brevo, SES; ver §10.2, paso 3) | 0–20 según volumen |
+| Correo de las cuentas: Resend (§5.9). Gratis hasta 3 000 correos al mes y 100 al día; Pro si el lanzamiento supera unos 80 registros en un día | 0–20 |
 | **Total aproximado** | **45–65** |
 
 ---
@@ -444,6 +444,29 @@ flowchart LR
 
 Los cron de Supabase que llaman a Vercel necesitan tres secretos en el **Vault** de cada proyecto: `clientify_sync_url` (URL del despliegue), `cron_secret` (igual a `CRON_SECRET` de Vercel) y, si el despliegue está protegido, `vercel_bypass_secret`. Sin ellos, el job no hace nada.
 
+### 5.9 Correos de la cuenta (Supabase Auth + Resend)
+
+Supabase Auth envía los correos de la cuenta por **SMTP propio** con **Resend**, desde `Aliados del Sol · GEENERA <no-reply@notificaciones.geenera.com>`. El correo por defecto de Supabase solo llega a los miembros del equipo del proyecto y tiene un límite muy bajo, así que no sirve para aliados reales.
+
+| Correo | Cuándo sale | Plantilla (`supabase/templates/`) |
+|---|---|---|
+| Confirma tu correo | Al registrarse | `confirmacion.html` |
+| Restablece tu contraseña | «¿Olvidaste tu contraseña?» en el login del Hub (también desde `admin.html` y `canje.html`) | `recuperacion.html` |
+| Confirma el cambio de correo | Si cambia el correo de una cuenta (se confirma en el correo anterior y en el nuevo) | `cambio_correo.html` |
+| Tu contraseña cambió | Después de cambiar la contraseña (aviso de seguridad) | `contrasena_cambiada.html` |
+
+**Cómo está armado y por qué:**
+
+- **Dominio de envío propio:** el subdominio `notificaciones.geenera.com` solo envía. Tiene su DKIM, su SPF de rebotes (`send.notificaciones`) y su DMARC en `p=none`, todos en Cloudflare. **No se tocó** el SPF ni el DMARC de `geenera.com`, que usan Microsoft 365 y Clientify (SparkPost): un problema del Hub no afecta el correo de la empresa.
+- **Sin seguimiento de clics ni aperturas** en Resend: reescribir los enlaces rompería los de confirmación.
+- **Los enlaces vencen en 24 horas** (*Email OTP Expiration* = 86400). Es un solo valor para todos los enlaces: confirmación, recuperación e invitación de operadores. Supabase avisa que supera lo recomendado (1 h); el equipo lo aceptó porque muchos aliados no abren el correo de inmediato.
+- **Recuperación de contraseña a prueba de antivirus:** el correo lleva `…/#recuperacion=<código>`, y el Hub solo usa el código cuando la persona guarda la contraseña nueva. Así, si Microsoft Defender o una vista previa abren el enlace antes, no lo gastan. Es el mismo patrón de la invitación de operadores.
+- **Al guardar la contraseña nueva** se entra con las reglas del login: activo → Hub; pendiente, rechazado o suspendido → su mensaje; admin → panel; operador → `canje.html`. El mensaje para pedir el enlace no revela si el correo existe.
+- **Logos:** el encabezado lleva los de Aliados del Sol y GEENERA, publicados en `geenera.com/wp-content/uploads/`. Si el lector bloquea imágenes, se ve su texto.
+- **El aviso de «tu cuenta fue aprobada» no lo envía Supabase.** Se hará con una automatización de Clientify o n8n que se dispara cuando el contacto del aliado se crea al aprobarlo (flujo A). Ver §11.
+
+**Configuración en cada proyecto de Supabase** (Authentication): SMTP (`smtp.resend.com`, puerto 465, usuario `resend`, contraseña = API key de Resend con permiso solo de envío), *URL Configuration*, *Email OTP Expiration* 86400, contraseña mínima de 8, límite de correos por hora y las cuatro plantillas. La lista paso a paso para `prod` está en §10.2, paso 3.
+
 ---
 
 ## 6. Reglas del programa: puntos, calidad, niveles
@@ -575,7 +598,7 @@ flowchart LR
 |---|---|
 | `id` | Llave técnica, igual al usuario de Supabase Auth. **Nunca se muestra ni sale del sistema.** |
 | `codigo_aliado` | Código público (p. ej. `LKCAL5SCPTB9T`): prefijo del tipo + iniciales + 8 caracteres. Es el `ID_aliado` de Clientify. Inmutable. |
-| `nombre_completo`, `correo`, `celular`, `regional` | Datos del registro. El correo es único; el celular en formato internacional (+57…). |
+| `nombre_completo`, `correo`, `celular`, `regional` | Datos del registro. El correo y el celular son únicos; el celular en formato internacional (+57…). |
 | `tipo_aliado` | Tipo de aliado (§7.2). |
 | `puntos_nivel` | Puntos de los últimos 6 meses, con piso en 0. Define el nivel. **Calculado.** |
 | `puntos_disponibles` | Saldo canjeable, histórico. **Calculado.** |
@@ -864,7 +887,9 @@ Cada código inexistente que prueba un operador (usuario y hora). Sirve para fre
 - **Nunca se muestra el `id` interno.** Hacia afuera (Clientify, proveedores, pantalla) solo sale el `codigo_aliado`.
 - **Todo endpoint verifica la sesión y exige `estado = 'activo'`.** Las acciones de admin se verifican dos veces: en el endpoint y otra vez en la base.
 - **Límites anti-abuso:** 20 referidos por hora, 5 eventos por día y 30 canjes por hora por aliado.
-- **Las claves secretas nunca van en el código ni en los commits.**
+- **Las claves secretas nunca van en el código ni en los commits.** La API key de Resend (contraseña SMTP) vive solo en el panel de Supabase de cada proyecto; no es una variable de Vercel.
+- **Un celular pertenece a un solo aliado** (índice único): Clientify une en un contacto los que comparten celular.
+- **Una cuenta de admin solo usa el panel:** si entra por el login del Hub, se la envía a `admin.html`.
 
 **Variables de entorno en Vercel** (cada una con valor de `prod` para *Production* y de `dev` para *Preview*/*Development*):
 
@@ -904,7 +929,14 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Iniciales del código: se ignoran las partículas y se usan máximo 4 letras.
 - Los Términos aplican a todos los tipos de aliado. La Política de datos debe incluir la transferencia internacional.
 - El primer admin es `c.lizarazo@geenera.com`. Los roles se asignan por SQL: el panel no cambia roles.
-- Las cuentas de admin no se sincronizan con Clientify.
+- Las cuentas de admin no se sincronizan con Clientify, y solo usan el panel: si entran al Hub se les envía a `admin.html`.
+- El celular es único por aliado: un registro con un celular ya usado se rechaza.
+- «¿Olvidaste tu contraseña?» en el Hub (y enlazado desde el panel y la página de canje). Al guardar la contraseña nueva se entra directo.
+
+**Correo de las cuentas**
+- Proveedor: Resend, remitente `no-reply@notificaciones.geenera.com`, subdominio solo para enviar. No se tocó el SPF ni el DMARC de `geenera.com`.
+- Enlaces de 24 horas, plantillas en español con los logos de Aliados del Sol y GEENERA, contacto `c.arenas@geenera.com`.
+- El aviso de cuenta aprobada lo enviará una automatización de Clientify o n8n, no Supabase.
 
 **Clientify**
 - El aliado se crea en Clientify al aprobarse, no al registrarse. Etiqueta "aliado del sol hub" para Cliente Embajador y "aliados del sol" para los demás.
@@ -963,6 +995,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | Pantallas del Hub y del panel | Pruebas en navegador con Supabase simulado | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
+| Correo propio (rama `config-smtp`): confirmación, recuperación de contraseña y aviso de cambio, con logos | Prueba real en el Preview con cuentas de Gmail, Outlook y del correo corporativo (2 oct 2026): llegaron a la bandeja de entrada, los enlaces funcionaron y la recuperación de contraseña entró al Hub | El volumen del lanzamiento (tope de Resend gratis: 100 correos al día) |
 | Canje con QR (fase 11): invitar operadores, mostrar el QR, escanear, canjear, rechazos por nivel y saldo, anular | 79 pruebas pgTAP, pruebas en navegador con cámara simulada y una **prueba real con celulares Android e iPhone** en el Preview (1 oct 2026) | Operadores y catálogo reales; pruebas de capturas de pantalla y modo avión con más personas |
 
 **Conclusión:** cada pieza está probada por separado, pero **falta la prueba de punta a punta con personas y con Clientify real**. Eso es la etapa 1, y es lo siguiente que hay que hacer.
@@ -977,9 +1010,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 3. **Vault de `aliados-dev`:** `clientify_sync_url` = `<URL del Preview>/api/cron/clientify`, y `vercel_bypass_secret` si el Preview está protegido.
    *Por qué:* los cron de dev llaman a esa URL. Si apunta a un Preview viejo, se prueba código viejo.
 4. **Webhook de oportunidades de Clientify:** apuntarlo a `<URL del Preview>/api/webhooks/clientify?token=<secreto de Preview>`.
-5. **Correos de confirmación:** el correo por defecto de Supabase solo envía a los miembros del equipo del proyecto. Hay dos opciones:
-   - configurar el SMTP propio también en dev, que además prueba el correo real (recomendado);
-   - confirmar las cuentas de prueba a mano; Claude puede hacerlo en dev.
+5. **Correos:** el SMTP propio (Resend) ya está configurado en `aliados-dev` (§5.9). La *Site URL* es la del Preview y las *Redirect URLs* aceptan `https://*-growth-73f6.vercel.app/**` y `http://localhost:3000/**`.
+   - El Preview está protegido por Vercel: antes de abrir el enlace de un correo, la persona debe abrir en ese mismo navegador el enlace para compartir del Preview (*Share*). Si no, el enlace del correo la lleva a iniciar sesión en Vercel. En producción no pasa, porque el dominio oficial es público.
 6. **Para probar desde celulares** (canje con QR): crear en Vercel un enlace para compartir del Preview (*Share*), porque el Preview pide iniciar sesión en Vercel; y en `aliados-dev` → Authentication → URL Configuration agregar en *Redirect URLs* `https://<URL del Preview>/**`, que necesitan los enlaces de invitación de operadores.
 7. **Cuentas de prueba:** usar correos con `+prueba` (p. ej. `nombre+prueba1@geenera.com`). Solo esos llegan a Clientify desde dev, con la etiqueta `PRUEBA HUB`. Conviene una cuenta EMI, una Financiero y una Agremiaciones.
 
@@ -1003,6 +1035,9 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 13 | Ajuste de puntos y baja calidad reiterada desde el panel | Se reflejan en el historial del aliado; queda registro en Auditoría |
 | 14 | Entrar a `admin.html` con una cuenta que no es admin | "Sin acceso" |
 | 15 | Revisar el Hub con las cuentas Financiero y Agremiaciones | Ven su dashboard de gestión, su nivel y sus puntos |
+| 16 | «¿Olvidaste tu contraseña?» con una cuenta activa y con una pendiente | Llega «Restablece tu contraseña»; la activa entra al Hub y la pendiente ve «Tu solicitud está en revisión»; llega «Tu contraseña cambió» |
+| 17 | Registrarse con un celular que ya tiene otro aliado | Se rechaza el registro y no queda ninguna cuenta creada |
+| 18 | Entrar al Hub con la cuenta de admin | Va directo a `admin.html` |
 
 **Quién hace qué:** el equipo ejecuta los casos como usuario (Hub, panel y Clientify). Claude verifica en `aliados-dev` que la base quedó como se esperaba, puede forzar la conciliación para no esperar una hora, y corrige cualquier error en una rama con su prueba.
 
@@ -1020,7 +1055,7 @@ Pasar Vercel a Pro. Crear una organización de Supabase en Pro para `aliados-pro
 *Por qué:* Vercel Hobby no permite uso comercial, y Supabase Free pausa el proyecto con poca actividad y no ofrece copias de seguridad descargables.
 
 **Paso 2 — Crear el esquema en `aliados-prod`.**
-Aplicar en orden las migraciones de `supabase/migrations/` (hoy 25). Lo recomendado es la Supabase CLI desde un computador del equipo:
+Aplicar en orden las migraciones de `supabase/migrations/` (hoy 26). Lo recomendado es la Supabase CLI desde un computador del equipo:
 1. `npx supabase login`
 2. `npx supabase link --project-ref pysyxycrybayhrescplc`
 3. `npx supabase db push`
@@ -1032,16 +1067,25 @@ Luego verificar:
 
 *Por qué:* las migraciones son la receta exacta ya probada en dev. Claude no toca `prod` directamente, por decisión del equipo.
 
-**Paso 3 — Autenticación de `prod`.**
-En Supabase → Authentication:
-- *Site URL* = el dominio oficial, y en *Redirect URLs* `https://<dominio>/**` (lo usan los enlaces de invitación de operadores a `canje.html`). En `aliados-dev`, la *Site URL* puede seguir siendo la del Preview;
-- confirmación de correo activada;
-- **SMTP propio** con remitente del dominio de GEENERA (SPF, DKIM y DMARC);
-- límite de correos por hora ajustado al lanzamiento;
-- plantillas de correo en español;
-- protección de contraseñas filtradas.
+**Paso 3 — Autenticación y correo de `prod`.**
+El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resend y sirve para los dos proyectos: **no hay que tocar el DNS**. En `aliados-prod` se repite lo que se hizo en dev (§5.9):
 
-*Por qué:* sin SMTP propio, Supabase solo envía correos a los miembros del equipo, y los aliados reales no podrían confirmar su cuenta.
+1. **Resend → API Keys → Create API Key:** nombre `supabase-aliados-prod`, permiso *Sending access*, dominio `notificaciones.geenera.com`. Se pega directo en el paso 2 y no se guarda en otro lado. Es una key distinta de la de dev, para poder revocar una sin afectar la otra.
+2. **Authentication → Emails → SMTP Settings → Enable custom SMTP:**
+   - Sender email `no-reply@notificaciones.geenera.com` y Sender name `Aliados del Sol · GEENERA`;
+   - Host `smtp.resend.com`, puerto `465`, usuario `resend`, contraseña = la key del punto 1.
+3. **Authentication → URL Configuration:** *Site URL* = `https://<dominio>` y en *Redirect URLs* solo `https://<dominio>/**`. En `prod` no se usa el comodín de Vercel.
+4. **Authentication → Sign In / Providers → Email:**
+   - *Confirm email* activado;
+   - *Secure email change* activado;
+   - *Email OTP Expiration* = `86400` (24 h). Supabase avisa que supera lo recomendado; es lo decidido;
+   - *Minimum password length* = 8;
+   - protección de contraseñas filtradas activada (requiere el plan Pro).
+5. **Authentication → Rate Limits:** correos por hora según el lanzamiento (30 por hora sirve para arrancar). Si se esperan más de unos 80 registros en un día, pasar Resend a Pro ese mes (§4.3).
+6. **Authentication → Emails → Templates:** pegar `confirmacion.html` (*Confirm sign up*), `recuperacion.html` (*Reset password*) y `cambio_correo.html` (*Change email address*) con sus asuntos. En las notificaciones de seguridad, activar *Password changed* con `contrasena_cambiada.html`. Los asuntos están en `supabase/templates/README.md`.
+7. **Prueba:** registrarse con un correo real, confirmar, pedir «¿Olvidaste tu contraseña?» y revisar que todo llegue a la bandeja de entrada (es parte del piloto, paso 11).
+
+*Por qué:* sin SMTP propio, Supabase solo envía correos a los miembros del equipo, y los aliados reales no podrían confirmar su cuenta. Las plantillas del repositorio son la fuente de verdad: si se cambian, se vuelven a pegar en los dos proyectos.
 
 **Paso 4 — Variables de *Production* en Vercel.**
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY` de `aliados-prod`;
@@ -1123,6 +1167,9 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 7 | Secciones del Hub con datos de demostración (series por mes, pronóstico de desembolsos, comisiones). | Se mantienen con la etiqueta "Demostración" hasta tener datos reales. |
 | 8 | Imágenes y logos de las recompensas reales. | El catálogo aún no guarda imágenes. |
 | 9 | El Hub es más ancho que la pantalla del celular (unos 616 px en 390 px) porque el menú lateral no se oculta. | Se puede desplazar hacia los lados; «Mi QR» ya se ajusta a la pantalla. Pendiente de corregir. |
+| 10 | Aviso por correo de «tu cuenta fue aprobada». | Decidido: una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A, al aprobarlo). Falta crearla; mientras tanto, avisar a mano. Se relaciona con el punto 3. |
+| 11 | Logos de los correos en PNG. | Hoy están en WebP en `geenera.com`, y Outlook de escritorio para Windows no muestra WebP (muestra el texto). Subir los PNG de `supabase/templates/img/` y cambiar la extensión en las plantillas. |
+| 12 | Endurecer el correo de `geenera.com` (área de TI). | Microsoft 365 no tiene activada la firma DKIM propia y el DMARC de `geenera.com` está en `p=none`. No afecta al Hub; conviene revisarlo con calma. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`. |
 
 ---
 

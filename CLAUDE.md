@@ -93,6 +93,10 @@ Formulario propio del Hub. No es de Clientify.
 5. En el front, toda la lógica de Supabase vive en `js/supabase.js`: la página emite eventos `ads:*` (`ads:join-register`, `ads:login`, `ads:logout`) y el módulo responde (`ads:join-resultado`, `ads:login-resultado`, `ads:sesion`, `ads:aviso`).
 6. **Excepción (fase 11):** si el correo tiene una invitación de **operador** (§4.10), el trigger de alta solo vincula la cuenta a `operadores` y no crea un aliado. La invitación solo la crea un admin; el navegador no puede marcarse como operador. Es el único caso de un usuario de Auth sin fila en `aliados`.
 
+7. **Celular único** (decisión del equipo, oct 2026): índice `aliados_celular_key`. Clientify une en un solo contacto los que comparten celular, así que dos aliados con el mismo celular no podían sincronizarse. Un registro con un celular ya usado se rechaza completo; el Hub lo menciona en el mensaje genérico de registro, sin decir que ese celular existe.
+8. **Recuperar contraseña** («¿Olvidaste tu contraseña?» en el login del Hub; `admin.html` y `canje.html` enlazan a `/#recuperar`): `js/supabase.js` responde `ads:recuperar` → `ads:recuperar-resultado` (`resetPasswordForEmail` con `redirectTo` = el origen; el mensaje no revela si el correo existe) y `ads:clave-nueva` → `ads:clave-nueva-resultado` o `ads:login-resultado` con `claveNueva`. El correo trae `#recuperacion=<token_hash>` y el código solo se usa (`verifyOtp`) al guardar la contraseña nueva, para que un antivirus o una vista previa no lo gasten. Después se entra con las reglas del login.
+9. **Una cuenta de admin solo usa el panel** (decisión del equipo): si entra por el login del Hub, `resolverAcceso` la envía a `admin.html`, igual que a un operador a `canje.html`.
+
 Validar en front **y** en servidor: formato de email, celular (formato internacional E.164; si es de Colombia, 10 dígitos que empiezan por 3), contraseñas iguales y mínimo 8 caracteres, campos condicionales según el tipo, aceptación de términos y autorización de datos.
 
 ---
@@ -109,7 +113,7 @@ id                      uuid PK  FK auth.users(id) ON DELETE CASCADE   -- ID_sup
 codigo_aliado           text UNIQUE NOT NULL                          -- ID_Aliado público
 nombre_completo         text NOT NULL
 correo                  text UNIQUE NOT NULL
-celular                 text NOT NULL
+celular                 text UNIQUE NOT NULL                   -- E.164; único por aliado (migración celular_unico)
 regional                text NULL
 tipo_aliado             enum tipo_aliado NOT NULL
 -- Valores calculados (caché; la fuente de verdad es movimientos_puntos / avance_empresa)
@@ -800,6 +804,13 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Nunca registrar en logs contraseñas, tokens ni datos personales completos.
 - Rate limiting en registro, login y `/api/oportunidades`.
 
+**Correo de las cuentas (rama `config-smtp`, oct 2026):**
+- Supabase Auth envía por **SMTP propio con Resend** desde `Aliados del Sol · GEENERA <no-reply@notificaciones.geenera.com>`. El subdominio `notificaciones.geenera.com` solo envía: DKIM, SPF de rebotes (`send.notificaciones`) y DMARC propio en `p=none`, en Cloudflare (región de Resend `us-east-1`). **No se tocan** el SPF ni el DMARC de `geenera.com` (Microsoft 365 y Clientify/SparkPost). Sin seguimiento de clics ni aperturas.
+- La API key de Resend (contraseña SMTP; usuario `resend`, `smtp.resend.com:465`) vive solo en el panel de cada proyecto de Supabase, una key por proyecto con permiso solo de envío. **Nunca** en el código ni en Vercel.
+- *Email OTP Expiration* = 86400 (24 h) en los dos proyectos, para todos los enlaces (confirmación, recuperación e invitación de operadores); contraseña mínima de 8. *Redirect URLs*: en dev, `https://*-growth-73f6.vercel.app/**` y `http://localhost:3000/**`; en prod, solo `https://<dominio>/**`.
+- Plantillas en `supabase/templates/` (fuente de verdad; `README.md` con asuntos y dónde se pegan): confirmación, recuperación, cambio de correo y aviso de contraseña cambiada, con los logos publicados en `geenera.com/wp-content/uploads/`. `supabase/config.toml` usa las mismas en la base local.
+- El aviso de «cuenta aprobada» no lo envía Supabase: lo hará una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A).
+
 ## 11. Legal (Colombia, Ley 1581 de 2012 y Decreto 1377 de 2013)
 
 - Autorización explícita en el registro, con la fecha guardada en `autorizacion_datos_at`, y enlace a la política de tratamiento de datos y a los términos del programa de puntos.
@@ -884,6 +895,11 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Canjes: el catálogo de recompensas lo crea y edita GEENERA desde el panel; los puntos y el nivel mínimo salen de ahí (§4.10).
 - El proveedor puede consultar el nivel, el saldo y las recompensas disponibles de un aliado por su código, sin datos personales (§4.10).
 - Un admin puede anular un canje no entregado: se devuelven los puntos disponibles, no los de nivel (§4.10, §5.4).
+- **Correo de las cuentas:** Resend con `no-reply@notificaciones.geenera.com`, subdominio solo para enviar; enlaces de 24 h; plantillas en español con logos; contacto `c.arenas@geenera.com` (§10).
+- El aviso de cuenta aprobada se hará con una automatización de Clientify o n8n, no con Supabase (§10).
+- Recuperación de contraseña desde el Hub; al guardar la contraseña nueva se entra directo (§3).
+- Una cuenta de admin solo usa el panel; el Hub la envía a `admin.html` (§3).
+- El celular es único por aliado (§3, §4.1).
 - **Canje con QR (fase 11):** QR dinámico firmado por la base, de 5 minutos y un solo uso, renovado cada 60 s; código corto de respaldo (§4.10).
 - Escanean **operadores** (personal de GEENERA o del proveedor) invitados por un admin, ligados a un proveedor; no son aliados. Los admins también escanean (§4.10).
 - La recompensa la elige el operador al escanear; una por escaneo; el aliado no aprueba en su celular (mostrar el QR es su consentimiento) (§4.10).
@@ -910,3 +926,5 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: se adjunta a la ficha de la empresa (§8, flujo B).
 8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).
 9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.
+14. **Aviso de cuenta aprobada:** crear en Clientify o n8n la automatización que envía el correo cuando se crea el contacto del aliado (relacionada con la 13).
+15. **Logos de los correos en PNG:** hoy están en WebP en `geenera.com` y Outlook de escritorio para Windows no los muestra (se ve el texto alternativo).

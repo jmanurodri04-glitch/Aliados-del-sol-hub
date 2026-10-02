@@ -19,8 +19,9 @@ ni enlaces mágicos por correo (la invitación de operadores de la fase 11 es un
 El encabezado lleva el logo de Aliados del Sol (izquierda) y el de GEENERA (derecha). Los archivos están en
 `img/` a doble resolución (se muestran a 81×56 y 126×52 px) y deben estar publicados en una dirección pública
 y permanente, porque el correo los descarga al abrirse: los Preview de Vercel están protegidos y no sirven.
-Se publican en el sitio de GEENERA (WordPress, *Medios*) y sus direcciones reemplazan `URL_LOGO_ALIADOS` y
-`URL_LOGO_GEENERA` en las cuatro plantillas. Si el lector bloquea las imágenes, se ve el texto alternativo
+Están publicados en el sitio de GEENERA: `https://geenera.com/wp-content/uploads/logo-aliados-del-sol.webp` y
+`https://geenera.com/wp-content/uploads/logo-geenera.webp`. Outlook de escritorio para Windows no muestra WebP
+(muestra el texto alternativo); si se publican también en PNG, basta cambiar la extensión en las cuatro plantillas. Si el lector bloquea las imágenes, se ve el texto alternativo
 ("Aliados del Sol" y "GEENERA").
 
 ## Cómo se pega

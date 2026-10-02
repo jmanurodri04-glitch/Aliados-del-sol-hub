@@ -110,10 +110,11 @@ before(async () => {
     VERCEL_ENV: 'preview'
   });
   await limpiar();
-  for (const [nombre, a] of Object.entries(ALIADOS)) {
+  // El celular es único por aliado (migración celular_unico): cada uno lleva el suyo.
+  for (const [i, [nombre, a]] of Object.entries(ALIADOS).entries()) {
     const { data, error } = await admin().auth.admin.createUser({
       email: a.correo, password: CLAVE, email_confirm: true,
-      user_metadata: { nombre_completo: 'Prueba ' + nombre, celular: '+573001234567', tipo_aliado: 'emi',
+      user_metadata: { nombre_completo: 'Prueba ' + nombre, celular: '+57300123' + String(4000 + i), tipo_aliado: 'emi',
         como_llega_empresas: 'Red', autorizacion_datos: true, acepta_terminos: true }
     });
     assert.equal(error, null);

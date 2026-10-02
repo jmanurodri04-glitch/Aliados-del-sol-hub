@@ -1,7 +1,7 @@
 -- Tests del alta de aliados desde Supabase Auth (CLAUDE.md §2, §3, §11).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(40);
+select plan(42);
 
 -- Metadatos válidos por tipo, como los envía el front en signUp({ options: { data } }).
 create function pg_temp.meta(tipo text, extra jsonb default '{}')
@@ -20,9 +20,14 @@ returns jsonb language sql as $$
   || extra;
 $$;
 
+-- El celular es único por aliado: salvo la primera alta (emi@prueba.test), el celular por defecto se
+-- reemplaza por uno propio de cada id. Los celulares que fija cada prueba se respetan.
 create function pg_temp.registrar(id uuid, email text, meta jsonb)
 returns void language sql as $$
-  insert into auth.users (id, email, raw_user_meta_data) values (id, email, meta);
+  insert into auth.users (id, email, raw_user_meta_data) values (id, email,
+    case when meta ->> 'celular' = '+573001234567' and email <> 'emi@prueba.test'
+      then meta || jsonb_build_object('celular', '+5730' || lpad((abs(hashtext(id::text)) % 100000000)::text, 8, '0'))
+      else meta end);
 $$;
 
 select has_trigger('auth', 'users', 'on_auth_user_created_aliado', 'existe el trigger de alta en auth.users');
@@ -86,6 +91,12 @@ select is((select nombre_completo from public.aliados where id = 'a0000000-0000-
 
 select lives_ok($$select pg_temp.registrar('a0000000-0000-0000-0000-000000000007', 'mx@prueba.test',
   pg_temp.meta('linker', '{"celular": "+525512345678"}'))$$, 'acepta celulares de otros países en formato internacional');
+
+-- Celular único por aliado (decisión del equipo): Clientify une los contactos que comparten celular.
+select has_index('public', 'aliados', 'aliados_celular_key', 'existe el índice único del celular');
+select throws_ok($$select pg_temp.registrar('a0000000-0000-0000-0000-000000000020', 'otro-mx@prueba.test',
+  pg_temp.meta('emi', '{"celular": "+525512345678"}'))$$,
+  '23505', null, 'rechaza el registro con un celular que ya tiene otro aliado (no queda usuario de Auth sin aliado)');
 
 -- Nadie se da permisos desde el navegador ------------------------------------------------
 

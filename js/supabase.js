@@ -48,7 +48,7 @@ const MENSAJES = {
   generico: 'No pudimos completar la operación. Intenta de nuevo en unos minutos.',
   sinConexion: 'No pudimos conectarnos. Revisa tu conexión e intenta de nuevo.',
   correoRegistrado: 'Ya existe una cuenta con este correo. Inicia sesión o recupera tu contraseña.',
-  registroInvalido: 'No pudimos crear tu cuenta. Revisa que todos los datos estén completos y vuelve a intentarlo.',
+  registroInvalido: 'No pudimos crear tu cuenta. Revisa que todos los datos estén completos y que tu celular no esté registrado en otra cuenta, y vuelve a intentarlo.',
   contrasenaDebil: 'La contraseña es muy débil. Usa al menos 8 caracteres y evita contraseñas comunes.',
   demasiadosIntentos: 'Hiciste demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
   credenciales: 'Correo o contraseña incorrectos.',

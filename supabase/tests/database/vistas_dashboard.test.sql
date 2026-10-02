@@ -7,7 +7,7 @@ create function pg_temp.aliado(id uuid, email text, tipo text, rol text default 
 returns void language plpgsql as $$
 begin
   insert into auth.users (id, email, raw_user_meta_data) values (id, email, jsonb_build_object(
-    'nombre_completo', 'Prueba ' || tipo, 'celular', '+573001234567', 'tipo_aliado', tipo,
+    'nombre_completo', 'Prueba ' || tipo, 'celular', '+5730' || lpad((abs(hashtext(id::text)) % 100000000)::text, 8, '0'), 'tipo_aliado', tipo,
     'organizacion', 'Banco Prueba', 'cargo', 'Ejecutiva', 'como_llega_empresas', 'Red',
     'autorizacion_datos', true, 'acepta_terminos', true));
   update public.aliados set estado = 'activo', rol = aliado.rol where aliados.id = aliado.id;

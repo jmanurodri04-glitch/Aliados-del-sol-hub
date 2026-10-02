@@ -6,7 +6,7 @@ select plan(16);
 create function pg_temp.aliado(id uuid, email text)
 returns void language sql as $$
   insert into auth.users (id, email, raw_user_meta_data) values (id, email, jsonb_build_object(
-    'nombre_completo', 'Prueba Retención', 'celular', '+573001234567', 'tipo_aliado', 'emi',
+    'nombre_completo', 'Prueba Retención', 'celular', '+5730' || lpad((abs(hashtext(id::text)) % 100000000)::text, 8, '0'), 'tipo_aliado', 'emi',
     'como_llega_empresas', 'Red', 'autorizacion_datos', true, 'acepta_terminos', true));
 $$;
 

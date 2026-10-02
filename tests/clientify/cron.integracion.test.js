@@ -77,9 +77,10 @@ before(async () => {
     VERCEL_ENV: 'preview'
   });
   sql("delete from auth.users where email like '%@cron.test'");
-  for (const [nombre, a] of Object.entries(ALIADOS)) {
+  // El celular es único por aliado (migración celular_unico): cada uno lleva el suyo.
+  for (const [i, [nombre, a]] of Object.entries(ALIADOS).entries()) {
     const meta = JSON.stringify({
-      nombre_completo: 'Prueba ' + nombre, celular: '+573001234567', tipo_aliado: a.tipo,
+      nombre_completo: 'Prueba ' + nombre, celular: '+57300123' + String(4000 + i), tipo_aliado: a.tipo,
       organizacion: 'Banco X', cargo: 'Gerente', como_llega_empresas: 'Red', autorizacion_datos: true, acepta_terminos: true
     });
     sql(`insert into auth.users (id, email, raw_user_meta_data) values ('${a.id}', '${a.correo}', '${meta}'::jsonb)`);

@@ -14,6 +14,15 @@ panel de cada proyecto (`aliados-dev` y `aliados-prod`) y `supabase/config.toml`
 Las demás plantillas (Invite user, Magic link, Reauthentication) no se usan: el Hub no envía invitaciones
 ni enlaces mágicos por correo (la invitación de operadores de la fase 11 es un enlace que el panel muestra).
 
+## Logos
+
+El encabezado lleva el logo de Aliados del Sol (izquierda) y el de GEENERA (derecha). Los archivos están en
+`img/` a doble resolución (se muestran a 81×56 y 126×52 px) y deben estar publicados en una dirección pública
+y permanente, porque el correo los descarga al abrirse: los Preview de Vercel están protegidos y no sirven.
+Se publican en el sitio de GEENERA (WordPress, *Medios*) y sus direcciones reemplazan `URL_LOGO_ALIADOS` y
+`URL_LOGO_GEENERA` en las cuatro plantillas. Si el lector bloquea las imágenes, se ve el texto alternativo
+("Aliados del Sol" y "GEENERA").
+
 ## Cómo se pega
 
 1. Copiar el contenido completo del archivo y pegarlo en *Message body* (vista de código).
@@ -22,7 +31,7 @@ ni enlaces mágicos por correo (la invitación de operadores de la fase 11 es un
 
 ## Reglas
 
-- **Sin marketing, sin imágenes y con un solo enlace** (el botón; la dirección en texto es el mismo enlace).
+- **Sin marketing, solo los dos logos como imágenes y con un solo enlace** (el botón; la dirección en texto es el mismo enlace).
   Así lo recomienda Supabase para que los correos no caigan en spam.
 - **Vigencia:** el texto dice "vence en 24 horas" porque *Email OTP Expiration* = `86400` en ambos proyectos.
   Si se cambia ese valor, hay que cambiar el texto de las plantillas y el del panel (`js/admin.js`, enlace

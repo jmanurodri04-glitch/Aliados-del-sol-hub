@@ -4042,7 +4042,7 @@ class Component extends DCLogic {
       if (!this._mq || now - this._mqAt > 500) {
         this._mqAt = now;
         this._mq = Array.from(document.querySelectorAll('[data-reveal]:not([data-on])'));
-        this._mc = Array.from(document.querySelectorAll('[data-count]:not([data-counted])'));
+        this._mc = Array.from(document.querySelectorAll('[data-count]'));
         this._ms = Array.from(document.querySelectorAll('[data-scrub]'));
       }
       const vh = window.innerHeight, at = vh * MOTION_CONFIG.revealAt;
@@ -4053,13 +4053,22 @@ class Component extends DCLogic {
       });
       this._mc.forEach(el => {
         if (!document.contains(el)) return;
+        /* Si el valor cambia después de contar (p. ej. llegan los datos reales tras los de demostración),
+           se vuelve a contar desde el valor mostrado hasta el nuevo. */
+        const objetivo = Number(el.getAttribute('data-count')) || 0;
+        if (el.__c && el.__c.target !== objetivo) {
+          const t0 = Math.min(1, (now - el.__c.start) / MOTION_CONFIG.countMs);
+          el.__c = Object.assign({}, el.__c, { start: now, from: el.__c.from + (el.__c.target - el.__c.from) * easeOut(t0), target: objetivo });
+          el.removeAttribute('data-counted');
+        }
+        if (el.hasAttribute('data-counted')) return;
         if (!el.__c) {
           const r = el.getBoundingClientRect();
           if (!(this.reduced || (r.top < at && r.bottom > -40))) return;
-          el.__c = { start: now, target: Number(el.getAttribute('data-count')) || 0, pre: el.getAttribute('data-prefix') || '', suf: el.getAttribute('data-suffix') || '' };
+          el.__c = { start: now, from: 0, target: objetivo, pre: el.getAttribute('data-prefix') || '', suf: el.getAttribute('data-suffix') || '' };
         }
         const c = el.__c, t = this.reduced ? 1 : Math.min(1, (now - c.start) / MOTION_CONFIG.countMs);
-        el.textContent = c.pre + fmt(Math.round(c.target * easeOut(t))) + c.suf;
+        el.textContent = c.pre + fmt(Math.round(c.from + (c.target - c.from) * easeOut(t))) + c.suf;
         if (t >= 1) { el.setAttribute('data-counted', '1'); }
       });
       this._ms.forEach(el => {
@@ -4136,7 +4145,8 @@ class Component extends DCLogic {
     const L = LEVEL_CONFIG.levels;
     /* Con sesión: puntos, calidad y nivel de la base. El nivel exige puntos y calidad (CLAUDE.md §6.3),
        aunque el Hub no muestre los requisitos de calidad para no complicar al aliado (decisión del equipo). */
-    const a = this.real() ? this.real().aliado : null;
+    /* Mientras llega el dashboard se usan los valores de la sesión, no los de demostración. */
+    const a = this.real() ? this.real().aliado : (this.state.sesion || null);
     const points = a ? Number(a.puntos_nivel) : Number(this.props.points ?? 560);
     const balance = a ? Number(a.puntos_disponibles) : Number(this.props.pointsBalance ?? points);
     const qualityRaw = a ? Math.round(Number(a.calidad_referidos || 0)) : Number(this.props.quality ?? 82);

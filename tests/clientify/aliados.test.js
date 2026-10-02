@@ -126,3 +126,20 @@ test('cliente HTTP: envía "Authorization: Token", busca por correo exacto y cla
   await assert.rejects(cliente.crearContacto({}), (e) => e.status === 400 && !e.reintentable);
   assert.throws(() => crearClienteClientify({ apiKey: '' }), ErrorClientify);
 });
+
+test('cola: si Clientify devuelve el contacto de otro aliado, el error dice la causa', async () => {
+  const { procesarAliados } = await import('../../lib/clientify/cola.js');
+  const resultados = [];
+  const supabase = {
+    rpc: async (nombre, args) => {
+      if (nombre === 'clientify_reclamar_aliados') return { data: [ALIADO], error: null };
+      resultados.push(args);
+      return args.p_contact_id ? { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } } : { data: null, error: null };
+    }
+  };
+  const r = await procesarAliados({ supabase, clientify: clientifyFalso(), entorno: 'preview' });
+  assert.equal(r.errores, 1);
+  assert.match(r.detalle[0].error, /otro aliado .*celular/);
+  assert.equal(resultados.at(-1).p_contact_id, null);
+  assert.match(resultados.at(-1).p_error, /otro aliado/);
+});

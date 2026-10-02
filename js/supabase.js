@@ -24,7 +24,7 @@
 //
 // El QR de canje (fase 11) lo pinta js/mi-qr.js; aquí solo se llaman generar_qr_canje y estado_qr_canje con la sesión
 // del aliado. El QR es un enlace a /canje.html#q=<ficha>: la ficha vale 5 minutos y sirve una sola vez.
-// Una cuenta de operador (quien registra canjes) que entre al Hub se envía a /canje.html.
+// Una cuenta de operador (quien registra canjes) que entre al Hub se envía a /canje.html, y una de admin a /admin.html.
 //
 // El dashboard (fase 8) sale de las vistas v_aliado_dashboard, v_mis_movimientos, v_mis_referidos y
 // v_mis_modulos (y v_mis_eventos, fase 9; v_mis_canjes y v_recompensas, fase 10), que solo devuelven lo del aliado de la sesión. Se recarga al entrar, después de un
@@ -68,6 +68,7 @@ const MENSAJES = {
   mismaContrasena: 'Usa una contraseña distinta a la anterior.',
   claveGuardada: 'Guardamos tu contraseña nueva.',
   operador: 'Tu cuenta es para registrar canjes. Te llevamos a la página de canjes.',
+  admin: 'Tu cuenta es de administración. Te llevamos al panel de administración.',
   sesionVencidaQR: 'Tu sesión expiró. Vuelve a iniciar sesión para ver tu QR.',
   qrNoActivo: 'Tu cuenta no está activa: aún no puedes canjear.',
   qrLimite: 'Generaste muchos QR seguidos. Espera unos minutos y vuelve a abrir «Mi QR».'
@@ -136,7 +137,7 @@ async function leerAliado(supabase) {
   if (!usuario) return null;
   const { data, error } = await supabase
     .from('aliados')
-    .select('codigo_aliado, nombre_completo, tipo_aliado, estado, nivel, puntos_nivel, puntos_disponibles')
+    .select('codigo_aliado, nombre_completo, tipo_aliado, estado, rol, nivel, puntos_nivel, puntos_disponibles')
     .eq('id', usuario.id)
     .maybeSingle();
   if (error) throw error;
@@ -152,9 +153,15 @@ async function esOperador(supabase) {
   return !!data;
 }
 
-// Solo las cuentas activas entran al Hub; las demás cierran sesión con un mensaje. Un operador va a /canje.html.
+// Solo las cuentas activas entran al Hub; las demás cierran sesión con un mensaje. Un operador va a /canje.html
+// y una cuenta de admin va a /admin.html (decisión del equipo: el admin usa solo el panel, no el Hub).
 async function resolverAcceso(supabase) {
   const aliado = await leerAliado(supabase);
+  if (aliado && aliado.estado === 'activo' && aliado.rol === 'admin') {
+    sesionActual = { activa: false };
+    window.location.assign('/admin.html');
+    return { ok: false, motivo: 'admin', mensaje: MENSAJES.admin };
+  }
   if (aliado && aliado.estado === 'activo') {
     sesionActual = { activa: true, aliado };
     return { ok: true, aliado };

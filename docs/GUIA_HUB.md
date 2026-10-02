@@ -62,9 +62,9 @@ Lo que puede hacer cada persona hoy:
 
 ```mermaid
 flowchart TB
-  U["👤 Usuarios<br/>Aliado · Admin GEENERA · Proveedor de recompensas"]
+  U["👤 Usuarios<br/>Aliado · Admin GEENERA · Operador de canjes · Proveedor de recompensas"]
   subgraph VER["Vercel"]
-    H["Hub estático<br/>index.html · admin.html"]
+    H["Hub estático<br/>index.html · admin.html · canje.html"]
     F["Funciones /api<br/>Node.js 22 · claves secretas"]
   end
   subgraph SUP["Supabase"]
@@ -98,11 +98,14 @@ flowchart TB
 |---|---|
 | `index.html` y `src/Aliados del Sol Hub.dc.html` | El Hub (el cuerpo de ambos debe ser idéntico). |
 | `admin.html` + `js/admin.js` | Panel de administración. |
+| `canje.html` + `js/canje.js` | Registro de canjes con QR para operadores y admins (fase 11). |
 | `js/supabase.js` | Toda la conexión del Hub con Supabase y con `/api` (eventos `ads:*`). |
+| `js/mi-qr.js` | Pantalla «Mi QR para canjear» del aliado (fase 11). |
 | `api/` | Funciones de servidor (12, ver §8). |
 | `lib/` | Código compartido de servidor: sesión, cliente de Supabase, integración Clientify (`lib/clientify/`). |
 | `supabase/migrations/` | Cambios de la base de datos, en orden. **Es la única forma de cambiar el esquema.** |
 | `supabase/tests/database/` | Pruebas pgTAP de las reglas de la base. |
+| `supabase/templates/` | Plantillas de los correos de la cuenta (fuente de verdad; se pegan en cada proyecto de Supabase, §5.9). |
 | `tests/` | Pruebas de las funciones `/api` (`npm test`). |
 | `vercel.json` | Configuración de Vercel: duración de funciones, cron diario y encabezados. |
 | `assets/legal/` | Términos y Política de datos en PDF, con la fecha de versión en el nombre. |
@@ -131,7 +134,7 @@ Vercel crea un **despliegue distinto según el origen del código**, y cada uno 
 | Entorno de Vercel | Cuándo se crea | A qué base apunta | Para qué sirve |
 |---|---|---|---|
 | **Production** | Al fusionar en `main` (o al promover un despliegue). Responde en el dominio oficial. | `aliados-prod` | Los aliados reales. |
-| **Preview** | En cada *push* a cualquier otra rama (p. ej. `fase-10-canjes`). Tiene una URL propia por rama y por despliegue. | `aliados-dev` | Probar una funcionalidad antes de fusionarla, sin tocar producción. |
+| **Preview** | En cada *push* a cualquier otra rama (p. ej. `correcciones-hub`). Tiene una URL propia por rama y por despliegue. | `aliados-dev` | Probar una funcionalidad antes de fusionarla, sin tocar producción. |
 | **Development** | Cuando un desarrollador ejecuta `vercel dev` en su computador (`vercel env pull` descarga estas variables). | `aliados-dev` | Desarrollo local. |
 
 Como el sitio es estático y no tiene paso de *build*, el navegador **no puede leer variables de entorno**. Por eso existe `GET /api/config`, que devuelve la URL y la *publishable key* del entorno donde corre. Así el mismo código sirve para Preview (dev) y Production (prod) sin cambiar nada.
@@ -140,7 +143,7 @@ Como el sitio es estático y no tiene paso de *build*, el navegador **no puede l
 
 ### 3.3 ¿Por qué ramas por fase y *pull requests*?
 
-- Cada fase (1 a 10) se construyó en su propia rama (`fase-1-base-datos` … `fase-10-canjes`). Cada rama se construyó sobre la anterior, así que **`fase-10-canjes` contiene todo**.
+- Cada fase (1 a 11) se construyó en su propia rama (`fase-1-base-datos` … `fase-11-qr-canjes`), cada una sobre la anterior. La rama `config-smtp` reúne todas las fases y el correo propio (§5.9), y sobre ella **`correcciones-hub`** reúne las correcciones previas a la etapa 1 (§10.1): **es la rama que contiene todo**.
 - Una rama genera un Preview en Vercel que apunta a `dev`: se puede probar la fase completa con un enlace, sin afectar producción.
 - El *pull request* hacia `main` es el punto de control: se revisa qué cambia, y al fusionarlo Vercel publica Producción.
 - **Importante:** fusionar en `main` publica el **código**, pero **no** cambia la base de `prod`. Las migraciones de la base se aplican aparte (§10.2, paso 2). Por eso el orden de puesta en marcha importa.
@@ -152,7 +155,7 @@ Las reglas críticas (puntos, niveles, racha, límites, validaciones de admin) e
 - **Se ejecutan en una transacción:** o se hace todo (insertar el canje y descontar los puntos) o nada.
 - **Bloquean la fila del aliado:** dos operaciones simultáneas no pueden gastar el mismo saldo.
 - **No dependen de quién llama:** el Hub, el panel, un webhook o un cron pasan por las mismas reglas.
-- **Se prueban con pgTAP** (unas 500 verificaciones entre todas las fases).
+- **Se prueban con pgTAP** (584 verificaciones en 16 suites).
 
 Las funciones de Vercel se encargan de lo que la base no puede hacer: verificar el token de sesión, hablar con Clientify, generar URLs firmadas y responder al navegador.
 
@@ -182,7 +185,7 @@ Las funciones de Vercel se encargan de lo que la base no puede hacer: verificar 
 
 Los cron frecuentes **no** dependen de Vercel Pro: el Hub los ejecuta desde Supabase (`pg_cron`), así que funcionan en cualquier plan de Vercel. El cron diario de Vercel es solo un respaldo.
 
-Hoy la cuenta está en **prueba de Pro** (quedaban 6 días al 29 de septiembre). Si la prueba termina sin pagar, la cuenta vuelve a Hobby: el sitio sigue funcionando mientras no se superen los límites, pero se pierde lo anterior.
+Al 2 de octubre de 2026 la cuenta está en **prueba de Pro**, que vence hacia el 5 de octubre (quedaban 6 días al 29 de septiembre); confirmar el estado en vercel.com. Si la prueba termina sin pagar, la cuenta vuelve a Hobby: el sitio sigue funcionando mientras no se superen los límites, pero se pierde lo anterior.
 
 ### 4.2 Supabase: Free frente a Pro
 
@@ -316,7 +319,7 @@ flowchart LR
     O4[Evento validado]
     O5[Racha 4x4]
     O6[Ajuste de admin]
-    O7[Canje del proveedor]
+    O7[Canje: QR o API del proveedor]
   end
   O1 & O2 & O3 & O4 & O5 & O6 & O7 --> INS[INSERT en movimientos_puntos<br/>con clave_unica]
   INS --> DUP{¿Clave ya existe?}
@@ -723,7 +726,7 @@ flowchart LR
 | `vinculo`, `vinculo_id` | Qué lo originó: `empresas`, `eventos`, `modulos_completados`, `racha`, `canjes` o `ajuste_admin`, y qué fila. |
 | `clave_unica` | Evita duplicados (p. ej. `empresa:{id}:calificado`). |
 | `fecha` | Cuándo se otorgó (define semanas, meses y la ventana de 6 meses). |
-| `creado_por` | `sistema`, `webhook_clientify`, `canjes_api` o `admin:{id}`. |
+| `creado_por` | `sistema`, `webhook_clientify`, `canjes_api`, `canjes_qr` o `admin:{id}`. |
 | `nota` | Detalle (justificación del ajuste, nombre de la recompensa…). |
 | `secuencia` | Orden exacto cuando dos movimientos tienen la misma hora. |
 
@@ -978,7 +981,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 | Etapa | Dónde ocurre | Con qué datos | Objetivo | Se cierra cuando… |
 |---|---|---|---|---|
-| **1. Pruebas de aceptación en dev** | Preview de Vercel (rama `fase-10-canjes`) + `aliados-dev` + Clientify con contactos `+prueba` | Datos de prueba, desechables | Comprobar con personas reales, de punta a punta, que todo funciona como el equipo espera | Todos los casos de la lista 10.1 pasan y los errores encontrados están corregidos |
+| **1. Pruebas de aceptación en dev** | Preview de Vercel (rama `correcciones-hub`) + `aliados-dev` + Clientify con contactos `+prueba` | Datos de prueba, desechables | Comprobar con personas reales, de punta a punta, que todo funciona como el equipo espera | Todos los casos de la lista 10.1 pasan y los errores encontrados están corregidos |
 | **2. Preparar producción** | `aliados-prod` + Vercel Production + dominio + Clientify | Ninguno todavía (base vacía) | Montar el mismo sistema ya probado, ahora en el entorno real | La configuración está completa y el primer admin entra al panel de producción |
 | **3. Piloto y apertura** | Producción | Datos reales | Confirmar que producción quedó bien conectada y abrir el registro | El piloto pasa y se comunica el enlace a los aliados |
 
@@ -990,12 +993,12 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 | Ya verificado | Cómo | Qué **no** cubre |
 |---|---|---|
-| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | Unas 500 pruebas pgTAP ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
-| Funciones `/api` | 67 pruebas automáticas con Supabase y Clientify simulados | Llamadas reales a Clientify y a Storage |
+| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 584 pruebas pgTAP en 16 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
+| Funciones `/api` | 95 pruebas de `npm test`: 72 con Supabase y Clientify simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
 | Pantallas del Hub y del panel | Pruebas en navegador con Supabase simulado | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
-| Correo propio (rama `config-smtp`): confirmación, recuperación de contraseña y aviso de cambio, con logos | Prueba real en el Preview con cuentas de Gmail, Outlook y del correo corporativo (2 oct 2026): llegaron a la bandeja de entrada, los enlaces funcionaron y la recuperación de contraseña entró al Hub | El volumen del lanzamiento (tope de Resend gratis: 100 correos al día) |
+| Correo propio (§5.9): confirmación, recuperación de contraseña y aviso de cambio, con logos | Prueba real en el Preview con cuentas de Gmail, Outlook y del correo corporativo (2 oct 2026): llegaron a la bandeja de entrada, los enlaces funcionaron y la recuperación de contraseña entró al Hub | El volumen del lanzamiento (tope de Resend gratis: 100 correos al día) |
 | Canje con QR (fase 11): invitar operadores, mostrar el QR, escanear, canjear, rechazos por nivel y saldo, anular | 79 pruebas pgTAP, pruebas en navegador con cámara simulada y una **prueba real con celulares Android e iPhone** en el Preview (1 oct 2026) | Operadores y catálogo reales; pruebas de capturas de pantalla y modo avión con más personas |
 
 **Conclusión:** cada pieza está probada por separado, pero **falta la prueba de punta a punta con personas y con Clientify real**. Eso es la etapa 1, y es lo siguiente que hay que hacer.
@@ -1004,7 +1007,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 **Preparación (una sola vez):**
 
-1. **Usar un Preview fijo.** Vercel da a cada rama una URL estable del tipo `https://<proyecto>-git-fase-10-canjes-<equipo>.vercel.app`. Esa URL es la que se usa en todos los pasos siguientes.
+1. **Usar un Preview fijo.** Vercel da a cada rama una URL estable del tipo `https://<proyecto>-git-correcciones-hub-<equipo>.vercel.app`. Esa URL es la que se usa en todos los pasos siguientes.
    *Por qué:* la URL de un despliegue concreto cambia en cada *push*; la de la rama no.
 2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`).
 3. **Vault de `aliados-dev`:** `clientify_sync_url` = `<URL del Preview>/api/cron/clientify`, y `vercel_bypass_secret` si el Preview está protegido.

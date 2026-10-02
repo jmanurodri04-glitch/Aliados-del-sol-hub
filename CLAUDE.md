@@ -634,7 +634,7 @@ Pasos:
 - Lo ignorado (contactos u oportunidades ajenos al programa) se procesa sin error y su payload se borra (`clientify_resultado_entidad(..., p_descartar => true)`).
 - **Diagnóstico:** `/api/cron/clientify-diagnostico` (con `CRON_SECRET`) devuelve solo nombres y estructura, sin datos personales: campos personalizados, etiquetas (paginadas), embudos, fases, los valores de Status en uso, la forma de contactos y oportunidades y la estructura de los últimos webhooks. Sirve para confirmar el mapeo y responder §14 (preguntas 1 y 2). Se llama con `select interno.invocar_cron_hub('clientify-diagnostico');`.
 
-**Conciliación nocturna** (Vercel Cron, 02:00 Bogotá; ver la implementación arriba): recorre los contactos y oportunidades modificados en Clientify en las últimas 48 h y reaplica el mismo proceso, que es idempotente. Así se cubren webhooks perdidos.
+**Conciliación nocturna** (Vercel Cron, 02:00 Bogotá): es la misma conciliación horaria descrita arriba (vuelve a encolar los referidos en curso, escanea todas las oportunidades y procesa las colas), como respaldo si `pg_cron` falla. El proceso es idempotente, así que repetirlo es inofensivo y cubre los webhooks perdidos.
 
 ### Mapeo Clientify → `avance_empresa` (decisión del equipo)
 
@@ -744,7 +744,7 @@ El número del prefijo de la fase (`"3. Diseño"` → 3) se guarda en `fase_opor
 - **Valor efectivo en las derivadas:** `fuera_perfil`, `integridad_informacion` y `oportunidad_tecnica = no` usan el valor vigente del Hub si ya es definitivo (p. ej. el `perfecto` de un referido del Hub); si no, el de Clientify. Con `calificado = no` y `perfecto` aún en `revision`, `fuera_perfil` queda en `revision`.
 - **Confirmado con el diagnóstico (fase 6):** estructura de contactos y oportunidades, códigos de Status, `status_desc`, `pipeline_desc`, `pipeline_stage_desc`, `amount`, `custom_fields` como `{field, value}`, etiquetas en minúscula (se comparan sin distinguir mayúsculas) y los campos del contacto que usa el formulario público ("Valor pagado en factura (COP / mes)", "Subsector Economico", ciudad en `addresses`). El lead scoring no viene en la API de contactos.
 - Los tres valores de la tabla D se calculan en el **escaneo horario** (`valoresDelReferido` en `avance.js`, `public.clientify_actualizar_valores`), porque es el único que ve todas las oportunidades de cada contacto; un evento suelto solo actualiza fase y estado. Si el escaneo no alcanzó a ver todas las oportunidades (más de 10 000), no borra valores.
-- **Racha:** la fase 6 ya guarda `fecha_calificado`; la actualización de la racha llega en la fase 7 y se reconstruirá desde esas fechas.
+- **Racha:** `aplicar_avance_clientify` guarda `fecha_calificado` y el movimiento `empresa_calificada` actualiza la racha con esa fecha (trigger `movimientos_puntos_racha`, fase 7; §5.2).
 
 ---
 
@@ -840,6 +840,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   9. panel admin y eventos;
   10. endpoint de canjes;
   11. canje con QR (**finalizada**, rama `fase-11-qr-canjes`).
+- **Ramas actuales:** `config-smtp` reúne las fases 1–11 y el correo propio (§10). Sobre ella, **`correcciones-hub`** reúne las correcciones previas a la etapa 1 de pruebas de aceptación (guía §10.1) y es la rama cuyo Preview se prueba. El despliegue a producción se trabaja aparte, en `despliegue-prod`.
 - **Migraciones con el conector de Supabase:** el conector corta los envíos grandes (~60 s) y pide una confirmación que no llega cuando el SQL contiene `delete`. En esos casos se aplica por partes o la persona pega el SQL en el *SQL Editor* de `aliados-dev`, y se registra en `supabase_migrations.schema_migrations` con la versión del nombre del archivo. Las pruebas pgTAP se corren en dev dentro de un bloque que termina con un error a propósito (así todo se deshace).
 - **Tests:** `npm run test:db` (pgTAP, base local con `npx supabase start`) y `npm test` (`node --test` de `/lib` y `/api`; las pruebas de integración se omiten si no están `PRUEBAS_SUPABASE_URL`, `PRUEBAS_SUPABASE_SECRET_KEY`, `PRUEBAS_SUPABASE_PUBLISHABLE_KEY` y `PRUEBAS_DB_URL`; corren en serie porque comparten la base local).
 - Incluir tests de las reglas críticas: idempotencia de puntos, límites de nivel, tope mensual de módulos, racha (incluido el reinicio y el bloqueo de 28 días), el cálculo de calidad con `revision` y el saldo con piso en 0 sin memoria (ejemplo +10, −30, +20 = 20).
@@ -928,3 +929,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.
 14. **Aviso de cuenta aprobada:** crear en Clientify o n8n la automatización que envía el correo cuando se crea el contacto del aliado (relacionada con la 13).
 15. **Logos de los correos en PNG:** hoy están en WebP en `geenera.com` y Outlook de escritorio para Windows no los muestra (se ve el texto alternativo).
+16. **Hub más ancho que el celular:** unos 616 px en una pantalla de 390 px, porque el menú lateral no se oculta (§9). Se puede desplazar hacia los lados; «Mi QR» ya se ajusta.
+17. **Secciones de demostración:** series por mes, pronóstico de desembolsos, distribución por ejecutivo y comisiones siguen con datos de demostración y la etiqueta "Demostración" hasta tener datos reales (§9).
+18. **Imágenes de las recompensas:** el catálogo `recompensas` aún no guarda imágenes ni logos.
+19. **Correo de `geenera.com` (área de TI):** Microsoft 365 no tiene la firma DKIM propia activada y el DMARC está en `p=none`. No afecta al Hub. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`.

@@ -10,7 +10,7 @@ Cuando un aliado viene por una recompensa, te muestra un **QR en su celular**. T
 2. Escribe tu contraseña (mínimo 8 caracteres), repítela y toca **«Guardar y entrar»**.
 3. Guarda la página en tu celular. Desde ahí entras siempre con tu correo y esa contraseña.
 
-El enlace sirve **una sola vez** y vence en **1 hora**. Si venció, pídele a GEENERA uno nuevo.
+El enlace sirve **una sola vez** y vence en **24 horas**. Si venció, pídele a GEENERA uno nuevo.
 
 ## Cada canje, paso a paso
 

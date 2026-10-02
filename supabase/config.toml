@@ -178,7 +178,7 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -230,7 +230,8 @@ max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# 24 h, igual que aliados-dev y aliados-prod (supabase/templates/README.md).
+otp_expiry = 86400
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
@@ -242,16 +243,24 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Plantillas en español (supabase/templates/README.md). Las mismas se pegan en el panel de dev y prod.
+[auth.email.template.confirmation]
+subject = "Confirma tu correo · Aliados del Sol"
+content_path = "./supabase/templates/confirmacion.html"
+
+[auth.email.template.recovery]
+subject = "Restablece tu contraseña · Aliados del Sol"
+content_path = "./supabase/templates/recuperacion.html"
+
+[auth.email.template.email_change]
+subject = "Confirma el cambio de correo · Aliados del Sol"
+content_path = "./supabase/templates/cambio_correo.html"
 
 # Uncomment to customize notification email template
-# [auth.email.notification.password_changed]
-# enabled = true
-# subject = "Your password has been changed"
-# content_path = "./supabase/templates/password_changed_notification.html"
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Tu contraseña cambió · Aliados del Sol"
+content_path = "./supabase/templates/contrasena_cambiada.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.

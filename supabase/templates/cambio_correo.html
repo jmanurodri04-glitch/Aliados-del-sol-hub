@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirma el cambio de correo</title>
+</head>
+<body style="margin:0;padding:0;background:#F4F3F0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F3F0;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:10px;border-top:4px solid #FFCA05;font-family:Arial,Helvetica,sans-serif;color:#1F1F23;">
+        <tr>
+          <td style="padding:28px 32px 8px;font-size:13px;letter-spacing:.04em;color:#6B6B72;">ALIADOS DEL SOL · GEENERA</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 32px 0;">
+            <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#1F1F23;">Confirma el cambio de correo</h1>
+            <p style="margin:0 0 14px;font-size:15px;line-height:1.6;">{{ if .Data.nombre_completo }}Hola, {{ .Data.nombre_completo }}:{{ else }}Hola:{{ end }}</p>
+            <p style="margin:0 0 14px;font-size:15px;line-height:1.6;">Recibimos una solicitud para cambiar el correo de tu cuenta en el Hub de Aliados del Sol de <b>{{ .Email }}</b> a <b>{{ .NewEmail }}</b>. Para aprobarlo, abre este enlace:</p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:12px 32px 20px;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 26px;background:#FFCA05;color:#1F1F23;font-size:15px;font-weight:bold;text-decoration:none;border-radius:8px;">Confirmar el cambio</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px;">
+            <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#6B6B72;">Enviamos este aviso a los dos correos y el cambio solo se aplica cuando se confirma en ambos. El enlace sirve una sola vez y vence en 24 horas. Si el botón no funciona, copia esta dirección en tu navegador:<br><span style="word-break:break-all;">{{ .ConfirmationURL }}</span></p>
+            <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#6B6B72;">Si no pediste este cambio, no abras el enlace y escríbenos a c.arenas@geenera.com.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 24px;border-top:1px solid #ECEAE6;font-size:12px;line-height:1.6;color:#8A8A90;">Este correo se envía automáticamente; no lo respondas.</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

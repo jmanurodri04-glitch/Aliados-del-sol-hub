@@ -383,7 +383,7 @@ function mostrarEnlace(r) {
   }
   pedir({
     titulo: 'Enlace para el operador',
-    texto: `Envíale este enlace a ${r.correo} por WhatsApp o correo. Al abrirlo crea su contraseña y queda en canje.html. Vence en 1 hora y sirve una sola vez; si vence, genera otro con «Nuevo enlace». Es personal: no lo compartas con nadie más.`,
+    texto: `Envíale este enlace a ${r.correo} por WhatsApp o correo. Al abrirlo crea su contraseña y queda en canje.html. Vence en 24 horas y sirve una sola vez; si vence, genera otro con «Nuevo enlace». Es personal: no lo compartas con nadie más.`,
     campos: [{ id: 'enlace', etiqueta: 'Enlace', tipo: 'texto', valor: r.enlace, soloLectura: true }],
     confirmar: 'Copiar enlace',
     accion: async () => {

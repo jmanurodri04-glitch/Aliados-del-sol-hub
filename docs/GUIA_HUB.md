@@ -379,7 +379,7 @@ sequenceDiagram
 | Un operador intenta canjear su propio QR | No se permite. |
 
 **Operadores.** Los invita un admin en el panel (pestaña **Operadores**) con correo, nombre y proveedor (`geenera` para el equipo propio).
-- El panel entrega un **enlace para copiar** y enviar por WhatsApp; no depende del correo. El enlace solo se usa cuando la persona crea su contraseña, así que la vista previa de WhatsApp no lo gasta. Sirve una vez y vence en 1 hora; si vence, se genera otro con **Nuevo enlace**.
+- El panel entrega un **enlace para copiar** y enviar por WhatsApp; no depende del correo. El enlace solo se usa cuando la persona crea su contraseña, así que la vista previa de WhatsApp no lo gasta. Sirve una vez y vence en 24 horas (vigencia de los enlaces de Supabase Auth, §10); si vence, se genera otro con **Nuevo enlace**.
 - Cada operador canjea solo las recompensas de su proveedor o las que son de todos.
 - Se puede **desactivar** (con motivo) y **reactivar**. Se puede **eliminar** solo si no ha registrado canjes; si ya registró alguno, solo se desactiva, para no perder quién los registró.
 - Los admins también pueden escanear.

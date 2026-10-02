@@ -26,7 +26,14 @@ const siguientePagina = (datos) => (datos && datos.next ? String(datos.next).rep
 const CLAVES_CATALOGO = ['id', 'name', 'label', 'field', 'content_type', 'model', 'type', 'field_type', 'choices', 'options',
   'pipeline', 'pipeline_desc', 'position', 'order', 'probability', 'slug', 'status', 'description'];
 // En contactos y oportunidades, claves cuyos valores son opciones de una lista y se pueden listar.
-const ENUMERABLES = /^tags$|(status|stage|pipeline|lifecycle|contact_type|contact_source|estado|fase)/;
+const ENUMERABLES = /^tags$|(status|stage|pipeline|lifecycle|contact_type|contact_source|estado|fase|^medium$|^channel$|type|tipo)/;
+
+// Campo "Tipo" del contacto (correcciones-hub): la lista de contactos no lo trae, así que se lee la ficha completa
+// de algunos contactos y se busca dónde está el valor "Aliados Estratégicos". Solo se devuelven rutas de claves y
+// valores de claves enumerables, nunca nombres, correos ni teléfonos.
+const VALOR_TIPO_BUSCADO = 'aliados estrategicos';
+const MAX_FICHAS = 25;
+const normalizar = (v) => String(v).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
 
 const tipo = (v) => (v === null ? 'null' : Array.isArray(v) ? 'lista' : typeof v === 'object' ? 'objeto' : typeof v);
 
@@ -94,10 +101,54 @@ async function muestra(clientify, ruta) {
   try {
     const datos = await clientify.leer(ruta);
     const lista = (datos && datos.results) || [];
-    return { ruta, total: datos && datos.count, estructura: estructura(lista[0]), valores: valoresDistintos(lista) };
+    return { ruta, total: datos && datos.count, estructura: estructura(lista[0]), valores: valoresDistintos(lista), lista };
   } catch (e) {
     return { ruta, error: e.status || e.message };
   }
+}
+
+/** Rutas de las claves cuyo valor es "Aliados Estratégicos" (los campos personalizados se nombran por su campo). */
+export function rutasConValor(valor, buscado = VALOR_TIPO_BUSCADO, ruta = '') {
+  if (valor == null) return [];
+  if (typeof valor !== 'object') return normalizar(valor) === buscado ? [ruta] : [];
+  if (Array.isArray(valor)) {
+    return valor.flatMap((x, i) => {
+      const nombre = x && typeof x === 'object' && (x.field ?? x.name) != null ? `[field=${x.field ?? x.name}]` : `[${i}]`;
+      return rutasConValor(x, buscado, `${ruta}${nombre}`);
+    });
+  }
+  return Object.entries(valor).flatMap(([k, v]) => rutasConValor(v, buscado, ruta ? `${ruta}.${k}` : k));
+}
+
+/**
+ * Lee la ficha completa de hasta MAX_FICHAS contactos (primero los que tienen etiquetas del programa) o del
+ * contacto indicado, y devuelve: las claves que la ficha trae y la lista no, dónde aparece "Aliados Estratégicos"
+ * y los valores distintos de las claves enumerables de la ficha.
+ */
+async function campoTipo(clientify, lista, contactoId) {
+  const delPrograma = (c) => (c.tags || []).some((t) => /aliad|^ads /i.test(String(t && typeof t === 'object' ? t.name : t)));
+  const ids = contactoId ? [contactoId]
+    : [...lista.filter(delPrograma), ...lista.filter((c) => !delPrograma(c))].map((c) => c.id).filter((id) => id != null).slice(0, MAX_FICHAS);
+  const clavesLista = new Set(lista[0] ? Object.keys(lista[0]) : []);
+  const fichas = [];
+  const errores = [];
+  for (const id of ids) {
+    try {
+      fichas.push(await clientify.leer(`/contacts/${encodeURIComponent(id)}/`));
+    } catch (e) {
+      errores.push(e.status || e.message);
+    }
+  }
+  const rutas = {};
+  for (const f of fichas) for (const r of rutasConValor(f)) rutas[r] = (rutas[r] || 0) + 1;
+  return {
+    fichas_leidas: fichas.length,
+    errores,
+    claves_solo_en_ficha: [...new Set(fichas.flatMap((f) => Object.keys(f || {})))].filter((k) => !clavesLista.has(k)),
+    estructura_ficha: estructura(fichas[0]),
+    rutas_con_aliados_estrategicos: rutas,
+    valores_ficha: valoresDistintos(fichas)
+  };
 }
 
 export default async function handler(req, res) {
@@ -113,8 +164,10 @@ export default async function handler(req, res) {
   const catalogos = {};
   for (const [nombre, rutas] of Object.entries(CATALOGOS)) catalogos[nombre] = await probar(clientify, rutas);
 
-  const contactos = await muestra(clientify, '/contacts/?page_size=100');
-  const oportunidades = await muestra(clientify, '/deals/?page_size=100');
+  const { lista: listaContactos = [], ...contactos } = await muestra(clientify, '/contacts/?page_size=100');
+  const { lista: _oportunidades, ...oportunidades } = await muestra(clientify, '/deals/?page_size=100');
+  const idContacto = /^\d{1,20}$/.test(String((req.query && req.query.contacto) || '')) ? String(req.query.contacto) : null;
+  contactos.tipo = await campoTipo(clientify, listaContactos, idContacto);
 
   const { data: eventos } = await supabase.from('webhook_eventos')
     .select('payload, entidad, accion, recibido_at').not('entidad', 'is', null).order('recibido_at', { ascending: false }).limit(3);

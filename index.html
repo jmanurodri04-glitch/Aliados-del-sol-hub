@@ -1110,9 +1110,13 @@
 </sc-if>
 
 <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
-<div style="display:grid;grid-template-columns:minmax(210px,250px) minmax(0,1fr);align-items:start;min-height:100vh">
+<div style="display:grid;grid-template-columns:{{ appCols }};align-items:start;min-height:100vh">
 
-  <aside style="position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:26px;padding:26px 18px 20px;overflow-y:auto;scrollbar-width:thin;min-height:0;border-right:1px solid var(--w-07,rgba(255,255,255,.07));background:linear-gradient(180deg,var(--w-022,rgba(255,255,255,.022)),var(--w-0,rgba(255,255,255,0)))">
+  <sc-if value="{{ appMenuOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeAppMenu }}" aria-hidden="true" style="position:fixed;inset:0;z-index:89;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);animation:riseIn 180ms ease both"></div>
+  </sc-if>
+
+  <aside aria-label="Menú del Hub" style="position:{{ asidePos }};top:0;left:0;z-index:90;width:{{ asideW }};box-sizing:border-box;height:100vh;height:100dvh;transform:{{ asideTf }};visibility:{{ asideVis }};transition:transform 240ms cubic-bezier(.22,.61,.36,1),visibility 240ms;display:flex;flex-direction:column;gap:26px;padding:26px 18px 20px;overflow-y:auto;scrollbar-width:thin;min-height:0;border-right:1px solid var(--w-07,rgba(255,255,255,.07));background:{{ asideBg }};box-shadow:{{ asideShadow }}">
     <div style="display:flex;flex-direction:column;gap:7px;padding:0 6px">
       <img src="assets/logo-aliados.png" alt="Aliados del Sol" style="width:140px;height:auto;display:block">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -1177,13 +1181,19 @@
     </div>
   </aside>
 
-  <main style="min-width:0;display:flex;flex-direction:column">
+  <main style="min-width:0;display:flex;flex-direction:column;overflow-x:clip">
     <header style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:14px clamp(16px,3.4vw,40px);border-bottom:1px solid var(--w-06,rgba(255,255,255,.06));background:var(--b-82,rgba(7,7,10,.82));backdrop-filter:blur(14px)">
+      <sc-if value="{{ appMovil }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ toggleAppMenu }}" aria-expanded="{{ appMenuExpanded }}" aria-label="Abrir el menú" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:9px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap"><span aria-hidden="true" style="font-size:16px;line-height:1">☰</span>Menú</button>
+      <img src="assets/logo-aliados.png" alt="Aliados del Sol" style="width:96px;height:auto;display:block">
+      </sc-if>
+      <sc-if value="{{ appEscritorio }}" hint-placeholder-val="{{ true }}">
       <div style="display:flex;align-items:center;gap:9px;flex:1;max-width:420px;padding:8px 13px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:9px;background:var(--w-03,rgba(255,255,255,.03))">
         <span style="width:11px;height:11px;border:1.5px solid var(--mut4,#6B6762);border-radius:50%;flex:none"></span>
         <input placeholder="Buscar empresa, oportunidad o beneficio" style="flex:1;border:none;outline:none;background:transparent;color:var(--fg,#F2F0EC);font-size:13.5px">
         <span style="font-size:11px;color:var(--mut5,#5A5651);border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:5px;padding:1px 5px">⌘K</span>
       </div>
+      </sc-if>
       <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
         <button onClick="{{ notifToast }}" style="position:relative;width:34px;height:34px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:9px;background:var(--w-025,rgba(255,255,255,.025));color:var(--t4,#A8A49E);font-size:13px;cursor:pointer;transition:border-color 180ms ease" style-hover="border-color:rgba(255,202,5,.3)">
           <span style="position:absolute;top:8px;right:9px;width:5px;height:5px;border-radius:50%;background:#F37920"></span>
@@ -1482,12 +1492,12 @@
                   </div>
                 </sc-for>
               </div>
-              <div style="display:flex;flex-direction:column;gap:0">
-                <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,.9fr);gap:12px;padding:0 4px 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut5,#5A5651)">
+              <div style="display:flex;flex-direction:column;gap:0;overflow-x:auto;scrollbar-width:thin">
+                <div style="display:grid;min-width:620px;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,.9fr);gap:12px;padding:0 4px 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut5,#5A5651)">
                   <span>Empresa</span><span>Valor estimado</span><span>Etapa</span><span title="{{ disbNote }}" style="cursor:help;border-bottom:1px dotted var(--w-30,rgba(255,255,255,.3));width:max-content">Fecha estimada de desembolso ⓘ</span><span>Estado</span>
                 </div>
                 <sc-for list="{{ disbRows }}" as="d" hint-placeholder-count="4">
-                  <div data-reveal="1" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,.9fr);gap:12px;align-items:center;padding:12px 4px;border-top:1px solid var(--w-06,rgba(255,255,255,.06));font-size:13.5px;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) {{ d.delay }},transform 820ms cubic-bezier(.22,.61,.36,1) {{ d.delay }}">
+                  <div data-reveal="1" style="display:grid;min-width:620px;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,.9fr);gap:12px;align-items:center;padding:12px 4px;border-top:1px solid var(--w-06,rgba(255,255,255,.06));font-size:13.5px;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) {{ d.delay }},transform 820ms cubic-bezier(.22,.61,.36,1) {{ d.delay }}">
                     <b style="font-weight:600;color:var(--fg,#F2F0EC);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.empresa }}</b>
                     <span style="color:var(--t2,#C9C5BE)">{{ d.valor }}</span>
                     <span style="display:inline-flex;align-self:center;justify-self:start;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:600;background:{{ d.stBg }};color:{{ d.stColor }}">{{ d.etapa }}</span>
@@ -1677,16 +1687,16 @@
       <sc-if value="{{ isDetalle }}" hint-placeholder-val="{{ false }}">
       <section data-screen-label="Detalle de oportunidad" style="animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
         <button onClick="{{ goOportunidades }}" style="margin:36px 0 20px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Oportunidades</button>
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding-bottom:30px">
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;align-items:center;gap:11px">
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:24px;padding-bottom:30px">
+          <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:11px">
               <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:99px;font-size:12px;font-weight:600;background:{{ sel.stBg }};color:{{ sel.stColor }}"><span style="font-size:9px">{{ sel.stGlyph }}</span>{{ sel.etapa }}</span>
               <span style="font-size:12.5px;color:var(--mut4,#6B6762)">Actualizada {{ sel.upd }}</span>
             </div>
             <h1 style="margin:0;font-size:clamp(27px,3.4vw,36px);font-weight:700;letter-spacing:-.025em">{{ sel.empresa }}</h1>
             <p style="margin:0;font-size:15px;color:var(--mut,#9A968F)">{{ sel.sector }} · {{ sel.ciudad }} · referida el {{ sel.fecha }}</p>
           </div>
-          <div style="display:flex;gap:10px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding:14px 18px;border:1px solid rgba(255,202,5,.25);border-radius:13px;background:rgba(255,202,5,.06)">
               <span style="font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold,#8E7A45)">Puntos generados</span>
               <span style="font-size:26px;font-weight:700;color:var(--y,#FFCA05);letter-spacing:-.02em">{{ sel.earned }}</span>
@@ -3929,7 +3939,7 @@ class Component extends DCLogic {
           else window.dispatchEvent(new CustomEvent('ads:referral', { detail: { datos: payload(), archivo: d.archivo || null } })); }
         else this.setState({ step: step + 1, refTried: false }); },
       prevStep: () => { if (step === 1) this.setState({ newOpen: false, refTried: false }); else this.setState({ step: step - 1, refTried: false }); },
-      openNew: () => this.setState({ newOpen: true, step: 1, done: false, refData: {}, refTried: false, refError: '', refResult: null, refSending: false }),
+      openNew: () => this.setState({ newOpen: true, appMenu: false, step: 1, done: false, refData: {}, refTried: false, refError: '', refResult: null, refSending: false }),
       resetNew: () => this.setState({ step: 1, done: false, refData: {}, refTried: false, refError: '', refResult: null, refSending: false })
     } };
   }
@@ -4033,10 +4043,12 @@ class Component extends DCLogic {
   componentDidMount() {
     this.measure = () => {
       const c = window.innerWidth < 1080;
+      const mv = window.innerWidth < 860; /* celular: el menú del Hub pasa a un panel que se abre con «☰ Menú» */
       const hdr = document.querySelector('header');
       const hdrH = hdr ? Math.round(hdr.getBoundingClientRect().height) : 0;
       const st = {};
       if (c !== this.state.compact) { st.compact = c; st.menuOpen = false; }
+      if (mv !== this.state.movil) { st.movil = mv; st.appMenu = false; }
       if (hdrH && hdrH !== this.state.hdrH) st.hdrH = hdrH;
       if (Object.keys(st).length) this.setState(st);
     };
@@ -4199,7 +4211,7 @@ class Component extends DCLogic {
   }
   mm(v) { return '$ ' + this.n(v) + ' MM'; }
 
-  go(route) { this.setState({ route, newOpen: false, levelUp: false, menuOpen: false, customize: false, acaRoute: route === 'academy' ? this.state.acaRoute : null, acaCourse: route === 'academy' ? this.state.acaCourse : null }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
+  go(route) { this.setState({ route, newOpen: false, levelUp: false, menuOpen: false, appMenu: false, customize: false, acaRoute: route === 'academy' ? this.state.acaRoute : null, acaCourse: route === 'academy' ? this.state.acaCourse : null }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
   ping(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
 
   /* Puntos de nivel (ventana móvil) y saldo disponible son conceptos distintos
@@ -4292,7 +4304,7 @@ class Component extends DCLogic {
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
     /* Fase 11: «Mi QR» abre el QR de canje (js/mi-qr.js) encima de la página; solo con sesión real. */
-    const abrirQR = () => window.dispatchEvent(new CustomEvent('ads:qr-abrir'));
+    const abrirQR = () => { this.setState({ appMenu: false }); window.dispatchEvent(new CustomEvent('ads:qr-abrir')); };
     if (real) nav.push({ label: 'Mi QR para canjear', go: abrirQR, bg: 'transparent', color: 'var(--y,#FFCA05)', fw: 600, dot: 'var(--y,#FFCA05)' });
 
     /* Catálogo real (fase 10): si GEENERA ya creó recompensas en el panel, reemplazan a las de demostración. */
@@ -4899,6 +4911,13 @@ class Component extends DCLogic {
       joinStepsOrg: ['GEENERA crea la organización', 'Invita al administrador', 'El administrador activa su cuenta', 'Invita a ejecutivos o miembros', 'Cada miembro recibe su perfil individual'].map((t, i) => ({ t, d: ['Por convenio con el equipo de Alianzas.', 'Un responsable autorizado por la entidad.', 'Enlace mágico u OTP por correo.', 'Desde su panel, sin intervención de GEENERA.', 'Código, enlace único y dashboard según su rol.'][i], mark: i === 0 ? '●' : '', ring: i === 0 ? 'var(--o,#F9A51A)' : 'var(--w-22,rgba(255,255,255,.22))', fill: 'transparent', color: i === 0 ? 'var(--fg,#F2F0EC)' : 'var(--t3,#B4B0A9)', line: i < 4 ? 'var(--w-10,rgba(255,255,255,.1))' : 'transparent' })),
       isPublic: PUB.indexOf(route) >= 0,
       navInline: !s.compact, navCompact: s.compact, menuOpen: s.compact && s.menuOpen,
+      appMovil: !!s.movil, appEscritorio: !s.movil, appMenuOpen: !!(s.movil && s.appMenu), appMenuExpanded: s.movil && s.appMenu ? 'true' : 'false',
+      appCols: s.movil ? 'minmax(0,1fr)' : 'minmax(210px,250px) minmax(0,1fr)',
+      asidePos: s.movil ? 'fixed' : 'sticky', asideW: s.movil ? 'min(290px,86vw)' : 'auto',
+      asideTf: s.movil && !s.appMenu ? 'translateX(-105%)' : 'none', asideVis: s.movil && !s.appMenu ? 'hidden' : 'visible',
+      asideBg: s.movil ? 'var(--bg,#07070A)' : 'linear-gradient(180deg,var(--w-022,rgba(255,255,255,.022)),var(--w-0,rgba(255,255,255,0)))',
+      asideShadow: s.movil && s.appMenu ? '0 0 60px -10px rgba(0,0,0,.8)' : 'none',
+      toggleAppMenu: () => this.setState({ appMenu: !s.appMenu }), closeAppMenu: () => this.setState({ appMenu: false }),
       menuLabel: s.menuOpen ? 'Cerrar' : 'Menú', menuExpanded: s.menuOpen ? 'true' : 'false',
       toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
       isHome: route === 'home', isPubOportunidades: route === 'p-oportunidades', isPubBeneficios: route === 'p-beneficios',

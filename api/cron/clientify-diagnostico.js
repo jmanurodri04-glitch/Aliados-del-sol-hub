@@ -164,7 +164,11 @@ export function resumenSondeo(s) {
     if (c.actions && typeof c.actions === 'object') {
       // OPTIONS de Django REST Framework: métodos de escritura con la definición de cada campo (sin datos).
       r.acciones = Object.fromEntries(Object.entries(c.actions).map(([m, campos]) => [m,
-        Object.fromEntries(Object.entries(campos || {}).map(([k, d]) => [k, { tipo: d && d.type, requerido: !!(d && d.required), solo_lectura: !!(d && d.read_only) }]))]));
+        Object.fromEntries(Object.entries(campos || {}).map(([k, d]) => [k, {
+          tipo: d && d.type, requerido: !!(d && d.required), solo_lectura: !!(d && d.read_only),
+          // Las opciones de un campo de lista son nombres del catálogo de Clientify (p. ej. sectores), no datos personales.
+          ...(d && Array.isArray(d.choices) ? { opciones: d.choices.slice(0, 60).map((o) => (o && typeof o === 'object' ? `${o.value} = ${o.display_name}` : String(o))) } : {})
+        }]))]));
     }
     if (Array.isArray(c.results)) { r.count = c.count ?? c.results.length; if (c.results[0]) r.estructura_item = estructura(c.results[0]); }
     else if (!r.acciones && !r.detalle) r.estructura = estructura(c);
@@ -174,7 +178,9 @@ export function resumenSondeo(s) {
   return r;
 }
 
-async function sondearArchivos(clientify, idEmpresa) {
+const MARCA_PRUEBA = '+prueba';
+
+async function sondearArchivos(clientify, idEmpresa, idContacto) {
   const id = encodeURIComponent(idEmpresa);
   const raiz = await clientify.sondear('GET', '/');
   const rutasRaiz = raiz.cuerpo && typeof raiz.cuerpo === 'object' && !Array.isArray(raiz.cuerpo) ? Object.keys(raiz.cuerpo) : null;
@@ -197,11 +203,32 @@ async function sondearArchivos(clientify, idEmpresa) {
     const ruta = url.slice(clientify.urlBase.length);
     const s = await clientify.sondear('GET', ruta);
     const o = await clientify.sondear('OPTIONS', ruta);
-    muro.push({ ruta: ruta.replace(/\d+/g, '{id}'), GET: resumenSondeo(s), OPTIONS: resumenSondeo(o) });
+    const c = s.cuerpo || {};
+    muro.push({ ruta: ruta.replace(/\d+/g, '{id}'), GET: resumenSondeo(s), OPTIONS: resumenSondeo(o),
+      // Cómo guarda Clientify un archivo subido a mano: tipo de la entrada, su texto (recortado) y la forma del enlace.
+      valores: { type: c.type ?? null, extra: typeof c.extra === 'string' ? c.extra.slice(0, 150) : null,
+        link: typeof c.link === 'string' ? c.link.replace(/\?.*$/, '?…').replace(/[A-Za-z0-9_-]{24,}/g, '…') : null } });
+  }
+
+  // Campos que aceptan los contactos y las empresas al crearse (tipo y opciones), para enviar cada dato donde va.
+  const campos = {};
+  for (const ruta of ['/contacts/', '/companies/']) campos[ruta] = resumenSondeo(await clientify.sondear('OPTIONS', ruta)).acciones || null;
+
+  // Cómo quedó la empresa en un contacto de prueba creado por el Hub (solo si su correo lleva +prueba).
+  let contactoPrueba = null;
+  if (idContacto) {
+    const s = await clientify.sondear('GET', `/contacts/${encodeURIComponent(idContacto)}/`);
+    const c = s.cuerpo || {};
+    const correos = [c.email, ...((c.emails || []).map((x) => (x && typeof x === 'object' ? x.email : x)))].filter(Boolean).map(String);
+    contactoPrueba = correos.some((x) => x.includes(MARCA_PRUEBA))
+      ? { status: s.status, ...Object.fromEntries(Object.entries(c).filter(([k]) => /company|address/i.test(k))) }
+      : { status: s.status, aviso: 'Solo se muestran contactos de prueba (correo con +prueba)' };
   }
   return {
     raiz: { status: raiz.status, rutas: rutasRaiz },
     muro: { tipo: tipo(empresa.cuerpo && empresa.cuerpo.wall_entries), cantidad: entradas.length, entradas: muro },
+    campos,
+    contacto_prueba: contactoPrueba,
     empresa: { status: empresa.status, claves: clavesEmpresa, claves_de_archivos: (clavesEmpresa || []).filter((k) => /file|document|attach|archivo/i.test(k)) },
     rutas
   };
@@ -219,7 +246,8 @@ export default async function handler(req, res) {
 
   const idEmpresa = String((req.query && req.query.archivos) || '');
   if (/^\d{1,20}$/.test(idEmpresa)) {
-    return res.status(200).json({ entorno: contexto.entorno, archivos: await sondearArchivos(clientify, idEmpresa) });
+    const idContacto = /^\d{1,20}$/.test(String((req.query && req.query.contacto) || '')) ? String(req.query.contacto) : null;
+    return res.status(200).json({ entorno: contexto.entorno, archivos: await sondearArchivos(clientify, idEmpresa, idContacto) });
   }
 
   const catalogos = {};

@@ -1080,6 +1080,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
    - El Preview está protegido por Vercel: antes de abrir el enlace de un correo, la persona debe abrir en ese mismo navegador el enlace para compartir del Preview (*Share*). Si no, el enlace del correo la lleva a iniciar sesión en Vercel. En producción no pasa, porque el dominio oficial es público.
 6. **Para probar desde celulares** (canje con QR): crear en Vercel un enlace para compartir del Preview (*Share*), porque el Preview pide iniciar sesión en Vercel; y en `aliados-dev` → Authentication → URL Configuration agregar en *Redirect URLs* `https://<URL del Preview>/**`, que necesitan los enlaces de invitación de operadores.
 7. **Cuentas de prueba:** usar correos con `+prueba` (p. ej. `nombre+prueba1@geenera.com`). Solo esos llegan a Clientify desde dev, con la etiqueta `PRUEBA HUB`. Conviene una cuenta EMI, una Financiero y una Agremiaciones.
+   **También el contacto de cada empresa referida** debe tener `+prueba` en su correo (p. ej. `contacto+prueba1@geenera.com`). Si no, el referido queda bien en el Hub (con sus puntos) pero no se envía a Clientify: queda con el error «solo se sincronizan contactos cuyo correo contenga +prueba». Es a propósito, para no crear contactos reales desde las pruebas.
 
 **Casos de prueba** (cada uno con su resultado esperado):
 

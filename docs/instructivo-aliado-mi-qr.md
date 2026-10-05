@@ -6,8 +6,8 @@ Con tu QR cambias tus **Puntos Sol** por una recompensa, en persona. Tú muestra
 
 ## Paso a paso
 
-1. **Entra al Hub** con tu correo y tu contraseña.
-2. Abre **«Mi QR para canjear»**. Lo encuentras en el menú, en la banda «Canjea con tu QR» de Beneficios o en el botón «Canjear con mi QR» de cada recompensa.
+1. **Entra al Hub** con tu correo y tu contraseña (marca la casilla «No soy un robot» si aparece).
+2. Abre **«Mi QR para canjear»**. Lo encuentras en el menú (en el celular, toca **«☰ Menú»** arriba a la izquierda), en la banda «Canjea con tu QR» de Beneficios o en el botón «Canjear con mi QR» de cada recompensa.
 3. **Muestra la pantalla** a la persona que te entrega la recompensa. Ella escanea el QR, elige la recompensa y la confirma.
 4. En tu celular aparece **«¡Canje registrado!»** con tus nuevos puntos disponibles. Listo.
 

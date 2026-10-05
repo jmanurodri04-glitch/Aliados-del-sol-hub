@@ -237,8 +237,9 @@ sequenceDiagram
   participant AD as Admin (panel)
   participant F as /api/cron/clientify
   participant CL as Clientify
-  V->>H: Llena "Quiero ser aliado"
-  H->>AU: signUp(correo, contraseña, datos)
+  V->>H: Llena "Quiero ser aliado" y el captcha
+  H->>AU: signUp(correo, contraseña, datos, token del captcha)
+  AU->>AU: verifica el captcha con Cloudflare
   AU->>DB: trigger handle_new_aliado
   DB->>DB: valida datos, crea aliado (pendiente),<br/>genera codigo_aliado, guarda consentimientos
   AU-->>V: Correo de confirmación
@@ -255,6 +256,8 @@ sequenceDiagram
 ```
 
 **Por qué así:** la contraseña la maneja solo Supabase Auth (nunca se guarda en las tablas). El aliado no se envía a Clientify al registrarse sino al aprobarse, para no llenar el CRM de solicitudes que se rechazarán. Si Clientify falla, ni el registro ni la aprobación fallan: queda en cola y se reintenta.
+
+**Captcha «No soy un robot»:** el registro, el login (del Hub, del panel y de canjes) y «¿Olvidaste tu contraseña?» llevan el mismo captcha de Cloudflare Turnstile que el formulario público. Aquí no lo verifica código propio: el Hub envía el token a Supabase Auth, que lo comprueba con la protección CAPTCHA de su panel (*Authentication → Attack Protection*). Frena los robots que crean cuentas falsas o prueban contraseñas. Crear la contraseña desde un enlace del correo no lo pide.
 
 **El «Tipo» en Clientify:** todo aliado llega con el Tipo de contacto **«Aliados Estratégicos»** (columna «tipo» al exportar), sea EMI, Linker, Financiero, Agremiaciones o Cliente Embajador, y también si ya existía en Clientify con otro Tipo. Así los flujos de Clientify pueden filtrar a los aliados, por ejemplo para el aviso de que su Hub está activo. Es distinto del tipo de aliado del Hub, que no cambia y sigue marcándose con las etiquetas «AdS …». Los referidos no llevan este Tipo.
 
@@ -501,7 +504,9 @@ Supabase Auth envía los correos de la cuenta por **SMTP propio** con **Resend**
 - **Logos:** el encabezado lleva los de Aliados del Sol y GEENERA, publicados en `geenera.com/wp-content/uploads/`. Si el lector bloquea imágenes, se ve su texto.
 - **El aviso de «tu cuenta fue aprobada» no lo envía Supabase.** Se hará con una automatización de Clientify o n8n que se dispara cuando el contacto del aliado se crea al aprobarlo (flujo A). Ver §11.
 
-**Configuración en cada proyecto de Supabase** (Authentication): SMTP (`smtp.resend.com`, puerto 465, usuario `resend`, contraseña = API key de Resend con permiso solo de envío), *URL Configuration*, *Email OTP Expiration* 86400, contraseña mínima de 8, límite de correos por hora y las cuatro plantillas. La lista paso a paso para `prod` está en §10.2, paso 3.
+- **Captcha antes de enviar correos:** registrarse y pedir «¿Olvidaste tu contraseña?» exigen el captcha (§5.1), así un robot no puede usar el Hub para mandar correos a direcciones ajenas ni gastar el límite de envío.
+
+**Configuración en cada proyecto de Supabase** (Authentication): SMTP (`smtp.resend.com`, puerto 465, usuario `resend`, contraseña = API key de Resend con permiso solo de envío), *URL Configuration*, *Email OTP Expiration* 86400, contraseña mínima de 8, límite de correos por hora, las cuatro plantillas y la protección CAPTCHA (*Attack Protection*, Turnstile). La lista paso a paso para `prod` está en §10.2, paso 3.
 
 ---
 
@@ -933,7 +938,7 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 - **RLS en las 23 tablas.** Un aliado solo puede **leer** sus propias filas. Las escrituras las hacen solo el servidor (clave secreta) o funciones controladas.
 - **Nunca se muestra el `id` interno.** Hacia afuera (Clientify, proveedores, pantalla) solo sale el `codigo_aliado`.
 - **Todo endpoint verifica la sesión y exige `estado = 'activo'`.** Las acciones de admin se verifican dos veces: en el endpoint y otra vez en la base.
-- **Límites anti-abuso:** 20 referidos por hora, 5 eventos por día y 30 canjes por hora por aliado. El formulario público además pide captcha y acepta 20 intentos por hora por conexión.
+- **Límites anti-abuso:** 20 referidos por hora, 5 eventos por día y 30 canjes por hora por aliado. El formulario público además pide captcha y acepta 20 intentos por hora por conexión. El registro, el login y «¿Olvidaste tu contraseña?» también piden captcha (lo verifica Supabase Auth).
 - **Las claves secretas nunca van en el código ni en los commits.** La API key de Resend (contraseña SMTP) vive solo en el panel de Supabase de cada proyecto; no es una variable de Vercel.
 - **Un celular pertenece a un solo aliado** (índice único): Clientify une en un contacto los que comparten celular.
 - **Una cuenta de admin solo usa el panel:** si entra por el login del Hub, se la envía a `admin.html`.
@@ -949,8 +954,8 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 | `CLIENTIFY_WEBHOOK_SECRET` | Token que Clientify y n8n envían al webhook. | **Nunca.** |
 | `CRON_SECRET` | Protege `/api/cron/*` (debe ser igual al `cron_secret` del Vault). | **Nunca.** |
 | `CANJES_API_KEYS` | `proveedor:key,proveedor:key` (keys de 24+ caracteres). | **Nunca.** |
-| `TURNSTILE_SITE_KEY` | Clave pública del captcha del formulario público (Cloudflare Turnstile). | Sí, por `/api/config`. |
-| `TURNSTILE_SECRET_KEY` | Clave secreta del captcha. Sin ella, en Production el formulario público no funciona. | **Nunca.** |
+| `TURNSTILE_SITE_KEY` | Clave pública del captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña. | Sí, por `/api/config`. |
+| `TURNSTILE_SECRET_KEY` | Clave secreta del captcha del formulario público. Sin ella, en Production ese formulario no funciona. La misma clave se pega en el panel de Supabase (*Attack Protection*) para el registro y el login; allí no es una variable de Vercel. | **Nunca.** |
 
 **Funciones de `/api` (12):**
 
@@ -981,6 +986,8 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Las cuentas de admin no se sincronizan con Clientify, y solo usan el panel: si entran al Hub se les envía a `admin.html`.
 - El celular es único por aliado: un registro con un celular ya usado se rechaza.
 - «¿Olvidaste tu contraseña?» en el Hub (y enlazado desde el panel y la página de canje). Al guardar la contraseña nueva se entra directo.
+- Captcha «No soy un robot» en el registro, en los tres logins (Hub, panel y canjes) y en «¿Olvidaste tu contraseña?», con la protección CAPTCHA de Supabase Auth y el mismo widget de Turnstile del formulario público.
+- En el celular (menos de 860 px) el menú del Hub es un panel que se abre con «☰ Menú».
 
 **Correo de las cuentas**
 - Proveedor: Resend, remitente `no-reply@notificaciones.geenera.com`, subdominio solo para enviar. No se tocó el SPF ni el DMARC de `geenera.com`.
@@ -1048,7 +1055,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 |---|---|---|
 | Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 628 pruebas pgTAP en 17 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
 | Funciones `/api` | 109 pruebas de `npm test`: 86 con Supabase, Clientify y el captcha simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
-| Pantallas del Hub y del panel (incluido el formulario público, oct 2026) | Pruebas en navegador con Supabase y el captcha simulados | Datos reales, correos reales, tiempos reales de los cron |
+| Pantallas del Hub y del panel (incluido el formulario público, el captcha del registro y los logins, y el Hub a 390 px de ancho, oct 2026) | Pruebas en navegador con Supabase y el captcha simulados | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
 | Correo propio (§5.9): confirmación, recuperación de contraseña y aviso de cambio, con logos | Prueba real en el Preview con cuentas de Gmail, Outlook y del correo corporativo (2 oct 2026): llegaron a la bandeja de entrada, los enlaces funcionaron y la recuperación de contraseña entró al Hub | El volumen del lanzamiento (tope de Resend gratis: 100 correos al día) |
@@ -1062,7 +1069,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 1. **Usar un Preview fijo.** Vercel da a cada rama una URL estable del tipo `https://<proyecto>-git-correcciones-hub-<equipo>.vercel.app`. Esa URL es la que se usa en todos los pasos siguientes.
    *Por qué:* la URL de un despliegue concreto cambia en cada *push*; la de la rama no.
-2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`) y las **claves de prueba** del captcha que publica Cloudflare (pasan siempre, en cualquier dominio): `TURNSTILE_SITE_KEY = 1x00000000000000000000AA` y `TURNSTILE_SECRET_KEY = 1x0000000000000000000000000000000AA`. Sin ellas el Preview muestra el formulario público sin captcha y el servidor lo omite.
+2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`) y las **claves de prueba** del captcha que publica Cloudflare (pasan siempre, en cualquier dominio): `TURNSTILE_SITE_KEY = 1x00000000000000000000AA` y `TURNSTILE_SECRET_KEY = 1x0000000000000000000000000000000AA`. Sin ellas el Preview no muestra ningún captcha y el servidor lo omite. **Después de un nuevo despliegue con esas variables**, en `aliados-dev` → Authentication → *Attack Protection* → *Enable CAPTCHA protection*: proveedor **Turnstile** y como *Secret key* la de prueba (`1x0000000000000000000000000000000AA`).
+   *Por qué en ese orden:* con la protección encendida, Supabase rechaza todo registro, login y recuperación sin captcha; si el Preview aún no tiene la site key, nadie podría entrar.
 3. **Vault de `aliados-dev`:** `clientify_sync_url` = `<URL del Preview>/api/cron/clientify`, y `vercel_bypass_secret` si el Preview está protegido.
    *Por qué:* los cron de dev llaman a esa URL. Si apunta a un Preview viejo, se prueba código viejo.
 4. **Webhook de oportunidades de Clientify:** apuntarlo a `<URL del Preview>/api/webhooks/clientify?token=<secreto de Preview>`.
@@ -1096,6 +1104,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 18 | Entrar al Hub con la cuenta de admin | Va directo a `admin.html` |
 | 19 | Sin iniciar sesión, referir una empresa en el formulario público con el correo de un aliado de prueba (con y sin factura) | Pide la casilla Ley 1581 y el captcha; «Referido recibido» con los puntos; la empresa aparece en el Hub de ese aliado y en Clientify con `ID_aliado` |
 | 20 | Repetir con un correo que no es de un aliado y con el correo de una cuenta pendiente | El primero: «Hubo un problema al registrar esta oportunidad…» y no se guarda nada. El pendiente: se registra y los puntos quedan retenidos hasta aprobarlo |
+| 21 | Registrarse, entrar (Hub, `admin.html` y `canje.html`) y pedir «¿Olvidaste tu contraseña?» sin marcar el captcha, y luego marcándolo | Sin marcarlo: «Confirma que no eres un robot y vuelve a intentarlo.» y no pasa nada más. Marcándolo: funciona como siempre |
+| 22 | Abrir el Hub en un celular (o con la ventana angosta) y navegar por todas las pantallas | No se desplaza hacia los lados; «☰ Menú» abre el menú y se cierra al elegir una opción o tocar fuera |
 
 **Quién hace qué:** el equipo ejecuta los casos como usuario (Hub, panel y Clientify). Claude verifica en `aliados-dev` que la base quedó como se esperaba, puede forzar la conciliación para no esperar una hora, y corrige cualquier error en una rama con su prueba.
 
@@ -1152,14 +1162,16 @@ El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resen
 - `CANJES_API_KEYS` cuando exista el proveedor;
 - `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget real de Cloudflare Turnstile (ver «Captcha» abajo). **Sin ellas el formulario público no funciona en Production.**
 
-**Captcha del formulario público (Cloudflare Turnstile), paso a paso:**
+**Captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña, paso a paso:**
 1. Entrar a dash.cloudflare.com con la cuenta de GEENERA (la misma de los DNS). Turnstile es gratis y no exige que el dominio esté en Cloudflare.
-2. Menú **Turnstile → Add widget**: nombre `Aliados del Sol · formulario público`; **Hostnames**: el dominio oficial del Hub (los subdominios quedan incluidos); **Widget mode: Managed** (muestra la casilla solo cuando hace falta); *Pre-clearance*: no.
+2. Menú **Turnstile → Add widget**: nombre `Aliados del Sol · Hub`; **Hostnames**: el dominio oficial del Hub (los subdominios quedan incluidos); **Widget mode: Managed** (muestra la casilla solo cuando hace falta); *Pre-clearance*: no.
 3. Al crearlo, Cloudflare muestra la **Site Key** (pública) y la **Secret Key** (secreta). La secreta no se pega en chats ni en archivos.
 4. Vercel → proyecto → *Settings → Environment Variables*, entorno **Production**: `TURNSTILE_SITE_KEY` = Site Key y `TURNSTILE_SECRET_KEY` = Secret Key (marcarla *Sensitive*). En **Preview**, las claves de prueba de Cloudflare (§10.1, paso 2).
 5. **Volver a desplegar** (las variables solo aplican a despliegues nuevos).
-6. Comprobar: `https://<dominio>/api/config` debe traer `turnstileSiteKey`; en el paso 2 del formulario aparece la casilla, y un referido de prueba termina en «Referido recibido».
-Si se cambia el dominio, se agrega en *Hostnames* del widget; si la Secret Key se expone, se rota en Cloudflare (*Rotate secret key*) y se actualiza en Vercel.
+6. Comprobar: `https://<dominio>/api/config` debe traer `turnstileSiteKey`; en el paso 2 del formulario aparece la casilla, y un referido de prueba termina en «Referido recibido». La casilla también aparece en el login y en «Quiero ser aliado».
+7. **Solo después del paso 6**, en `aliados-prod` → Authentication → *Attack Protection* → *Enable CAPTCHA protection*: proveedor **Turnstile** y como *Secret key* la misma Secret Key del widget. Guardar y comprobar que se puede entrar al panel marcando la casilla.
+   *Por qué en ese orden:* con la protección encendida, Supabase rechaza todo registro, login y recuperación sin captcha; si el sitio aún no muestra la casilla, nadie podría entrar (tampoco los admins).
+Si se cambia el dominio, se agrega en *Hostnames* del widget; si la Secret Key se expone, se rota en Cloudflare (*Rotate secret key*) y se actualiza en Vercel **y** en Supabase. Si algún día hay que apagar el captcha, primero se apaga en Supabase y después se quita la site key de Vercel.
 
 *Por qué:* separan el mundo real del de pruebas (§3.2), y los secretos que circularon por conversaciones deben rotarse.
 
@@ -1234,11 +1246,11 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (etapa 2, pasos 4 y 9). |
 | 7 | Secciones del Hub con datos de demostración (series por mes, pronóstico de desembolsos, comisiones). | Se mantienen con la etiqueta "Demostración" hasta tener datos reales. |
 | 8 | Imágenes y logos de las recompensas reales. | El catálogo aún no guarda imágenes. |
-| 9 | El Hub es más ancho que la pantalla del celular (unos 616 px en 390 px) porque el menú lateral no se oculta. | Se puede desplazar hacia los lados; «Mi QR» ya se ajusta a la pantalla. Pendiente de corregir. |
+| 9 | ~~El Hub es más ancho que la pantalla del celular.~~ | Resuelto (oct 2026): bajo 860 px el menú lateral es un panel que se abre con «☰ Menú» y nada se sale de la pantalla. |
 | 10 | Aviso por correo de «tu cuenta fue aprobada». | Decidido: una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A, al aprobarlo). Falta crearla; mientras tanto, avisar a mano. Se relaciona con el punto 3. |
 | 11 | Logos de los correos en PNG. | Hoy están en WebP en `geenera.com`, y Outlook de escritorio para Windows no muestra WebP (muestra el texto). Subir los PNG de `supabase/templates/img/` y cambiar la extensión en las plantillas. |
 | 12 | Endurecer el correo de `geenera.com` (área de TI). | Microsoft 365 no tiene activada la firma DKIM propia y el DMARC de `geenera.com` está en `p=none`. No afecta al Hub; conviene revisarlo con calma. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`. |
-| 13 | Claves del captcha del formulario público (Cloudflare Turnstile). | Pasos en §10.2, paso 4: widget real para el dominio oficial (Production) y claves de prueba de Cloudflare en Preview. Sin ellas el formulario público no funciona en Production. |
+| 13 | Claves del captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña. | Pasos en §10.2, paso 4: widget real para el dominio oficial (Production) y claves de prueba de Cloudflare en Preview; después, encender la protección CAPTCHA en cada proyecto de Supabase con la clave secreta del mismo widget. Sin ellas el formulario público no funciona en Production. |
 | 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`. |
 
 ---

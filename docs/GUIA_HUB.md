@@ -279,7 +279,7 @@ sequenceDiagram
   F2->>DB: registrar_oportunidad (una transacción)
   DB->>DB: límite 20/hora, valida campos, rechaza<br/>duplicados y autorreferidos, calcula es_perfecto
   DB->>DB: inserta empresa, factura y avance,<br/>+10 registro válido y +20 perfecto / −5 imperfecto
-  F2->>CL: empresa → contacto con ID_aliado y etiqueta<br/>perfecto/imperfecto → adjunta factura (mejor esfuerzo)
+  F2->>CL: empresa (sector, ciudad) → contacto con ID_aliado y etiqueta<br/>perfecto/imperfecto → enlace de la factura (mejor esfuerzo)
   F2-->>A: puntos confirmados y nivel
   Note over F2,CL: Si Clientify falla, queda en cola y el cron reintenta
 ```
@@ -314,6 +314,8 @@ sequenceDiagram
 - **Aliado pendiente o suspendido:** la empresa se registra y sus puntos quedan retenidos hasta que la cuenta esté activa.
 - **Protecciones:** captcha de Cloudflare Turnstile, máximo 20 intentos por hora por conexión (se guarda una huella, nunca la IP) y la respuesta no muestra el saldo ni el nivel del aliado.
 - **Etiquetas en Clientify:** como en el Hub, solo «Referido perfecto» o «Referido imperfecto». Los flujos de Clientify se disparan con «referido perfecto» y el imperfecto va a n8n.
+
+**La factura en Clientify (decisión del equipo, oct 2026):** la API de Clientify no permite subir archivos, así que el Hub deja en la descripción de la empresa un **enlace privado de descarga** que vale 180 días. Cualquiera que tenga el enlace puede abrir la factura, que trae datos personales del contacto. Por eso el equipo comercial **no debe copiarlo, reenviarlo ni pegarlo en otros lugares**: lo abre, descarga la factura y la guarda según la política de tratamiento de datos. La factura original sigue privada en el Hub.
 
 ### 5.3 Avance comercial desde Clientify (flujo C) y conciliación
 
@@ -706,7 +708,7 @@ flowchart LR
 | `nombre_archivo` | Nombre original del archivo. |
 | `fecha_carga` | Cuándo se subió. |
 | `validacion`, `aprobado` | Revisión de la factura por GEENERA (`pendiente`/`revisado`; `si`/`no`/`revision`). |
-| `clientify_subida_at` | Cuándo se adjuntó a la empresa en Clientify. |
+| `clientify_subida_at` | Cuándo se dejó el enlace de la factura en la empresa de Clientify. |
 
 #### `avance_empresa` — espejo del avance en Clientify (1 a 1 con `empresas`)
 
@@ -1002,7 +1004,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - "0. lead perdido" = revisión. La fase "7. Interesado No ahora" cuenta como propuesta.
 - Información falsa = etiquetas "fraude", "no existe" o "información de contacto errónea".
 - Valor cotizado = suma del importe de todas las oportunidades. Pipeline originado = suma de las cerradas.
-- La factura se adjunta a la **empresa** en Clientify, y la empresa se crea siempre.
+- La factura queda en la **empresa** en Clientify como un enlace privado de descarga de 180 días en su descripción, porque la API de Clientify no permite subir archivos (lo confirmó su soporte). La empresa se crea siempre, con sector y ciudad, y el contacto se vincula por su nombre.
 - Un contacto se refiere una sola vez (gana el primer aliado) y no se admite el autorreferido.
 - Los referidos solo llevan «Referido perfecto» o «Referido imperfecto» (los flujos de Clientify se disparan con «referido perfecto»; el imperfecto va a n8n). No llevan «aliado del sol hub» ni «aliados del sol».
 - El webhook de contactos sigue en n8n; al Hub llega el de oportunidades, más una conciliación horaria.
@@ -1088,7 +1090,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 |---|---|---|
 | 1 | Registrarse con cada tipo de aliado e intentar entrar antes de ser aprobado | "Tu solicitud está en revisión"; aparece en Solicitudes del panel |
 | 2 | Rechazar una solicitud y aprobar otra desde el panel | El rechazado ve "no fue aprobada"; el aprobado entra al Hub; en ≤ 2 min aparece como contacto en Clientify con `ID_aliado` y `PRUEBA HUB` |
-| 3 | Nueva oportunidad **perfecta** (10 campos + factura) y otra **imperfecta** | +30 (10 + 20) y +5 (10 − 5); en Clientify quedan la empresa con la factura adjunta y el contacto con la etiqueta correcta |
+| 3 | Nueva oportunidad **perfecta** (10 campos + factura) y otra **imperfecta** | +30 (10 + 20) y +5 (10 − 5); en Clientify quedan la empresa con su sector, ciudad y el enlace de la factura en la descripción, y el contacto vinculado a esa empresa (por su nombre) con `ID_aliado`, la etiqueta correcta, ciudad, subsector y valor de la factura |
 | 4 | Referir el mismo correo dos veces, y el propio correo del aliado | Rechazo por duplicado y por autorreferido; sin puntos |
 | 5 | En Clientify, pasar el contacto a "3. lead caliente" | En ≤ 1 h (o al forzar la conciliación): +30, calidad actualizada y Racha semana 1 |
 | 6 | Crear una oportunidad para ese contacto y moverla a Diseño → Presentación de oferta → Contrato | +30, +50, +150 en ≤ 2 min cada uno; el dashboard de Financieros muestra valor y kWp tras el escaneo horario |

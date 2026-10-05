@@ -203,7 +203,7 @@ nombre_archivo   text NOT NULL
 fecha_carga      timestamptz NOT NULL DEFAULT now()
 validacion       text NOT NULL DEFAULT 'pendiente'   -- pendiente | revisado
 aprobado         estado_triple NOT NULL DEFAULT 'revision'
-clientify_subida_at timestamptz NULL     -- cuándo se adjuntó a la empresa en Clientify
+clientify_subida_at timestamptz NULL     -- cuándo se dejó el enlace de la factura en la empresa de Clientify
 ```
 
 El bucket de Storage es **privado** y se accede con URLs firmadas de corta duración. Límite: 10 MB; tipos PDF, JPG y PNG (lo impone el bucket). No tiene políticas: el navegador sube con una URL firmada de un solo uso y solo el servidor lee.
@@ -604,16 +604,17 @@ Cuando el aliado edita su perfil, también se replica en Clientify.
 
 1. Crear el contacto (y la empresa, si aplica) con el campo personalizado `ID_aliado = codigo_aliado`.
 2. Poner la etiqueta **"Referido perfecto"** o **"Referido imperfecto"** según `es_perfecto`, para que Clientify continúe su proceso existente. El contacto entra con el Status inicial que use su flujo actual.
-3. La factura se **adjunta a la ficha de la empresa** en Clientify, donde el equipo ya guarda los documentos (decisión del equipo).
+3. La factura queda en la **ficha de la empresa** en Clientify como un **enlace privado de descarga de 180 días** en su descripción (decisión del equipo, oct 2026: la API de Clientify no permite subir archivos, lo confirmó su soporte). **El equipo no debe copiar ni compartir el enlace:** descarga la factura y la guarda con el cuidado que exige la política de datos.
 4. Guardar el **`ID` nativo del contacto** que devuelve Clientify en `clientify_contact_id`. Es el mismo "ID" que aparece al exportar leads, y no se necesita crear ningún campo adicional. La oportunidad la crea el equipo comercial más adelante; su id se captura por webhook.
 
 **Implementación (fase 5):**
-- La empresa **siempre** se crea (o se reutiliza si ya existe con el mismo nombre) y el contacto queda vinculado a ella (`company`), con `ID_aliado`, la etiqueta de perfecto/imperfecto y un resumen del referido en la descripción.
-- Orden: empresa → contacto → factura adjunta (`POST /companies/{id}/files/`). La factura va al final (correcciones-hub, oct 2026): en la primera prueba real Clientify respondió 403 al adjuntarla y, con el orden anterior, el contacto nunca se creaba; ahora un fallo del adjunto deja el contacto completo y el reintento solo repite la factura. La causa del 403 se averigua con `/api/cron/clientify-diagnostico?archivos=<id de empresa>` (solo GET/OPTIONS). Cada paso se guarda aunque el siguiente falle (`clientify_company_id`, `facturas.clientify_subida_at`, `clientify_contact_id`), así el reintento no duplica nada.
+- La empresa **siempre** se crea (o se reutiliza si ya existe con el mismo nombre; una que ya existía no se modifica, salvo agregar el enlace de la factura al final de su descripción). La nueva lleva `company_sector` (sector / subsector), la ciudad en `addresses` (`country: 'co'`) y el resumen del referido en `description`.
+- El contacto se vincula por el **nombre** de la empresa (`company` es texto: con la URL de la empresa, Clientify creaba otra empresa llamada como la URL, hallado en la prueba real). Lleva `ID_aliado`, la etiqueta de perfecto/imperfecto, `contact_sector`, la ciudad y los campos del antiguo formulario («Subsector Economico» y «Valor pagado en factura (COP / mes)»). Si Clientify rechaza la dirección o el sector (400), se crea sin ellos.
+- Orden: empresa → contacto → enlace de la factura. La factura va al final: en la primera prueba real (oct 2026) Clientify respondió 403 al adjuntarla y, con el orden anterior, el contacto nunca se creaba. El enlace es una URL firmada de Storage con descarga forzada (`enlazadorDeFacturas` en `cola.js`); el párrafo se marca con «Factura de energía del referido» para no repetirlo en un reintento. Cada paso se guarda aunque el siguiente falle (`clientify_company_id`, `clientify_contact_id`, `facturas.clientify_subida_at`), así el reintento no duplica nada. El diagnóstico `/api/cron/clientify-diagnostico?archivos=<id de empresa>&contacto=<id>` (solo GET/OPTIONS) muestra los campos que aceptan contactos y empresas.
 - Si el contacto ya existe en Clientify sin `ID_aliado`, se vincula a la empresa y recibe `ID_aliado` y etiquetas; si ya tiene **otro** `ID_aliado`, no se cambia la atribución: queda en `error` para revisión del equipo.
 - Cola en la base: `public.clientify_reclamar_empresas(limite, empresa)` y `public.clientify_registrar_resultado_empresa(...)`, con el mismo préstamo y backoff del flujo A; solo `service_role`. Las procesa el mismo cron `/api/cron/clientify`.
 - Fuera de Production aplica la misma regla: `PRUEBA HUB` y solo contactos con `+prueba` en el correo.
-- *Por confirmar con la API real:* los filtros `?email=` y `?name=`, el formato de `custom_fields`, el vínculo `company` y la subida multipart de archivos. Si difieren, se ajusta solo `lib/clientify/cliente.js`.
+- *Confirmado con la API real (oct 2026):* `custom_fields` como `{field, value}`, `company` del contacto como nombre y que no se pueden subir archivos. *Por confirmar:* que el contacto quede vinculado a la empresa creada por el Hub (y no a una nueva con el mismo nombre) y el formato de `addresses` al crear.
 
 **Evitar duplicados:** Clientify también dispara el webhook de "contacto creado" para este lead, y puede llegar **antes** de que el Hub guarde el `ID`. Por eso:
 
@@ -885,7 +886,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - El contacto del aliado en Clientify se crea cuando GEENERA aprueba la solicitud, no al registrarse (§3, §8 flujo A).
 - La Política de Tratamiento de Datos debe incluir la transferencia internacional (§11).
 - Un aliado suspendido (o pendiente) no gana ni pierde puntos: se retienen y se acreditan al reactivarse (§4.7).
-- La factura de una oportunidad se adjunta a la **empresa** en Clientify, y la empresa se crea siempre, vinculada al contacto (§8, flujo B).
+- La factura de una oportunidad queda en la **empresa** en Clientify como enlace privado de descarga de 180 días en su descripción (la API no permite subir archivos); el equipo descarga la factura y no comparte el enlace. La empresa se crea siempre, vinculada al contacto por su nombre (§8, flujo B).
 - Un contacto solo se refiere una vez (gana el primer aliado) y un aliado no puede referirse a sí mismo (§4.4, §7.2).
 - Máximo 20 referidos por hora por aliado (§7.2).
 - Un lead del formulario público de un aliado `pendiente` o `suspendido` se registra y sus puntos quedan retenidos hasta la reactivación (§7.1).
@@ -953,7 +954,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 4. ~~Iniciales: ¿ignorar partículas ("de", "la"…) y usar máximo 4 letras?~~ Resuelta: sí (§2, §13).
 5. ~~Financieros y Agremiaciones: ¿también participan en puntos y niveles? ¿Qué criterio define la distribución regional?~~ Resuelta: sí ven puntos y nivel; la distribución regional usa la ciudad de la empresa referida (§9).
 6. Sistema externo de canjes: quién lo opera. **Implementado del lado del Hub (fase 10):** API key por proveedor y catálogo en el panel (§4.10). **Fase 11:** el canje presencial ya funciona con QR y operadores, sin depender de un sistema externo. Pendiente: invitar a los operadores reales, cargar el catálogo real y, si un proveedor se integra por sistema, generar su key.
-7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: se adjunta a la ficha de la empresa (§8, flujo B).
+7. ~~Envío de la factura a Clientify: adjunto por API o enlace firmado.~~ Resuelta: enlace firmado de 180 días en la descripción de la empresa, porque la API no permite subir archivos (§8, flujo B).
 8. ~~¿Los Términos (dicen "EMI") aplican a todos los tipos?~~ Resuelta: sí, aplican a todos (§11).
 9. **Nueva versión de la Política de Tratamiento de Datos** (decidido agregar la transferencia internacional; pendiente de redacción final del equipo legal): transferencia internacional (Supabase en EE. UU. y Clientify), finalidades propias del programa de referidos y un canal concreto (correo) para consultas y reclamos. Al recibirla: subir el PDF con la fecha nueva en `assets/legal/`, actualizar `JOIN_CONFIG.legal` y `interno.version_politica_datos_vigente()` con una migración.
 14. **Aviso de cuenta aprobada:** crear en Clientify o n8n la automatización que envía el correo cuando se crea el contacto del aliado (relacionada con la 13).

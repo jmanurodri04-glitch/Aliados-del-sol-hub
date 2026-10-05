@@ -940,8 +940,8 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 11. ~~Etiqueta de aliado~~ Resuelta: "aliado del sol hub" (Cliente Embajador) y "aliados del sol" (§8, flujo A).
 12. ~~Leads del formulario público sin oportunidad~~ Ya no aplica para los nuevos: el formulario público es del Hub y registra la empresa al enviarlo (§7.1). El reenvío desde n8n solo haría falta si siguen llegando leads con `ID_aliado` por otra vía de Clientify.
 13. ~~Etiquetas del flujo A y B~~ Resuelta: los referidos solo llevan "Referido perfecto"/"Referido imperfecto" (los flujos se disparan con esas); el aliado conserva "aliados del sol"/"aliado del sol hub" y el Tipo "Aliados Estratégicos" (§8, §13).
-20. **Claves del captcha (Cloudflare Turnstile):** crear el widget en Cloudflare (dominio de producción y `*.vercel.app` para Preview) y poner `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Vercel. Sin ellas, en Production el formulario público no funciona (503).
-21. **`main` en producción tiene el formulario público sin lógica:** lo que se envía ahí hoy no se guarda en ninguna parte. Se corrige al publicar `correcciones-hub` (o, mientras tanto, volviendo a poner el formulario de Clientify en `main`).
+20. **Claves del captcha (Cloudflare Turnstile):** widget real (modo *Managed*) para el dominio oficial en Production y, en Preview, las claves de prueba de Cloudflare (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`, pasan siempre). Pasos en la guía §10.2, paso 4. Sin ellas, en Production el formulario público no funciona (503).
+21. **`main` en producción tiene el formulario público sin lógica:** lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`.
 
 **Generales:**
 

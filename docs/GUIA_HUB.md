@@ -1062,7 +1062,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 1. **Usar un Preview fijo.** Vercel da a cada rama una URL estable del tipo `https://<proyecto>-git-correcciones-hub-<equipo>.vercel.app`. Esa URL es la que se usa en todos los pasos siguientes.
    *Por qué:* la URL de un despliegue concreto cambia en cada *push*; la de la rama no.
-2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`) y las claves del captcha (`TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget de Cloudflare con el dominio `vercel.app`). Sin ellas el Preview muestra el formulario público sin captcha y el servidor lo omite.
+2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`) y las **claves de prueba** del captcha que publica Cloudflare (pasan siempre, en cualquier dominio): `TURNSTILE_SITE_KEY = 1x00000000000000000000AA` y `TURNSTILE_SECRET_KEY = 1x0000000000000000000000000000000AA`. Sin ellas el Preview muestra el formulario público sin captcha y el servidor lo omite.
 3. **Vault de `aliados-dev`:** `clientify_sync_url` = `<URL del Preview>/api/cron/clientify`, y `vercel_bypass_secret` si el Preview está protegido.
    *Por qué:* los cron de dev llaman a esa URL. Si apunta a un Preview viejo, se prueba código viejo.
 4. **Webhook de oportunidades de Clientify:** apuntarlo a `<URL del Preview>/api/webhooks/clientify?token=<secreto de Preview>`.
@@ -1150,7 +1150,16 @@ El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resen
 - `CLIENTIFY_API_KEY`;
 - `CLIENTIFY_WEBHOOK_SECRET` y `CRON_SECRET` **nuevos**, distintos de los de pruebas;
 - `CANJES_API_KEYS` cuando exista el proveedor;
-- `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget de Cloudflare Turnstile con el dominio oficial. **Sin ellas el formulario público no funciona en Production.**
+- `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget real de Cloudflare Turnstile (ver «Captcha» abajo). **Sin ellas el formulario público no funciona en Production.**
+
+**Captcha del formulario público (Cloudflare Turnstile), paso a paso:**
+1. Entrar a dash.cloudflare.com con la cuenta de GEENERA (la misma de los DNS). Turnstile es gratis y no exige que el dominio esté en Cloudflare.
+2. Menú **Turnstile → Add widget**: nombre `Aliados del Sol · formulario público`; **Hostnames**: el dominio oficial del Hub (los subdominios quedan incluidos); **Widget mode: Managed** (muestra la casilla solo cuando hace falta); *Pre-clearance*: no.
+3. Al crearlo, Cloudflare muestra la **Site Key** (pública) y la **Secret Key** (secreta). La secreta no se pega en chats ni en archivos.
+4. Vercel → proyecto → *Settings → Environment Variables*, entorno **Production**: `TURNSTILE_SITE_KEY` = Site Key y `TURNSTILE_SECRET_KEY` = Secret Key (marcarla *Sensitive*). En **Preview**, las claves de prueba de Cloudflare (§10.1, paso 2).
+5. **Volver a desplegar** (las variables solo aplican a despliegues nuevos).
+6. Comprobar: `https://<dominio>/api/config` debe traer `turnstileSiteKey`; en el paso 2 del formulario aparece la casilla, y un referido de prueba termina en «Referido recibido».
+Si se cambia el dominio, se agrega en *Hostnames* del widget; si la Secret Key se expone, se rota en Cloudflare (*Rotate secret key*) y se actualiza en Vercel.
 
 *Por qué:* separan el mundo real del de pruebas (§3.2), y los secretos que circularon por conversaciones deben rotarse.
 
@@ -1229,8 +1238,8 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 10 | Aviso por correo de «tu cuenta fue aprobada». | Decidido: una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A, al aprobarlo). Falta crearla; mientras tanto, avisar a mano. Se relaciona con el punto 3. |
 | 11 | Logos de los correos en PNG. | Hoy están en WebP en `geenera.com`, y Outlook de escritorio para Windows no muestra WebP (muestra el texto). Subir los PNG de `supabase/templates/img/` y cambiar la extensión en las plantillas. |
 | 12 | Endurecer el correo de `geenera.com` (área de TI). | Microsoft 365 no tiene activada la firma DKIM propia y el DMARC de `geenera.com` está en `p=none`. No afecta al Hub; conviene revisarlo con calma. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`. |
-| 13 | Claves del captcha del formulario público (Cloudflare Turnstile). | Crear el widget en Cloudflare (dominio oficial y `vercel.app`) y poner `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Vercel. Sin ellas el formulario público no funciona en Production. |
-| 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Se corrige al publicar `correcciones-hub`; mientras tanto, conviene volver a poner el formulario de Clientify en `main`. |
+| 13 | Claves del captcha del formulario público (Cloudflare Turnstile). | Pasos en §10.2, paso 4: widget real para el dominio oficial (Production) y claves de prueba de Cloudflare en Preview. Sin ellas el formulario público no funciona en Production. |
+| 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`. |
 
 ---
 

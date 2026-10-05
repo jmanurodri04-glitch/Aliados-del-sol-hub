@@ -161,7 +161,8 @@ Un trigger o CHECK valida que el perfil corresponda al `tipo_aliado`.
 ```
 id                     uuid PK                      -- ID_Empresa (interno)
 aliado_id              uuid FK aliados(id) NOT NULL
-origen                 text NOT NULL                -- 'hub' (Nueva oportunidad) | 'clientify_form' (Refiere tu empresa)
+origen                 text NOT NULL                -- 'hub' (registrada por el Hub) | 'clientify_form' (antiguo formulario de Clientify)
+canal                  text NULL                    -- solo origen 'hub': 'sesion' (Nueva oportunidad) | 'publico' (formulario público, §7.1)
 empresa                text NOT NULL
 sector                 text NOT NULL
 subsector              text NULL
@@ -185,7 +186,7 @@ created_at, updated_at timestamptz
 
 Un contacto solo puede referirse **una vez** en todo el programa: índice único `lower(correo)` (gana el primer aliado).
 
-Los leads del formulario público (`origen = 'clientify_form'`) pueden llegar sin empresa, sector, teléfono, correo o valor de la factura; para `origen = 'hub'` esos campos siguen siendo obligatorios (CHECK `empresas_campos_hub`).
+Los leads del antiguo formulario de Clientify (`origen = 'clientify_form'`) pueden llegar sin empresa, sector, teléfono, correo o valor de la factura; para `origen = 'hub'` esos campos siguen siendo obligatorios (CHECK `empresas_campos_hub`).
 
 **Referido perfecto:** los **10 campos** completos: empresa, sector, subsector, ciudad, nombre_contacto, cargo, telefono, correo, valor_factura y **factura adjunta**. `observaciones` no cuenta. Si falta alguno, `es_perfecto = false` (imperfecto).
 
@@ -511,9 +512,26 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 
 ## 7. Formularios de leads
 
-### 7.1 "Refiere tu empresa" (público, formulario **de Clientify**)
+### 7.1 "Referir una empresa" (público, sin sesión, formulario **del Hub**)
 
-- Ya existe y está configurado en Clientify, con sus etiquetas y su proceso. **No se modifica.**
+**Desde oct 2026 (decisión del equipo, rama `correcciones-hub`) el sitio público ya no usa el SuperForm de Clientify:** usa un formulario propio de 2 pasos, igual al de "Nueva oportunidad" (§7.2), que además pide el **email de quien refiere**. Objetivo: que toda empresa referida quede en el Hub relacionada con un aliado (no hay empresas sin aliado).
+
+- **Quién puede referir:** el correo debe ser de un aliado (`rol = 'aliado'`) `activo`, `pendiente` o `suspendido`. Activo: puntos normales; pendiente o suspendido: la empresa se registra y los puntos quedan **retenidos** (§4.7). Si el correo no existe, es de una cuenta rechazada o de un admin, **no se registra**. Solo se acepta el correo (no el celular), decisión del equipo.
+- **Mismas reglas del Hub:** campos obligatorios, referido perfecto (10 campos + factura), duplicados, autorreferido, 20 referidos por hora por aliado, declaración Ley 1581 (casilla obligatoria) y +10 / +20 o −5. Entra a Clientify por el **flujo B** (empresa, factura adjunta, contacto con `ID_aliado` y la etiqueta "Referido perfecto" o "Referido imperfecto"; **sin** "aliado del sol hub" ni "aliados del sol", decisión del equipo).
+- **Privacidad y abuso (sin sesión):**
+  - **Mensaje ambiguo:** un correo que no es de un aliado, una cuenta que no puede referir o un autorreferido responden lo mismo: «Hubo un problema al registrar esta oportunidad. Verifica los datos e intenta de nuevo.» No revela quién es aliado (decisión del equipo; lo mitiga, no lo elimina).
+  - **Captcha** («No soy un robot»): Cloudflare Turnstile, gratis y sin rastreo publicitario. Site key pública en `GET /api/config` (`TURNSTILE_SITE_KEY`) y verificación en el servidor con `TURNSTILE_SECRET_KEY`. Sin la clave secreta, en Production el formulario responde 503; en Preview/Development se omite.
+  - **Límite por conexión:** 20 intentos por hora (pedir la subida de la factura cuenta como uno), por la huella HMAC-SHA256 de la IP con `SUPABASE_SECRET_KEY`; la IP nunca se guarda (`referidos_publicos_intentos`, una fila por conexión, sin historial).
+  - La respuesta trae solo `{ es_perfecto, puntos, clientify }`: nunca el saldo, el nivel ni el código del aliado.
+- **Implementación (migración `referido_publico`):**
+  - `POST /api/oportunidades/factura` con `{ publico: true, captcha, nombre_archivo, tipo, tamano }`: cuenta el intento, verifica el captcha, da la URL firmada en **`publico/{empresa_id}/{archivo}`** (sin el id del aliado) y crea un permiso de un solo uso de 30 min (`referidos_publicos_permisos`). No pide el correo del aliado, así este paso no revela nada.
+  - `POST /api/oportunidades` con `{ publico: true, correo_aliado, captcha?, empresa_id, datos, factura? }`: cuenta el intento; sin factura verifica el captcha; llama a `public.registrar_oportunidad_publica(correo, empresa, datos, factura)`, que exige el permiso si hay factura y usa la misma lógica que el Hub (`interno.registrar_oportunidad_base`, canal `publico`). Errores `referidor_invalido`, `aliado_no_activo` y `autorreferido` → 422 con el mensaje ambiguo; `limite_referidos` → 429 genérico. Sigue siendo **12 funciones** de Vercel.
+  - Front: `js/supabase.js` responde `ads:referral-publico { datos, archivo?, correo_aliado }` → `ads:referral-publico-resultado { ok, mensaje?, es_perfecto?, puntos? }`; `js/captcha.js` pinta Turnstile en `[data-captcha-referido]` y lo reinicia tras cada envío.
+- `main` tenía el formulario sin lógica (subido a mano sobre una versión vieja de la página); se trajo a `correcciones-hub` sin su pantalla de recuperar contraseña ni su Academy (decisiones del equipo).
+
+**Antiguo formulario de Clientify** (lo que sigue describe el flujo C para los leads que ya existen o que lleguen con `ID_aliado` por otra vía):
+
+- Estaba configurado en Clientify, con sus etiquetas y su proceso.
 - Al llenarse, Clientify pone en el **referido** la etiqueta **"aliado del sol hub"** y "referido perfecto" o "referido imperfecto", dispara mensajes de WhatsApp y automatizaciones de n8n. El Hub lee esas etiquetas (el perfecto/imperfecto da +20/−5) pero **no** usa "aliado del sol hub" para reconocer aliados.
 - Los datos llegan a Clientify con `ID_aliado`. El Hub se entera por webhook (§8, flujo C):
   - crea la fila en `empresas` con `origen = 'clientify_form'` y en `avance_empresa`;
@@ -796,13 +814,13 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
   ```
 - **Registro de canjes (fase 11):** página separada `canje.html` para operadores y admins (§4.10). Las funciones del QR son las únicas que el navegador llama directamente con su sesión; cada una verifica al usuario.
 - Funciones de Vercel: con `/api/admin`, `/api/eventos` y `/api/canjes` son **12, el máximo del plan Hobby** (la fase 11 no agregó ninguna). Un endpoint nuevo exige unir funciones o pasar a Pro (el equipo planea pasar Vercel y Supabase a Pro; hoy Vercel está en prueba de Pro y Supabase en el plan gratuito).
-- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS` (`proveedor:key,proveedor:key`, §4.10), `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo). **Nunca** se escriben en el código ni en commits.
+- Variables de entorno en Vercel (sin prefijos, porque el sitio es estático): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (solo estas dos se exponen, vía `/api/config`), `SUPABASE_SECRET_KEY`, `CLIENTIFY_API_KEY`, `CLIENTIFY_WEBHOOK_SECRET`, `CANJES_API_KEYS` (`proveedor:key,proveedor:key`, §4.10), `CRON_SECRET` (protege `/api/cron/*`; Vercel Cron lo envía solo), `TURNSTILE_SITE_KEY` (pública, vía `/api/config`) y `TURNSTILE_SECRET_KEY` (captcha del formulario público, §7.1). **Nunca** se escriben en el código ni en commits.
   - **Production** apunta al proyecto `aliados-prod`; **Preview** y **Development** apuntan a `aliados-dev`.
   - `SUPABASE_PUBLISHABLE_KEY` es la *publishable key* (o la *anon key* legacy). `SUPABASE_SECRET_KEY` es la *secret key* (o la *service_role* legacy). **`SUPABASE_SECRET_KEY` solo se usa dentro de `/api`, jamás en el navegador.**
   - En local se usan con `vercel env pull .env.local`. Verifica que `.env*.local` esté en `.gitignore`.
 - **Clientify es uno solo para pruebas y producción.** Los contactos creados desde Preview o Development llevan además la etiqueta `PRUEBA HUB` y su correo debe contener `+prueba`, para poder identificarlos y borrarlos.
 - Nunca registrar en logs contraseñas, tokens ni datos personales completos.
-- Rate limiting en registro, login y `/api/oportunidades`.
+- Rate limiting en registro, login y `/api/oportunidades` (20 referidos por hora por aliado; el formulario público además tiene captcha y 20 intentos por hora por conexión, §7.1).
 
 **Correo de las cuentas (rama `config-smtp`, oct 2026):**
 - Supabase Auth envía por **SMTP propio con Resend** desde `Aliados del Sol · GEENERA <no-reply@notificaciones.geenera.com>`. El subdominio `notificaciones.geenera.com` solo envía: DKIM, SPF de rebotes (`send.notificaciones`) y DMARC propio en `p=none`, en Cloudflare (región de Resend `us-east-1`). **No se tocan** el SPF ni el DMARC de `geenera.com` (Microsoft 365 y Clientify/SparkPost). Sin seguimiento de clics ni aperturas.
@@ -907,6 +925,10 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - La recompensa la elige el operador al escanear; una por escaneo; el aliado no aprueba en su celular (mostrar el QR es su consentimiento) (§4.10).
 - El operador ve el nombre corto del aliado («Laura P.»), su código, nivel y saldo; nunca su correo ni su celular (§4.10).
 - Un operador se elimina solo si no registró canjes; si no, se desactiva (§4.10).
+- **Formulario público propio** en lugar del de Clientify: pide el correo de quien refiere y la empresa queda en el Hub de ese aliado; si el correo no es de un aliado, no se registra (§7.1).
+- Solo el correo identifica a quien refiere (no el celular); se acepta un aliado activo, pendiente o suspendido (estos dos con puntos retenidos) (§7.1).
+- El error del formulario público es ambiguo («Hubo un problema al registrar esta oportunidad…») para no revelar quién es aliado; lleva casilla Ley 1581 y captcha (§7.1).
+- Los referidos (Hub y formulario público) solo llevan "Referido perfecto" o "Referido imperfecto": los flujos de Clientify se disparan con "referido perfecto" y el imperfecto va a n8n (flujos de Valentina y Enrique); no llevan "aliado del sol hub" ni "aliados del sol" (§8, flujo B).
 
 ## 14. Preguntas abiertas
 
@@ -916,8 +938,10 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 2. ~~Campo "Potencia" y valores~~ Resuelta: "Potencia (kWp)" de la oportunidad y valor cotizado = "Importe" (`amount`). **Pendiente:** ¿qué campo es el "pipeline originado" (`valor_oportunidad`)?
 10. ~~¿Qué embudos cuentan?~~ Resuelta: todos los de proyectos (§8).
 11. ~~Etiqueta de aliado~~ Resuelta: "aliado del sol hub" (Cliente Embajador) y "aliados del sol" (§8, flujo A).
-12. Leads del formulario público sin oportunidad: plan de reenvío desde n8n definido (§8, flujo C); pendiente de implementarlo en n8n.
-13. **Etiquetas del flujo A y B:** si "aliado del sol hub" / "aliados del sol" van a disparar automatizaciones de *nuevo lead*, el contacto del **aliado** (flujo A) no debería llevarlas (hoy las lleva según §8, flujo A), y el **referido del Hub** (flujo B) sí debería llevar una. Pendiente de confirmar cuál.
+12. ~~Leads del formulario público sin oportunidad~~ Ya no aplica para los nuevos: el formulario público es del Hub y registra la empresa al enviarlo (§7.1). El reenvío desde n8n solo haría falta si siguen llegando leads con `ID_aliado` por otra vía de Clientify.
+13. ~~Etiquetas del flujo A y B~~ Resuelta: los referidos solo llevan "Referido perfecto"/"Referido imperfecto" (los flujos se disparan con esas); el aliado conserva "aliados del sol"/"aliado del sol hub" y el Tipo "Aliados Estratégicos" (§8, §13).
+20. **Claves del captcha (Cloudflare Turnstile):** crear el widget en Cloudflare (dominio de producción y `*.vercel.app` para Preview) y poner `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Vercel. Sin ellas, en Production el formulario público no funciona (503).
+21. **`main` en producción tiene el formulario público sin lógica:** lo que se envía ahí hoy no se guarda en ninguna parte. Se corrige al publicar `correcciones-hub` (o, mientras tanto, volviendo a poner el formulario de Clientify en `main`).
 
 **Generales:**
 

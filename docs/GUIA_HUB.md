@@ -33,7 +33,7 @@ Lo que puede hacer cada persona hoy:
 
 | Quién | Qué hace en el Hub |
 |---|---|
-| **Visitante** | Ve el sitio público, refiere una empresa por el formulario de Clientify ("Refiere tu empresa") y solicita ser aliado. |
+| **Visitante** | Ve el sitio público y solicita ser aliado. Puede referir una empresa en el formulario público **escribiendo el correo de un aliado**: la empresa queda en el Hub de ese aliado (§5.2). |
 | **Aliado pendiente** | Se registró y confirmó su correo, pero espera la aprobación de GEENERA. No entra al Hub. |
 | **Aliado activo** | Entra al Hub: registra oportunidades ("Nueva oportunidad") con factura, sigue el avance de sus referidos, ve su historial de puntos, su nivel, su Racha Solar, hace cursos en la Academy, reporta eventos, **muestra su QR para canjear** y ve sus canjes. |
 | **Admin (equipo GEENERA)** | Usa el panel `admin.html`: aprueba o rechaza solicitudes, suspende o reactiva cuentas, ajusta puntos, valida eventos, resuelve conflictos con Clientify, administra el catálogo de recompensas, **invita operadores** y anula canjes. También puede escanear QR. Todo queda auditado. |
@@ -56,7 +56,7 @@ Lo que puede hacer cada persona hoy:
 | **Vercel** | Publica el sitio (HTML/CSS/JS estático) y ejecuta las funciones de servidor de la carpeta `/api` (Node.js 22). Cada rama genera un despliegue de prueba (*Preview*); `main` genera Producción. También ejecuta un cron diario. | La interfaz y la lógica de integración. | vercel.com → proyecto → Settings |
 | **Supabase** (dos proyectos: `aliados-dev` y `aliados-prod`, región us-east-1) | Base de datos PostgreSQL, autenticación (usuarios y contraseñas), almacenamiento de archivos (facturas y registros de asistentes) y tareas programadas (`pg_cron`). Aquí viven las reglas de puntos, niveles y seguridad. | Aliados, credenciales, puntos, niveles, racha, módulos, eventos, canjes y la copia de trabajo de las empresas referidas. | supabase.com → proyecto |
 | **Clientify** (CRM) | Donde el equipo comercial trabaja los leads, las empresas y las oportunidades. El Hub le envía aliados y referidos y lee su avance (Status del contacto, fase de la oportunidad, etiquetas). | El proceso comercial. | Clientify → Configuración |
-| **n8n** | Automatizaciones existentes de GEENERA. Recibe el webhook de **contactos** de Clientify (no se cambió). Está planeada una rama que reenvíe al Hub los leads del formulario público. | Sus propios flujos. | Instancia n8n de GEENERA |
+| **n8n** | Automatizaciones existentes de GEENERA. Recibe el webhook de **contactos** de Clientify (no se cambió). La rama planeada para reenviar al Hub los leads del antiguo formulario de Clientify ya no hace falta para los nuevos referidos (el formulario público es del Hub). | Sus propios flujos. | Instancia n8n de GEENERA |
 
 ### Diagrama general de la arquitectura
 
@@ -155,7 +155,7 @@ Las reglas críticas (puntos, niveles, racha, límites, validaciones de admin) e
 - **Se ejecutan en una transacción:** o se hace todo (insertar el canje y descontar los puntos) o nada.
 - **Bloquean la fila del aliado:** dos operaciones simultáneas no pueden gastar el mismo saldo.
 - **No dependen de quién llama:** el Hub, el panel, un webhook o un cron pasan por las mismas reglas.
-- **Se prueban con pgTAP** (584 verificaciones en 16 suites).
+- **Se prueban con pgTAP** (628 verificaciones en 17 suites).
 
 Las funciones de Vercel se encargan de lo que la base no puede hacer: verificar el token de sesión, hablar con Clientify, generar URLs firmadas y responder al navegador.
 
@@ -281,6 +281,37 @@ sequenceDiagram
   Note over F2,CL: Si Clientify falla, queda en cola y el cron reintenta
 ```
 
+#### Referir desde el sitio público, sin cuenta (oct 2026)
+
+El sitio público ya no usa el formulario de Clientify. Tiene uno propio, igual al de «Nueva oportunidad», que además pide el **email de quien refiere**. Así toda empresa queda en el Hub relacionada con un aliado.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant V as Quien refiere (sitio público)
+  participant F1 as /api/oportunidades/factura
+  participant ST as Storage "facturas"
+  participant F2 as /api/oportunidades
+  participant DB as Base de datos
+  participant CL as Clientify
+  V->>V: llena los 2 pasos, la casilla Ley 1581<br/>y el captcha «No soy un robot»
+  opt Con factura
+    V->>F1: captcha + nombre, tipo y tamaño
+    F1->>DB: cuenta el intento de la conexión y crea un permiso de un solo uso
+    F1-->>V: URL firmada en publico/{empresa}/…
+    V->>ST: sube la factura
+  end
+  V->>F2: correo de quien refiere + datos (+ captcha si no hay factura)
+  F2->>DB: registrar_oportunidad_publica: busca al aliado por su correo<br/>y aplica las mismas reglas del Hub
+  F2->>CL: flujo B (empresa, factura, contacto con ID_aliado)
+  F2-->>V: «Referido recibido» y los puntos del aliado por este referido
+```
+
+- **Si el correo no es de un aliado**, no se registra. El mensaje es ambiguo («Hubo un problema al registrar esta oportunidad. Verifica los datos e intenta de nuevo.») para no revelar quién es aliado. Lo mismo si la cuenta fue rechazada, si es de un admin o si el aliado se refiere a sí mismo.
+- **Aliado pendiente o suspendido:** la empresa se registra y sus puntos quedan retenidos hasta que la cuenta esté activa.
+- **Protecciones:** captcha de Cloudflare Turnstile, máximo 20 intentos por hora por conexión (se guarda una huella, nunca la IP) y la respuesta no muestra el saldo ni el nivel del aliado.
+- **Etiquetas en Clientify:** como en el Hub, solo «Referido perfecto» o «Referido imperfecto». Los flujos de Clientify se disparan con «referido perfecto» y el imperfecto va a n8n.
+
 ### 5.3 Avance comercial desde Clientify (flujo C) y conciliación
 
 ```mermaid
@@ -295,7 +326,7 @@ flowchart TD
   Q --> R[Vuelve a consultar el contacto<br/>y sus oportunidades en Clientify]
   R --> E{¿Empresa conocida?}
   E -->|por clientify_contact_id| D[derivarAvance: Status → calificado,<br/>fase → técnica / propuesta / cierre,<br/>etiquetas → perfecto, información falsa]
-  E -->|no, pero tiene ID_aliado| L[Lead del formulario público:<br/>crea la empresa, +10 registro válido]
+  E -->|no, pero tiene ID_aliado| L[Lead creado en Clientify con ID_aliado:<br/>crea la empresa, +10 registro válido]
   E -->|no es del programa| X[Se ignora y se borra el payload]
   L --> D
   D --> AV[aplicar_avance_clientify:<br/>solo revision → si/no genera puntos;<br/>cambios sobre valores definitivos → conflicto]
@@ -559,6 +590,7 @@ flowchart LR
   MOD[/"modulos<br/>catálogo"/] --> MC
   REC[/"recompensas<br/>catálogo"/] --> CAN
   WH[["webhook_eventos<br/>auditoría · sin relaciones"]]
+  RPI[["referidos_publicos_intentos<br/>· permisos · sin relaciones"]]
   COLA[["clientify_cola_entidades<br/>cola · sin relaciones"]]
 ```
 
@@ -645,8 +677,9 @@ flowchart LR
 |---|---|
 | `id` | Llave interna de la empresa referida. |
 | `aliado_id` | Aliado que la refirió (siempre tomado de la sesión, nunca del formulario). |
-| `origen` | `hub` (Nueva oportunidad) o `clientify_form` (formulario público). |
-| `empresa`, `sector`, `subsector`, `ciudad` | Datos de la empresa. Obligatorios desde el Hub; pueden faltar si vienen del formulario público. |
+| `origen` | `hub` (registrada por el Hub) o `clientify_form` (antiguo formulario de Clientify). |
+| `canal` | Solo si `origen = hub`: `sesion` (Nueva oportunidad) o `publico` (formulario público del sitio). |
+| `empresa`, `sector`, `subsector`, `ciudad` | Datos de la empresa. Obligatorios desde el Hub (con sesión o formulario público); pueden faltar si vinieron del antiguo formulario de Clientify. |
 | `nombre_contacto`, `cargo`, `telefono`, `correo` | Contacto en la empresa. El correo es único en todo el programa: gana el primer aliado. |
 | `valor_factura` | Valor mensual de la factura de energía (COP). |
 | `observaciones` | Comentarios libres (no cuentan para "perfecto"). |
@@ -850,6 +883,15 @@ Cada código inexistente que prueba un operador (usuario y hora). Sirve para fre
 | `intentos`, `error` | Reintentos y último error. |
 | `actualizado_at` | Última actualización. |
 
+#### `referidos_publicos_intentos` y `referidos_publicos_permisos` — protección del formulario público
+
+| Tabla | Qué guarda |
+|---|---|
+| `referidos_publicos_intentos` | Una fila por conexión: `huella` (HMAC de la IP; la IP nunca se guarda), `ventana_inicio` e `intentos` de la hora en curso. Máximo 20 por hora. |
+| `referidos_publicos_permisos` | Permiso de un solo uso (`empresa_id`, `huella`, `vence_at` a los 30 min, `usado_at`) para registrar con factura, creado al verificar el captcha. |
+
+Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llaves foráneas: el permiso existe antes que la empresa.
+
 #### `acciones_admin` — auditoría del panel (solo inserción)
 
 | Columna | Qué representa |
@@ -873,7 +915,7 @@ Cada código inexistente que prueba un operador (usuario y hora). Sirve para fre
   - El navegador sube con una URL firmada de un solo uso y solo el servidor lee.
 - **Funciones principales:**
   - `handle_new_aliado`: registro.
-  - `registrar_oportunidad`: Nueva oportunidad.
+  - `registrar_oportunidad`: Nueva oportunidad; `registrar_oportunidad_publica`: formulario público (las dos usan `interno.registrar_oportunidad_base`).
   - `aplicar_avance_clientify`: flujo C.
   - `completar_modulo` y `otorgar_modulos_pendientes`: Academy.
   - `registrar_evento`: eventos.
@@ -888,10 +930,10 @@ Cada código inexistente que prueba un operador (usuario y hora). Sirve para fre
 
 **Principios:**
 
-- **RLS en las 21 tablas.** Un aliado solo puede **leer** sus propias filas. Las escrituras las hacen solo el servidor (clave secreta) o funciones controladas.
+- **RLS en las 23 tablas.** Un aliado solo puede **leer** sus propias filas. Las escrituras las hacen solo el servidor (clave secreta) o funciones controladas.
 - **Nunca se muestra el `id` interno.** Hacia afuera (Clientify, proveedores, pantalla) solo sale el `codigo_aliado`.
 - **Todo endpoint verifica la sesión y exige `estado = 'activo'`.** Las acciones de admin se verifican dos veces: en el endpoint y otra vez en la base.
-- **Límites anti-abuso:** 20 referidos por hora, 5 eventos por día y 30 canjes por hora por aliado.
+- **Límites anti-abuso:** 20 referidos por hora, 5 eventos por día y 30 canjes por hora por aliado. El formulario público además pide captcha y acepta 20 intentos por hora por conexión.
 - **Las claves secretas nunca van en el código ni en los commits.** La API key de Resend (contraseña SMTP) vive solo en el panel de Supabase de cada proyecto; no es una variable de Vercel.
 - **Un celular pertenece a un solo aliado** (índice único): Clientify une en un contacto los que comparten celular.
 - **Una cuenta de admin solo usa el panel:** si entra por el login del Hub, se la envía a `admin.html`.
@@ -907,13 +949,15 @@ Cada código inexistente que prueba un operador (usuario y hora). Sirve para fre
 | `CLIENTIFY_WEBHOOK_SECRET` | Token que Clientify y n8n envían al webhook. | **Nunca.** |
 | `CRON_SECRET` | Protege `/api/cron/*` (debe ser igual al `cron_secret` del Vault). | **Nunca.** |
 | `CANJES_API_KEYS` | `proveedor:key,proveedor:key` (keys de 24+ caracteres). | **Nunca.** |
+| `TURNSTILE_SITE_KEY` | Clave pública del captcha del formulario público (Cloudflare Turnstile). | Sí, por `/api/config`. |
+| `TURNSTILE_SECRET_KEY` | Clave secreta del captcha. Sin ella, en Production el formulario público no funciona. | **Nunca.** |
 
 **Funciones de `/api` (12):**
 
 | Función | Uso |
 |---|---|
 | `config` | Configuración pública. |
-| `oportunidades/factura` y `oportunidades` | Nueva oportunidad. |
+| `oportunidades/factura` y `oportunidades` | Nueva oportunidad y formulario público (`publico: true`). |
 | `modulos` | Academy. |
 | `eventos` | Reportar eventos. |
 | `admin` | Acciones del panel. |
@@ -953,6 +997,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Valor cotizado = suma del importe de todas las oportunidades. Pipeline originado = suma de las cerradas.
 - La factura se adjunta a la **empresa** en Clientify, y la empresa se crea siempre.
 - Un contacto se refiere una sola vez (gana el primer aliado) y no se admite el autorreferido.
+- Los referidos solo llevan «Referido perfecto» o «Referido imperfecto» (los flujos de Clientify se disparan con «referido perfecto»; el imperfecto va a n8n). No llevan «aliado del sol hub» ni «aliados del sol».
 - El webhook de contactos sigue en n8n; al Hub llega el de oportunidades, más una conciliación horaria.
 - Los eventos de webhook ajenos al programa se borran al procesarlos. El resto se vacía a los 90 días.
 - Un cambio de Clientify sobre un valor definitivo queda como conflicto para un admin.
@@ -966,6 +1011,11 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Racha: cuenta la fecha de calificación; se reinicia el lunes después de completarla; lo retenido no cuenta.
 - Módulos: cada uno vale lo que diga el catálogo; tope de 20 puntos al mes, sin partir módulos y en orden de llegada.
 - Máximo 20 referidos por hora.
+
+**Formulario público**
+- Reemplaza al de Clientify. Pide el correo de quien refiere (solo correo, no celular) y la empresa queda en el Hub de ese aliado. Si el correo no es de un aliado, no se registra.
+- Se acepta un aliado activo, pendiente o suspendido (los dos últimos con los puntos retenidos).
+- El error es ambiguo para no revelar quién es aliado. Lleva la casilla Ley 1581 y captcha.
 
 **Hub, panel y canjes**
 - Financieros y Agremiaciones también ven sus puntos y su nivel. Agremiaciones agrupan por la ciudad de la empresa referida.
@@ -996,9 +1046,9 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 | Ya verificado | Cómo | Qué **no** cubre |
 |---|---|---|
-| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 584 pruebas pgTAP en 16 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
-| Funciones `/api` | 95 pruebas de `npm test`: 72 con Supabase y Clientify simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
-| Pantallas del Hub y del panel | Pruebas en navegador con Supabase simulado | Datos reales, correos reales, tiempos reales de los cron |
+| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 628 pruebas pgTAP en 17 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
+| Funciones `/api` | 109 pruebas de `npm test`: 86 con Supabase, Clientify y el captcha simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
+| Pantallas del Hub y del panel (incluido el formulario público, oct 2026) | Pruebas en navegador con Supabase y el captcha simulados | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
 | Correo propio (§5.9): confirmación, recuperación de contraseña y aviso de cambio, con logos | Prueba real en el Preview con cuentas de Gmail, Outlook y del correo corporativo (2 oct 2026): llegaron a la bandeja de entrada, los enlaces funcionaron y la recuperación de contraseña entró al Hub | El volumen del lanzamiento (tope de Resend gratis: 100 correos al día) |
@@ -1012,7 +1062,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 1. **Usar un Preview fijo.** Vercel da a cada rama una URL estable del tipo `https://<proyecto>-git-correcciones-hub-<equipo>.vercel.app`. Esa URL es la que se usa en todos los pasos siguientes.
    *Por qué:* la URL de un despliegue concreto cambia en cada *push*; la de la rama no.
-2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`).
+2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`) y las claves del captcha (`TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget de Cloudflare con el dominio `vercel.app`). Sin ellas el Preview muestra el formulario público sin captcha y el servidor lo omite.
 3. **Vault de `aliados-dev`:** `clientify_sync_url` = `<URL del Preview>/api/cron/clientify`, y `vercel_bypass_secret` si el Preview está protegido.
    *Por qué:* los cron de dev llaman a esa URL. Si apunta a un Preview viejo, se prueba código viejo.
 4. **Webhook de oportunidades de Clientify:** apuntarlo a `<URL del Preview>/api/webhooks/clientify?token=<secreto de Preview>`.
@@ -1032,7 +1082,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 5 | En Clientify, pasar el contacto a "3. lead caliente" | En ≤ 1 h (o al forzar la conciliación): +30, calidad actualizada y Racha semana 1 |
 | 6 | Crear una oportunidad para ese contacto y moverla a Diseño → Presentación de oferta → Contrato | +30, +50, +150 en ≤ 2 min cada uno; el dashboard de Financieros muestra valor y kWp tras el escaneo horario |
 | 7 | Devolver el contacto a "no calificado" | No cambian los puntos; aparece un conflicto en el panel. Resolverlo con y sin ajuste |
-| 8 | Llenar el formulario público "Refiere tu empresa" con el `ID_aliado` de prueba y crearle una oportunidad | La empresa aparece en el Hub del aliado con +10 |
+| 8 | Crear directamente en Clientify un contacto `+prueba` con el `ID_aliado` de prueba y crearle una oportunidad (camino del antiguo formulario de Clientify) | La empresa aparece en el Hub del aliado con +10 |
 | 9 | Completar cursos de la Academy hasta pasar 20 puntos en el mes | Solo 20 puntos otorgados; el resto queda "pendiente" |
 | 10 | Reportar un evento que cumple y otro que no; validar y rechazar | +100 solo al que cumple; el aliado ve el motivo del rechazo |
 | 11 | Crear recompensas en el panel y canjear con la key de prueba (Claude da el comando) | Descuenta saldo, no nivel; una referencia repetida no descuenta dos veces; la anulación devuelve el saldo |
@@ -1044,6 +1094,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 16 | «¿Olvidaste tu contraseña?» con una cuenta activa y con una pendiente | Llega «Restablece tu contraseña»; la activa entra al Hub y la pendiente ve «Tu solicitud está en revisión»; llega «Tu contraseña cambió» |
 | 17 | Registrarse con un celular que ya tiene otro aliado | Se rechaza el registro y no queda ninguna cuenta creada |
 | 18 | Entrar al Hub con la cuenta de admin | Va directo a `admin.html` |
+| 19 | Sin iniciar sesión, referir una empresa en el formulario público con el correo de un aliado de prueba (con y sin factura) | Pide la casilla Ley 1581 y el captcha; «Referido recibido» con los puntos; la empresa aparece en el Hub de ese aliado y en Clientify con `ID_aliado` |
+| 20 | Repetir con un correo que no es de un aliado y con el correo de una cuenta pendiente | El primero: «Hubo un problema al registrar esta oportunidad…» y no se guarda nada. El pendiente: se registra y los puntos quedan retenidos hasta aprobarlo |
 
 **Quién hace qué:** el equipo ejecuta los casos como usuario (Hub, panel y Clientify). Claude verifica en `aliados-dev` que la base quedó como se esperaba, puede forzar la conciliación para no esperar una hora, y corrige cualquier error en una rama con su prueba.
 
@@ -1061,14 +1113,14 @@ Pasar Vercel a Pro. Crear una organización de Supabase en Pro para `aliados-pro
 *Por qué:* Vercel Hobby no permite uso comercial, y Supabase Free pausa el proyecto con poca actividad y no ofrece copias de seguridad descargables.
 
 **Paso 2 — Crear el esquema en `aliados-prod`.**
-Aplicar en orden las migraciones de `supabase/migrations/` (hoy 26). Lo recomendado es la Supabase CLI desde un computador del equipo:
+Aplicar en orden las migraciones de `supabase/migrations/` (hoy 27). Lo recomendado es la Supabase CLI desde un computador del equipo:
 1. `npx supabase login`
 2. `npx supabase link --project-ref pysyxycrybayhrescplc`
 3. `npx supabase db push`
 
 Luego verificar:
 - que las extensiones `pg_cron`, `pg_net` y Vault estén activas;
-- que se vean las 21 tablas y los 7 cron jobs;
+- que se vean las 23 tablas y los 7 cron jobs;
 - que el *Security Advisor* no muestre alertas nuevas.
 
 *Por qué:* las migraciones son la receta exacta ya probada en dev. Claude no toca `prod` directamente, por decisión del equipo.
@@ -1097,7 +1149,8 @@ El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resen
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` y `SUPABASE_SECRET_KEY` de `aliados-prod`;
 - `CLIENTIFY_API_KEY`;
 - `CLIENTIFY_WEBHOOK_SECRET` y `CRON_SECRET` **nuevos**, distintos de los de pruebas;
-- `CANJES_API_KEYS` cuando exista el proveedor.
+- `CANJES_API_KEYS` cuando exista el proveedor;
+- `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget de Cloudflare Turnstile con el dominio oficial. **Sin ellas el formulario público no funciona en Production.**
 
 *Por qué:* separan el mundo real del de pruebas (§3.2), y los secretos que circularon por conversaciones deben rotarse.
 
@@ -1122,7 +1175,7 @@ Crear:
 
 **Paso 9 — Webhooks.**
 - En Clientify, crear o cambiar el webhook de oportunidades de producción: `https://<dominio>/api/webhooks/clientify?token=<secreto de producción>`. Si se quiere seguir probando en dev, conservar aparte el del Preview.
-- En n8n, agregar la rama que reenvía al Hub los leads del formulario público (`CLAUDE.md` §8).
+- En n8n, la rama que reenvía al Hub los leads con `ID_aliado` (`CLAUDE.md` §8) ya es opcional: el formulario público es del Hub.
 
 **Paso 10 — Primer admin en producción.**
 1. La persona se registra en el sitio oficial y confirma su correo.
@@ -1165,8 +1218,8 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | # | Tema | Estado |
 |---|---|---|
 | 1 | Canjes: quién entrega cada recompensa y qué recompensas habrá. | El Hub ya está listo: API por proveedor (fase 10) y canje con QR presencial (fase 11). Falta cargar el catálogo real, invitar a los operadores reales y, si un proveedor se integra por sistema, generar su key. |
-| 2 | Rama de n8n para reenviar los leads del formulario público. | Plan definido (`CLAUDE.md` §8); falta implementarla en n8n. |
-| 3 | Etiquetas de los flujos A y B: ¿el contacto del aliado debe llevar "aliados del sol"/"aliado del sol hub" si esas etiquetas disparan automatizaciones de "nuevo lead"? | Por confirmar con el equipo comercial. |
+| 2 | Rama de n8n para reenviar los leads del formulario público. | Ya no hace falta para los nuevos: el formulario público es del Hub (§5.2). Solo serviría si llegan leads con `ID_aliado` por otra vía de Clientify. |
+| 3 | Etiquetas de los flujos A y B. | Resuelto: los referidos solo llevan «Referido perfecto»/«Referido imperfecto»; el aliado lleva «aliados del sol»/«aliado del sol hub» y el Tipo «Aliados Estratégicos». |
 | 4 | Nueva versión de la Política de Tratamiento de Datos (transferencia internacional, finalidades y canal de reclamos). | Pendiente de redacción legal. |
 | 5 | Política de beneficios (se incluirá en los Términos). | Pendiente. |
 | 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (etapa 2, pasos 4 y 9). |
@@ -1176,6 +1229,8 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 10 | Aviso por correo de «tu cuenta fue aprobada». | Decidido: una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A, al aprobarlo). Falta crearla; mientras tanto, avisar a mano. Se relaciona con el punto 3. |
 | 11 | Logos de los correos en PNG. | Hoy están en WebP en `geenera.com`, y Outlook de escritorio para Windows no muestra WebP (muestra el texto). Subir los PNG de `supabase/templates/img/` y cambiar la extensión en las plantillas. |
 | 12 | Endurecer el correo de `geenera.com` (área de TI). | Microsoft 365 no tiene activada la firma DKIM propia y el DMARC de `geenera.com` está en `p=none`. No afecta al Hub; conviene revisarlo con calma. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`. |
+| 13 | Claves del captcha del formulario público (Cloudflare Turnstile). | Crear el widget en Cloudflare (dominio oficial y `vercel.app`) y poner `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` en Vercel. Sin ellas el formulario público no funciona en Production. |
+| 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Se corrige al publicar `correcciones-hub`; mientras tanto, conviene volver a poner el formulario de Clientify en `main`. |
 
 ---
 

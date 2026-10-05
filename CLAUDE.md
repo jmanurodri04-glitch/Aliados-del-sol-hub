@@ -609,7 +609,7 @@ Cuando el aliado edita su perfil, también se replica en Clientify.
 
 **Implementación (fase 5):**
 - La empresa **siempre** se crea (o se reutiliza si ya existe con el mismo nombre) y el contacto queda vinculado a ella (`company`), con `ID_aliado`, la etiqueta de perfecto/imperfecto y un resumen del referido en la descripción.
-- Orden: empresa → factura adjunta (`POST /companies/{id}/files/`) → contacto. Cada paso se guarda aunque el siguiente falle (`clientify_company_id`, `facturas.clientify_subida_at`, `clientify_contact_id`), así el reintento no duplica nada.
+- Orden: empresa → contacto → factura adjunta (`POST /companies/{id}/files/`). La factura va al final (correcciones-hub, oct 2026): en la primera prueba real Clientify respondió 403 al adjuntarla y, con el orden anterior, el contacto nunca se creaba; ahora un fallo del adjunto deja el contacto completo y el reintento solo repite la factura. La causa del 403 se averigua con `/api/cron/clientify-diagnostico?archivos=<id de empresa>` (solo GET/OPTIONS). Cada paso se guarda aunque el siguiente falle (`clientify_company_id`, `facturas.clientify_subida_at`, `clientify_contact_id`), así el reintento no duplica nada.
 - Si el contacto ya existe en Clientify sin `ID_aliado`, se vincula a la empresa y recibe `ID_aliado` y etiquetas; si ya tiene **otro** `ID_aliado`, no se cambia la atribución: queda en `error` para revisión del equipo.
 - Cola en la base: `public.clientify_reclamar_empresas(limite, empresa)` y `public.clientify_registrar_resultado_empresa(...)`, con el mismo préstamo y backoff del flujo A; solo `service_role`. Las procesa el mismo cron `/api/cron/clientify`.
 - Fuera de Production aplica la misma regla: `PRUEBA HUB` y solo contactos con `+prueba` en el correo.

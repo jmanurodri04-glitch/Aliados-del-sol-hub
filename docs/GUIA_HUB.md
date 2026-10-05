@@ -279,7 +279,7 @@ sequenceDiagram
   F2->>DB: registrar_oportunidad (una transacción)
   DB->>DB: límite 20/hora, valida campos, rechaza<br/>duplicados y autorreferidos, calcula es_perfecto
   DB->>DB: inserta empresa, factura y avance,<br/>+10 registro válido y +20 perfecto / −5 imperfecto
-  F2->>CL: empresa → adjunta factura → contacto con ID_aliado<br/>y etiqueta perfecto/imperfecto (mejor esfuerzo)
+  F2->>CL: empresa → contacto con ID_aliado y etiqueta<br/>perfecto/imperfecto → adjunta factura (mejor esfuerzo)
   F2-->>A: puntos confirmados y nivel
   Note over F2,CL: Si Clientify falla, queda en cola y el cron reintenta
 ```

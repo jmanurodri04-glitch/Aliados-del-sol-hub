@@ -44,11 +44,11 @@ test('el contacto lleva ID_aliado, la etiqueta de perfecto/imperfecto, el víncu
   assert.ok(!('contact_type' in c), 'el referido no lleva el Tipo "Aliados Estratégicos" (solo los aliados)');
 });
 
-test('flujo completo: crea la empresa, adjunta la factura y crea el contacto vinculado', async () => {
+test('flujo completo: crea la empresa, el contacto vinculado y adjunta la factura', async () => {
   const clientify = clientifyFalso();
   const r = await sincronizarEmpresa(EMPRESA, { clientify, entorno: 'preview', descargarFactura });
   assert.deepEqual(r, { companyId: '300', contactId: '400', facturaSubida: true });
-  assert.deepEqual(clientify.llamadas, ['buscarEmpresa', 'crearEmpresa', 'subirFactura', 'buscarContacto', 'crearContacto']);
+  assert.deepEqual(clientify.llamadas, ['buscarEmpresa', 'crearEmpresa', 'buscarContacto', 'crearContacto', 'subirFactura']);
 });
 
 test('si la empresa ya existe en Clientify (mismo nombre) se reutiliza', async () => {
@@ -69,7 +69,18 @@ test('un reintento no repite lo ya hecho (empresa creada y factura subida)', asy
 test('si falla un paso, el error lleva lo ya creado para no duplicarlo', async () => {
   const clientify = clientifyFalso({ fallos: { crearContacto: new ErrorClientify('503', { status: 503 }) } });
   await assert.rejects(sincronizarEmpresa(EMPRESA, { clientify, entorno: 'preview', descargarFactura }),
-    (e) => e.reintentable && e.parcial.companyId === '300' && e.parcial.facturaSubida === true && e.parcial.contactId === null);
+    (e) => e.reintentable && e.parcial.companyId === '300' && e.parcial.facturaSubida === false && e.parcial.contactId === null);
+});
+
+test('si la factura falla (p. ej. 403), el contacto ya quedó creado y el reintento solo repite la factura', async () => {
+  const clientify = clientifyFalso({ fallos: { subirFactura: new ErrorClientify('Clientify respondió 403', { status: 403, reintentable: false }) } });
+  await assert.rejects(sincronizarEmpresa(EMPRESA, { clientify, entorno: 'preview', descargarFactura }),
+    (e) => e.status === 403 && e.parcial.companyId === '300' && e.parcial.contactId === '400' && e.parcial.facturaSubida === false);
+  assert.deepEqual(clientify.llamadas, ['buscarEmpresa', 'crearEmpresa', 'buscarContacto', 'crearContacto', 'subirFactura']);
+  const otra = clientifyFalso();
+  const r = await sincronizarEmpresa({ ...EMPRESA, clientify_company_id: '300', clientify_contact_id: '400' }, { clientify: otra, entorno: 'preview', descargarFactura });
+  assert.deepEqual(r, { companyId: '300', contactId: '400', facturaSubida: true });
+  assert.deepEqual(otra.llamadas, ['subirFactura']);
 });
 
 test('contacto existente sin aliado: se vincula a la empresa y recibe ID_aliado y etiquetas', async () => {

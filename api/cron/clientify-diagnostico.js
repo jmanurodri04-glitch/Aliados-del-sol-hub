@@ -151,6 +151,47 @@ async function campoTipo(clientify, lista, contactoId) {
   };
 }
 
+// Adjuntar la factura a la empresa (correcciones-hub): `POST /companies/{id}/files/` respondió 403. Con
+// ?archivos=<id de una empresa> se sondean, solo con GET y OPTIONS (nada se crea), la raíz de la API, la ficha
+// de la empresa y las rutas candidatas de archivos. Se devuelven códigos, métodos permitidos y estructura
+// (claves y tipos), nunca valores, salvo los textos de error y las definiciones de campos de OPTIONS.
+export function resumenSondeo(s) {
+  const r = { status: s.status, allow: s.allow || null };
+  if (s.error) r.error = s.error;
+  const c = s.cuerpo;
+  if (c && typeof c === 'object' && !Array.isArray(c)) {
+    if (typeof c.detail === 'string') r.detalle = c.detail.slice(0, 300);
+    if (c.actions && typeof c.actions === 'object') {
+      // OPTIONS de Django REST Framework: métodos de escritura con la definición de cada campo (sin datos).
+      r.acciones = Object.fromEntries(Object.entries(c.actions).map(([m, campos]) => [m,
+        Object.fromEntries(Object.entries(campos || {}).map(([k, d]) => [k, { tipo: d && d.type, requerido: !!(d && d.required), solo_lectura: !!(d && d.read_only) }]))]));
+    }
+    if (Array.isArray(c.results)) { r.count = c.count ?? c.results.length; if (c.results[0]) r.estructura_item = estructura(c.results[0]); }
+    else if (!r.acciones && !r.detalle) r.estructura = estructura(c);
+  } else if (Array.isArray(c)) {
+    r.count = c.length; if (c[0] && typeof c[0] === 'object') r.estructura_item = estructura(c[0]);
+  }
+  return r;
+}
+
+async function sondearArchivos(clientify, idEmpresa) {
+  const id = encodeURIComponent(idEmpresa);
+  const raiz = await clientify.sondear('GET', '/');
+  const rutasRaiz = raiz.cuerpo && typeof raiz.cuerpo === 'object' && !Array.isArray(raiz.cuerpo) ? Object.keys(raiz.cuerpo) : null;
+  const empresa = await clientify.sondear('GET', `/companies/${id}/`);
+  const clavesEmpresa = empresa.cuerpo && typeof empresa.cuerpo === 'object' ? Object.keys(empresa.cuerpo) : null;
+  const candidatas = [`/companies/${id}/files/`, `/companies/${id}/documents/`, `/companies/${id}/attachments/`, '/files/', '/documents/', '/attachments/'];
+  const rutas = {};
+  for (const ruta of candidatas) {
+    rutas[ruta] = { GET: resumenSondeo(await clientify.sondear('GET', ruta)), OPTIONS: resumenSondeo(await clientify.sondear('OPTIONS', ruta)) };
+  }
+  return {
+    raiz: { status: raiz.status, rutas: rutasRaiz },
+    empresa: { status: empresa.status, claves: clavesEmpresa, claves_de_archivos: (clavesEmpresa || []).filter((k) => /file|document|attach|archivo/i.test(k)) },
+    rutas
+  };
+}
+
 export default async function handler(req, res) {
   if (!validarCron(req, res)) return;
   let contexto;
@@ -160,6 +201,11 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
   const { clientify, supabase } = contexto;
+
+  const idEmpresa = String((req.query && req.query.archivos) || '');
+  if (/^\d{1,20}$/.test(idEmpresa)) {
+    return res.status(200).json({ entorno: contexto.entorno, archivos: await sondearArchivos(clientify, idEmpresa) });
+  }
 
   const catalogos = {};
   for (const [nombre, rutas] of Object.entries(CATALOGOS)) catalogos[nombre] = await probar(clientify, rutas);

@@ -3206,10 +3206,10 @@ const STREAK_CONFIG = {
 
 const QUALITY_CONFIG = {
   label: 'Calidad de tus referidos',
-  minSample: 5,
+  minSample: 1, /* desde la primera empresa evaluada, igual que el nivel (antes 5, de la demostración) */
   periodMonths: 6,
   pendingLabel: 'Calidad en construcción',
-  pendingNote: 'Aún necesitamos más oportunidades para calcular este indicador.',
+  pendingNote: 'Se calcula cuando GEENERA termine de evaluar tu primera empresa referida.',
   formulaNote: 'QualityScore = 40 % calificación + 30 % Referido Perfecto + 20 % avance a evaluación técnica + 10 % integridad de la información. Ponderaciones configurables.',
   metrics: [
     { k: 'calificados', label: 'Referidos que resultan calificados', weight: 0.40, value: 84, inverse: false },
@@ -3577,7 +3577,7 @@ const ACADEMY_CONFIG = {
       { id: 'c52', name: 'Puntos Sol, niveles y calidad', minutes: 9, points: true, lessons: [
         { t: 'Puntos Sol', body: 'Se acumulan a medida que una oportunidad avanza. También suman Academy, los eventos y la Racha Solar 4x4.', example: '' },
         { t: 'Niveles', body: 'Bronce, Plata, Oro, Platino, Diamante y Círculo Solar. Se calculan con tu actividad de los últimos 6 meses.', example: '' },
-        { t: 'Calidad de tus referidos', body: 'Un indicador de 0 a 100% que mide qué tan buenas son tus oportunidades. Si aún hay pocos datos verás “Calidad en construcción”.', example: '' },
+        { t: 'Calidad de tus referidos', body: 'Un indicador de 0 a 100% que mide qué tan buenas son tus oportunidades. Mientras ninguna de tus empresas haya terminado su evaluación verás “Calidad en construcción”.', example: '' },
         { t: 'Racha Solar 4x4', body: 'Una empresa calificada por semana durante cuatro semanas: +75 Puntos Sol.', example: '', quiz: { q: '¿Qué exige la Racha Solar 4x4?', options: ['Cuatro contactos cualquiera', 'Una empresa calificada por semana durante cuatro semanas', 'Cuatro módulos de Academy'], answer: 1 } }
       ] },
       { id: 'c53', name: 'Beneficios, enlace, eventos y soporte', minutes: 6, points: false, lessons: [

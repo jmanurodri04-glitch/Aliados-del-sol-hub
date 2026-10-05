@@ -785,6 +785,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - En `index.html` (y su fuente en `src/`), con sesión todas las pantallas usan esos datos; sin sesión se sigue viendo la demostración. Las funciones `referidoComoOpp`, `referidoComoCartera` y `movimientoComoHistorial` convierten las vistas a las formas de las constantes de demostración, así el diseño no cambia.
 - La vista la define `tipo_aliado` y se ocultan el selector de rol y las vistas de demostración: EMI, Linker y Cliente Embajador ven el dashboard de aliado; Financieros y Agremiaciones, el de gestión (solo sus referidos), también con su nivel, puntos y código.
 - El nivel es el de la base (puntos **y** calidad, §6.3); el Hub no muestra los requisitos de calidad por nivel (decisión del equipo).
+- La calidad se muestra desde la **primera empresa evaluada** (`QUALITY_CONFIG.minSample = 1`, decisión del equipo, oct 2026; la demostración pedía 5 y el Hub decía «Calidad en construcción» aunque el nivel ya la usaba). «En construcción» solo aparece si no hay ninguna empresa evaluada.
 - El historial se filtra por tipo y por semana, mes y trimestre (hora Bogotá), con la nota de descuento parcial del §5.4.
 - Agremiaciones: la distribución regional agrupa por la ciudad de la empresa referida.
 - Secciones sin datos reales todavía (series por mes, pronóstico de desembolsos, distribución por ejecutivo, Beneficios y Comisiones) conservan los datos de demostración con la etiqueta **"Demostración"**.

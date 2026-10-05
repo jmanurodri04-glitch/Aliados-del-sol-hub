@@ -990,6 +990,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - «¿Olvidaste tu contraseña?» en el Hub (y enlazado desde el panel y la página de canje). Al guardar la contraseña nueva se entra directo.
 - Captcha «No soy un robot» en el registro, en los tres logins (Hub, panel y canjes) y en «¿Olvidaste tu contraseña?», con la protección CAPTCHA de Supabase Auth y el mismo widget de Turnstile del formulario público.
 - En el celular (menos de 860 px) el menú del Hub es un panel que se abre con «☰ Menú».
+- La calidad de referidos se muestra desde la primera empresa evaluada, igual que la usa el nivel; «Calidad en construcción» solo si aún no hay ninguna.
 
 **Correo de las cuentas**
 - Proveedor: Resend, remitente `no-reply@notificaciones.geenera.com`, subdominio solo para enviar. No se tocó el SPF ni el DMARC de `geenera.com`.

@@ -5,11 +5,15 @@
 //    transacción: o queda completo o no queda nada (con límite de 20 por hora, duplicados y autorreferidos).
 // 3. Intenta sincronizar con Clientify en el momento (flujo B); si falla, la cola lo reintenta por cron.
 // 4. Responde con los puntos otorgados y el saldo actualizado.
+//
+// Formulario público (`publico: true`, sin sesión): el aliado se busca por `correo_aliado` con captcha, límite por
+// conexión y mensajes ambiguos (lib/referido-publico.js). Responde solo { es_perfecto, puntos, clientify }.
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { crearClienteClientify } from '../../lib/clientify/cliente.js';
 import { procesarEmpresas } from '../../lib/clientify/cola.js';
 import { aliadoDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
+import { registrarPublico } from '../../lib/referido-publico.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CAMPOS = ['empresa', 'sector', 'subsector', 'ciudad', 'nombre_contacto', 'cargo', 'telefono', 'correo',
@@ -33,17 +37,37 @@ export function errorDeRegistro(mensaje) {
   return new ErrorHttp(regla[0], regla[1] || (detalle ? detalle.charAt(0).toUpperCase() + detalle.slice(1) + '.' : 'Revisa los datos.'));
 }
 
-export default async function handler(req, res) {
+// Flujo B inmediato (mejor esfuerzo). Si Clientify falla o no está configurado, lo reintenta el cron.
+async function sincronizarAhora(supabase, empresaId, entorno) {
+  if (!entorno.CLIENTIFY_API_KEY) return 'pendiente';
+  try {
+    const r = await procesarEmpresas({
+      supabase,
+      clientify: crearClienteClientify({ apiKey: entorno.CLIENTIFY_API_KEY, urlBase: entorno.CLIENTIFY_API_URL || undefined }),
+      entorno: entorno.VERCEL_ENV || 'development',
+      empresaId,
+      limite: 1
+    });
+    return r.ok === 1 ? 'ok' : 'pendiente';
+  } catch {
+    return 'pendiente'; // queda en la cola
+  }
+}
+
+// `inyectado` solo lo usan las pruebas (cliente de Supabase, variables de entorno y fetch simulados).
+export default async function handler(req, res, inyectado = {}) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Método no permitido' });
   }
   let supabase;
-  let porBorrar = null; // factura del aliado que se borra si el registro falla
+  let porBorrar = null; // factura que se borra si el registro falla
   try {
-    supabase = crearClienteServidor();
-    const aliado = await aliadoDeLaSesion(req, supabase);
+    supabase = inyectado.supabase || crearClienteServidor();
+    const entorno = inyectado.entorno || process.env;
     const cuerpo = cuerpoJson(req);
+    const publico = cuerpo.publico === true;
+    const aliado = publico ? null : await aliadoDeLaSesion(req, supabase);
 
     const empresaId = String(cuerpo.empresa_id || '');
     if (!UUID.test(empresaId)) throw new ErrorHttp(400, 'Solicitud inválida.');
@@ -52,11 +76,18 @@ export default async function handler(req, res) {
     let factura = null;
     if (cuerpo.factura && cuerpo.factura.ruta) {
       factura = { storage_path: String(cuerpo.factura.ruta), nombre_archivo: String(cuerpo.factura.nombre_archivo || '').slice(0, 200) || null };
-      // Solo la carpeta del aliado de la sesión y de esta oportunidad; nunca se toca un archivo ajeno.
-      if (!factura.storage_path.startsWith(`${aliado.id}/${empresaId}/`) || factura.storage_path.includes('..')) {
+      // Solo la carpeta de esta oportunidad (y del aliado de la sesión); nunca se toca un archivo ajeno.
+      const carpeta = publico ? `publico/${empresaId}/` : `${aliado.id}/${empresaId}/`;
+      if (!factura.storage_path.startsWith(carpeta) || factura.storage_path.includes('..')) {
         throw new ErrorHttp(422, 'La factura no corresponde a esta oportunidad.');
       }
       porBorrar = factura.storage_path;
+    }
+
+    if (publico) {
+      const resultado = await registrarPublico(req, cuerpo, { supabase, entorno, fetchImpl: inyectado.fetch, empresaId, datos, factura });
+      porBorrar = null;
+      return res.status(201).json({ ...resultado, clientify: await sincronizarAhora(supabase, empresaId, entorno) });
     }
 
     const { data: resultado, error } = await supabase.rpc('registrar_oportunidad', {
@@ -65,22 +96,7 @@ export default async function handler(req, res) {
     if (error) throw errorDeRegistro(error.message) || new Error('registrar_oportunidad falló');
     porBorrar = null; // quedó registrada: ya no se borra
 
-    // Flujo B inmediato (mejor esfuerzo). Si Clientify falla o no está configurado, lo reintenta el cron.
-    let clientify = 'pendiente';
-    if (process.env.CLIENTIFY_API_KEY) {
-      try {
-        const r = await procesarEmpresas({
-          supabase,
-          clientify: crearClienteClientify({ apiKey: process.env.CLIENTIFY_API_KEY, urlBase: process.env.CLIENTIFY_API_URL || undefined }),
-          entorno: process.env.VERCEL_ENV || 'development',
-          empresaId,
-          limite: 1
-        });
-        if (r.ok === 1) clientify = 'ok';
-      } catch { /* queda en la cola */ }
-    }
-
-    return res.status(201).json({ ...resultado, clientify });
+    return res.status(201).json({ ...resultado, clientify: await sincronizarAhora(supabase, empresaId, entorno) });
   } catch (e) {
     // Si el registro falló, se borra la factura que se alcanzó a subir.
     if (porBorrar && supabase) await supabase.storage.from('facturas').remove([porBorrar]).catch(() => {});

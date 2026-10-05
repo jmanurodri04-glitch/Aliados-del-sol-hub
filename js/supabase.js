@@ -9,6 +9,7 @@
 //   ads:logout                          ads:sesion          { activa, aliado? }
 //   ads:consultar-sesion                ads:aviso           { mensaje, tono }  (p. ej. al volver del correo de confirmación)
 //   ads:referral {datos, archivo?}      ads:referral-resultado { ok, mensaje?, es_perfecto?, movimientos?, puntos_disponibles?, nivel? }
+//   ads:referral-publico {datos, archivo?, correo_aliado}  ads:referral-publico-resultado { ok, mensaje?, es_perfecto?, puntos? }
 //   ads:consultar-dashboard             ads:dashboard       { ok, aliado?, movimientos?, referidos?, modulos? }
 //   ads:modulo-completado {codigo}      ads:modulo-resultado { ok, codigo, mensaje?, nuevo?, puntos?, recompensa_estado? }
 //   ads:evento-registrar {datos, archivo?} ads:evento-resultado { ok, mensaje?, evento_id? }
@@ -71,7 +72,8 @@ const MENSAJES = {
   admin: 'Tu cuenta es de administración. Te llevamos al panel de administración.',
   sesionVencidaQR: 'Tu sesión expiró. Vuelve a iniciar sesión para ver tu QR.',
   qrNoActivo: 'Tu cuenta no está activa: aún no puedes canjear.',
-  qrLimite: 'Generaste muchos QR seguidos. Espera unos minutos y vuelve a abrir «Mi QR».'
+  qrLimite: 'Generaste muchos QR seguidos. Espera unos minutos y vuelve a abrir «Mi QR».',
+  captchaPendiente: 'Confirma que no eres un robot y vuelve a enviar.'
 };
 
 // Se lee antes de crear el cliente, porque supabase-js limpia el hash de la URL al procesarlo.
@@ -330,6 +332,50 @@ async function referir({ datos, archivo }) {
   }
 }
 
+// Formulario público de referidos (sin sesión): el aliado se identifica con su correo y hay captcha
+// (js/captcha.js). Con factura, /api/oportunidades/factura verifica el captcha y la sube a publico/{empresa}/…;
+// sin factura, /api/oportunidades lo verifica. La respuesta trae solo los puntos de este referido.
+async function postPublico(ruta, cuerpo) {
+  const r = await fetch(ruta, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify(Object.assign({ publico: true }, cuerpo))
+  });
+  let datos = {};
+  try { datos = await r.json(); } catch (e) { /* respuesta sin cuerpo */ }
+  return { status: r.status, datos };
+}
+
+async function referirPublico({ datos, archivo, correo_aliado }) {
+  const captcha = window.adsCaptcha;
+  const fallo = (mensaje) => {
+    if (captcha) captcha.reiniciar(); // cada token sirve una vez
+    emitir('ads:referral-publico-resultado', { ok: false, mensaje: mensaje || MENSAJES.generico });
+  };
+  try {
+    const token = captcha ? captcha.token() : null;
+    if (!token && captcha && await captcha.activo()) return emitir('ads:referral-publico-resultado', { ok: false, mensaje: MENSAJES.captchaPendiente });
+    let empresaId = null;
+    let factura = null;
+    if (archivo) {
+      const permiso = await postPublico('/api/oportunidades/factura', { captcha: token, nombre_archivo: archivo.name, tipo: archivo.type, tamano: archivo.size });
+      if (permiso.status !== 200) return fallo(permiso.datos.error);
+      const supabase = await obtenerCliente();
+      const { error } = await supabase.storage.from('facturas')
+        .uploadToSignedUrl(permiso.datos.ruta, permiso.datos.token, archivo, { contentType: archivo.type });
+      if (error) return fallo(MENSAJES.facturaNoSubio);
+      empresaId = permiso.datos.empresa_id;
+      factura = { ruta: permiso.datos.ruta, nombre_archivo: archivo.name };
+    }
+    const r = await postPublico('/api/oportunidades', { captcha: factura ? null : token, correo_aliado, empresa_id: empresaId || crypto.randomUUID(), datos, factura });
+    if (r.status !== 201) return fallo(r.datos.error);
+    if (captcha) captcha.reiniciar();
+    emitir('ads:referral-publico-resultado', { ok: true, es_perfecto: !!r.datos.es_perfecto, puntos: r.datos.puntos });
+  } catch (e) {
+    fallo(mensajeDeError(e));
+  }
+}
+
 // Dashboard del aliado (CLAUDE.md §9). Las vistas filtran por la sesión: nunca llega información de otro aliado.
 async function cargarDashboard(supabaseDado) {
   try {
@@ -485,6 +531,7 @@ window.addEventListener('ads:join-register', (e) => registrar(e.detail || {}));
 window.addEventListener('ads:login', (e) => iniciarSesion(e.detail || {}));
 window.addEventListener('ads:logout', () => cerrarSesion());
 window.addEventListener('ads:referral', (e) => referir(e.detail || {}));
+window.addEventListener('ads:referral-publico', (e) => referirPublico(e.detail || {}));
 window.addEventListener('ads:modulo-completado', (e) => completarModulo(e.detail || {}));
 window.addEventListener('ads:evento-registrar', (e) => registrarEvento(e.detail || {}));
 window.addEventListener('ads:qr-generar', () => generarQR());

@@ -159,21 +159,75 @@
           </div>
         </div>
 
-        <!-- Clientify SuperForm 139329 / 25015 — embed real documentado en HANDOFF.md
-             <script type="text/javascript" src="https://api.clientify.net/web-marketing/superforms/script/139329.js"></script> -->
+        <!-- Formulario público de referidos (corrección oct 2026): reemplaza al SuperForm de Clientify. Pide el correo de quien
+             refiere y registra la empresa en el Hub de ese aliado (js/supabase.js → ads:referral-publico, captcha en js/captcha.js). -->
         <div style="flex:1.6 1 520px;min-width:0;position:relative;padding:clamp(14px,1.7vw,22px);border:1px solid rgba(255,202,5,.22);border-radius:20px;background:linear-gradient(165deg,rgba(255,202,5,.07),var(--w-016,rgba(255,255,255,.016)));overflow:hidden">
           <div style="position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(255,202,5,.16),rgba(255,202,5,0) 70%)"></div>
           <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 6px 14px">
-            <span style="font-size:17px;font-weight:600;letter-spacing:-.01em">Datos de la empresa</span>
-            <span style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mut4,#6B6762)">Paso 1 de 1</span>
+            <span style="font-size:17px;font-weight:600;letter-spacing:-.01em">Referir una empresa</span>
+            <span style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mut4,#6B6762)">Paso {{ step }} de 2</span>
           </div>
-          <div id="clientify-form-139329" data-clientify-form="139329" style="position:relative;display:flex;flex-direction:column;gap:14px">
-            <div style="position:relative;width:100%;max-width:800px;margin:0 auto;padding:0;border-radius:16px;overflow:hidden;background:#FFFFFF;box-shadow:0 0 0 1px rgba(255,202,5,.35),0 24px 60px rgba(0,0,0,.35),0 0 80px rgba(255,202,5,.08)">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;background:linear-gradient(180deg,#FFF8E1,#FFFFFF);border-bottom:1px solid #F1E7CC"><span style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;letter-spacing:-.01em;color:#1B1915"><span style="width:8px;height:8px;border-radius:50%;background:#FFCA05;box-shadow:0 0 0 4px rgba(255,202,5,.22)"></span>Refiere tu negocio</span><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8C7A3E">Toma 2 minutos</span></div>
-              <iframe ref="{{ formRef }}" src="https://apps.clientify.net/formbuilderembed/simpleembed/#/forms/embedform/139329/25015" title="Formulario de referidos GEENERA" loading="lazy" allowtransparency="true" style="display:block;width:100%;height:620px;border:none;background:transparent;transition:height 320ms cubic-bezier(.22,.61,.36,1)"></iframe>
+          <sc-if value="{{ pubRefForm }}" hint-placeholder-val="{{ true }}">
+          <div style="position:relative;display:flex;flex-direction:column;padding:clamp(18px,2vw,26px);border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:16px;background:var(--bg2,#0D0D11)">
+            <p style="margin:0 0 16px;font-size:14.5px;color:var(--mut,#9A968F)">{{ stepSubtitle }}</p>
+            <div style="display:flex;gap:6px;padding-bottom:22px">
+              <sc-for list="{{ stepBars }}" as="s" hint-placeholder-count="2">
+                <span style="flex:1;height:3px;border-radius:99px;background:{{ s.bg }}"></span>
+              </sc-for>
             </div>
-            <p style="margin:0;padding:0 6px;font-size:12px;line-height:1.5;color:var(--mut5,#5A5651)">Al enviar aceptas la política de tratamiento de datos de GEENERA. El formulario es el oficial de Clientify (SuperForm 139329) y los datos llegan directamente al CRM.</p>
+            <div style="display:flex;align-items:center;gap:10px;margin:-8px 0 20px;font-size:12.5px;color:var(--mut2,#8E8B86)"><span style="flex:none;padding:3px 10px;border:1px solid rgba(255,202,5,.32);border-radius:99px;background:rgba(255,202,5,.07);color:var(--y,#FFCA05);font-weight:700">{{ refPerfectCount }}</span><span>{{ refPerfectLabel }}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:16px">
+              <sc-for list="{{ stepFields }}" as="f" hint-placeholder-count="5">
+                <label style="display:flex;flex-direction:column;gap:7px;grid-column:{{ f.span }};min-width:0">
+                  <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mut3,#7C7873)"><span>{{ f.k }}<span style="color:var(--o,#F9A51A)">{{ f.req }}</span><span style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--mut4,#6B6762)">{{ f.opt }}</span></span><sc-if value="{{ f.perfect }}" hint-placeholder-val="{{ false }}"><span style="padding:2px 8px;border:1px solid rgba(255,202,5,.3);border-radius:99px;font-size:10.5px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--y,#FFCA05)">Referido Perfecto</span></sc-if></span>
+                  <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}"><input type="{{ f.type }}" inputMode="{{ f.im }}" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" autocomplete="{{ f.ac }}" aria-invalid="{{ f.hasErr }}" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;transition:border-color 180ms ease" style-focus="border-color:rgba(255,202,5,.55)"></sc-if>
+                  <sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}"><select value="{{ f.value }}" onChange="{{ f.onChange }}" aria-invalid="{{ f.hasErr }}" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;transition:border-color 180ms ease;cursor:pointer;color-scheme:var(--scheme,dark)" style-focus="border-color:rgba(255,202,5,.55)"><option value="" style="background:var(--bg,#12110F);color:var(--fg,#F2F0EC)">Selecciona…</option><sc-for list="{{ f.options }}" as="o" hint-placeholder-count="1"><option value="{{ o.v }}" style="background:var(--bg,#12110F);color:var(--fg,#F2F0EC)">{{ o.v }}</option></sc-for></select></sc-if>
+                  <sc-if value="{{ f.isPhone }}" hint-placeholder-val="{{ false }}"><span style="display:flex;gap:8px;min-width:0"><select aria-label="País del teléfono" value="{{ f.country }}" onChange="{{ f.onCountry }}" style="flex:0 0 auto;max-width:132px;padding:11px 8px 11px 12px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-06,rgba(255,255,255,.06));color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;font-family:inherit;outline:none;cursor:pointer;color-scheme:var(--scheme,dark)" style-focus="border-color:rgba(255,202,5,.55)"><sc-for list="{{ f.countries }}" as="c" hint-placeholder-count="1"><option value="{{ c.id }}" style="background:var(--bg,#12110F);color:var(--fg,#F2F0EC)">{{ c.label }}</option></sc-for></select><input type="tel" inputMode="numeric" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" autocomplete="tel-national" aria-invalid="{{ f.hasErr }}" style="flex:1;min-width:0;width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;transition:border-color 180ms ease" style-focus="border-color:rgba(255,202,5,.55)"></span></sc-if>
+                  <sc-if value="{{ f.isArea }}" hint-placeholder-val="{{ false }}"><textarea rows="3" value="{{ f.value }}" onChange="{{ f.onChange }}" placeholder="{{ f.ph }}" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;transition:border-color 180ms ease;resize:vertical;line-height:1.45" style-focus="border-color:rgba(255,202,5,.55)"></textarea></sc-if>
+                  <span style="font-size:12px;color:{{ f.noteColor }}">{{ f.note }}</span>
+                </label>
+              </sc-for>
+            </div>
+            <sc-if value="{{ isStep3 }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:14px;margin-top:16px;padding:16px 18px;border:1px dashed rgba(255,202,5,.3);border-radius:12px;background:rgba(255,202,5,.05)">
+                <span style="width:34px;height:34px;flex:none;border-radius:9px;display:grid;place-items:center;background:rgba(255,202,5,.14);color:var(--y,#FFCA05);font-size:16px">↑</span>
+                <span style="display:flex;flex-direction:column;gap:2px">
+                  <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;font-weight:600">Adjuntar factura de energía<span style="padding:2px 8px;border:1px solid rgba(255,202,5,.3);border-radius:99px;font-size:10.5px;font-weight:600;color:var(--y,#FFCA05)">Referido Perfecto</span></span>
+                  <span style="font-size:12.5px;color:var(--mut2,#8E8B86)">{{ refFileNote }}</span>
+                </span>
+                <label style="margin-left:auto;flex:none;padding:8px 14px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:8px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">{{ refFileBtn }}<input type="file" accept="application/pdf,image/jpeg,image/png" onChange="{{ refFileChange }}" style="display:none"></label>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:16px">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <button role="checkbox" aria-checked="{{ refAutOn }}" aria-label="Declaro que cuento con autorización del contacto" onClick="{{ refAutToggle }}" style="flex:0 0 auto;width:20px;height:20px;margin-top:1px;display:grid;place-items:center;padding:0;border:1.5px solid {{ refAutRing }};border-radius:5px;background:{{ refAutBox }};color:#1A1200;font-size:13px;font-weight:800;line-height:1;cursor:pointer">{{ refAutMark }}</button>
+                  <span style="font-size:13px;line-height:1.5;color:var(--t3,#B4B0A9)">Declaro que cuento con autorización del contacto para compartir sus datos con GEENERA (Ley 1581 de 2012).<span style="color:var(--o,#F9A51A)"> *</span></span>
+                </div>
+                <sc-if value="{{ refAutHasErr }}" hint-placeholder-val="{{ false }}"><span style="padding-left:30px;font-size:12px;color:#C97B6E">Debes confirmar la autorización del contacto para enviar el referido.</span></sc-if>
+              </div>
+              <div data-captcha-referido="1" style="margin-top:16px;min-height:65px"></div>
+            </sc-if>
+            <sc-if value="{{ refHasError }}" hint-placeholder-val="{{ false }}">
+            <p role="alert" style="margin:18px 0 0;padding:11px 14px;border:1px solid rgba(201,123,110,.4);border-radius:10px;background:rgba(201,123,110,.08);color:#C97B6E;font-size:13.5px;line-height:1.5">{{ refError }}</p>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:14px;padding-top:24px">
+              <sc-if value="{{ pubShowPrev }}" hint-placeholder-val="{{ false }}"><button onClick="{{ prevStep }}" style="padding:11px 17px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--t2,#C9C5BE);font-size:14px;font-weight:600;cursor:pointer">Atrás</button></sc-if>
+              <button onClick="{{ nextStep }}" style="margin-left:auto;padding:11px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14.5px;font-weight:700;cursor:{{ refNextCursor }};opacity:{{ refNextOpacity }};transition:transform 160ms ease,opacity 200ms ease" style-hover="transform:translateY(-1px)">{{ nextLabel }}</button>
+            </div>
+            <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:var(--mut5,#5A5651)">Al enviar aceptas la política de tratamiento de datos de GEENERA. La empresa queda relacionada con el aliado del correo de quien refiere.</p>
           </div>
+          </sc-if>
+          <sc-if value="{{ pubRefDone }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:16px;padding:44px 28px;text-align:center;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:16px;background:var(--bg2,#0D0D11)">
+            <dc-import name="GProgress" variant="mark" size="{{ 112 }}" pct="{{ 1 }}" duration="{{ 700 }}" hint-size="112px,112px"></dc-import>
+            <h3 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-.03em">Referido recibido</h3>
+            <p style="margin:0;font-size:15px;color:var(--mut,#9A968F);max-width:40ch;line-height:1.5">{{ refEmpresa }} ya está en nuestro proceso comercial y quedó en el Hub del aliado que la refirió.</p>
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 18px;border:1px solid rgba(255,202,5,.32);border-radius:99px;background:rgba(255,202,5,.08)"><span style="font-size:19px;font-weight:700;color:var(--y,#FFCA05)">{{ refDonePts }}</span><span style="font-size:13.5px;color:var(--t2,#C9C5BE)">{{ refDoneLabel }}</span></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:6px">
+              <button onClick="{{ goJoin }}" style="padding:11px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;cursor:pointer">Quiero ser Aliado del Sol</button>
+              <button onClick="{{ resetNew }}" style="padding:11px 18px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:10px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer">Referir otra empresa</button>
+            </div>
+          </div>
+          </sc-if>
         </div>
       </div>
     </section>
@@ -3284,6 +3338,8 @@ const SUPPORT_CONFIG = {
 /* Formulario "Referir" (hub). req = obligatorio; perfect = opcional pero cuenta para Referido Perfecto. Los obligatorios también cuentan para Referido Perfecto. */
 const REFER_CONFIG = {
   sectors: ['Industrial', 'Residencial', 'Comercial'],
+  /* Formulario público: correo de quien refiere (relaciona la empresa con su aliado; no hay sesión). */
+  referrerField: { id: 'refEmail', k: 'Email de quien refiere', kind: 'email', req: true, ph: 'tu@correo.com', span: '1 / -1', hint: 'Con este correo relacionamos la empresa con tu perfil de aliado.', ac: 'email' },
   subsectors: ['Concesionarios', 'Farmacéuticas', 'Avícolas', 'Frigoríficos', 'Académicas', 'Extractoras', 'Comercios', 'Fábricas', 'Manufactura', 'Industria pesada', 'Industria ligera', 'Agroindustria', 'Alimentos y bebidas', 'Logística', 'Salud', 'Hotelería y turismo', 'Educación', 'Construcción e inmobiliario', 'Minería y materiales', 'Tecnología y comunicaciones', 'Energía y utilities', 'Sector público'],
   steps: {
     1: { sub: 'Empecemos por la empresa y la persona con quien hablamos.', fields: [
@@ -3796,7 +3852,7 @@ class Component extends DCLogic {
       evtOk: !!s.evtOk, misEventos, misEventosVacio: misEventos.length === 0
     };
   }
-  refVals(s) {
+  refVals(s, pub) {
     const d = Object.assign({ country: 'CO' }, s.refData || {}); const step = s.step || 1; const tr = !!s.refTried;
     const pc = phoneCountry(d.country); const pd = (d.telefono || '').replace(/\D/g, ''); const pStart = !pc.start || pc.start.indexOf(pd[0]) >= 0;
     const errOf = f => { const v = (d[f.id] || '').trim();
@@ -3808,7 +3864,8 @@ class Component extends DCLogic {
     const filled = f => f.req ? !errOf(f) : !!(d[f.id] || '').trim();
     const perfectDone = perfectDefs.filter(filled).length + (d.file ? 1 : 0); const perfectTotal = perfectDefs.length + 1;
     const isPerfect = perfectDone === perfectTotal;
-    const cur = REFER_CONFIG.steps[step] || REFER_CONFIG.steps[1];
+    const base = REFER_CONFIG.steps[step] || REFER_CONFIG.steps[1];
+    const cur = pub && step === 1 ? { sub: base.sub, fields: [REFER_CONFIG.referrerField].concat(base.fields) } : base;
     const stepValid = cur.fields.filter(f => f.req).every(f => !errOf(f)) && (step !== 2 || !!d.autoriza);
     const countries = PHONE_COUNTRIES.map(c => ({ id: c.id, label: c.id + ' +' + c.dial + ' · ' + c.name }));
     const fields = cur.fields.map(f => { const e = f.req ? errOf(f) : ''; const show = !!e && tr; const k = f.kind;
@@ -3826,7 +3883,8 @@ class Component extends DCLogic {
       valor_factura: Number((d.factura || '').replace(/\D/g, '')) || null, observaciones: (d.obs || '').trim() || null, autorizacion_contacto: !!d.autoriza });
     /* Puntos que confirmó el servidor (movimientos del registro). */
     const res = s.refResult || null;
-    const ptsRes = res && Array.isArray(res.movimientos) ? res.movimientos.reduce((a, m) => a + (m.tipo === 'perdido' ? -m.puntos : m.puntos), 0) : null;
+    const ptsRes = res && Array.isArray(res.movimientos) ? res.movimientos.reduce((a, m) => a + (m.tipo === 'perdido' ? -m.puntos : m.puntos), 0)
+      : res && typeof res.puntos === 'number' ? res.puntos : null;
     const perfRes = res ? !!res.es_perfecto : isPerfect;
     const autErr = tr && step === 2 && !d.autoriza;
     return { sub: cur.sub, fields, out: {
@@ -3845,10 +3903,14 @@ class Component extends DCLogic {
       refNextOpacity: stepValid ? 1 : 0.45, refNextCursor: stepValid ? 'pointer' : 'not-allowed',
       refEmpresa: d.empresa || 'La empresa',
       refDonePts: ptsRes != null ? (ptsRes >= 0 ? '+' : '') + ptsRes : perfRes ? '+30' : '+5',
-      refDoneLabel: perfRes ? 'Puntos Sol por un Referido Perfecto' : 'Puntos Sol: +10 por registro y −5 por datos incompletos',
+      refDoneLabel: pub ? (perfRes ? 'Puntos Sol para el aliado por un Referido Perfecto' : 'Puntos Sol para el aliado: +10 por registro y −5 por datos incompletos')
+        : perfRes ? 'Puntos Sol por un Referido Perfecto' : 'Puntos Sol: +10 por registro y −5 por datos incompletos',
       nextStep: () => { if (s.refSending) return; if (!stepValid) { this.setState({ refTried: true }); return; }
         /* El envío lo hace js/supabase.js (ads:referral) y el resultado llega por ads:referral-resultado. */
-        if (step === 2) { this.setState({ refSending: true, refError: '' }); window.dispatchEvent(new CustomEvent('ads:referral', { detail: { datos: payload(), archivo: d.archivo || null } })); }
+        if (step === 2) { this.setState({ refSending: true, refError: '' });
+          /* Formulario público: sin sesión, con el correo de quien refiere y el captcha (js/supabase.js → ads:referral-publico). */
+          if (pub) window.dispatchEvent(new CustomEvent('ads:referral-publico', { detail: { datos: payload(), archivo: d.archivo || null, correo_aliado: (d.refEmail || '').trim().toLowerCase() } }));
+          else window.dispatchEvent(new CustomEvent('ads:referral', { detail: { datos: payload(), archivo: d.archivo || null } })); }
         else this.setState({ step: step + 1, refTried: false }); },
       prevStep: () => { if (step === 1) this.setState({ newOpen: false, refTried: false }); else this.setState({ step: step - 1, refTried: false }); },
       openNew: () => this.setState({ newOpen: true, step: 1, done: false, refData: {}, refTried: false, refError: '', refResult: null, refSending: false }),
@@ -4006,10 +4068,10 @@ class Component extends DCLogic {
       else if (e.type === 'ads:dashboard') { if (d.ok) this.recibirDashboard(d); else if (this.state.sesion) this.ping(d.mensaje || 'No pudimos cargar tus datos. Intenta de nuevo en unos minutos.'); }
       else if (e.type === 'ads:modulo-resultado') this.avisarModulo(d);
       else if (e.type === 'ads:evento-resultado') this.setState(d.ok ? { evtEnviando: false, evtAbierto: false, evtOk: true, evtDatos: {} } : { evtEnviando: false, evtError: d.mensaje || 'No pudimos enviar el evento.' });
-      else if (e.type === 'ads:referral-resultado') this.setState(d.ok ? { refSending: false, refError: '', refTried: false, refResult: d, done: true } : { refSending: false, refError: d.mensaje || '' });
+      else if (e.type === 'ads:referral-resultado' || e.type === 'ads:referral-publico-resultado') this.setState(d.ok ? { refSending: false, refError: '', refTried: false, refResult: d, done: true } : { refSending: false, refError: d.mensaje || '' });
       else if (e.type === 'ads:aviso') { this.setState({ loginMsg: d.mensaje || '', loginTono: d.tono || 'info', loginModo: d.modo || 'entrar', olvidoEnviado: false, olvidoMsg: '', claveMsg: '' }); if (d.ruta) this.go(d.ruta); }
     };
-    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:dashboard', 'ads:modulo-resultado', 'ads:evento-resultado', 'ads:recuperar-resultado', 'ads:clave-nueva-resultado'];
+    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:referral-publico-resultado', 'ads:dashboard', 'ads:modulo-resultado', 'ads:evento-resultado', 'ads:recuperar-resultado', 'ads:clave-nueva-resultado'];
     this._adsEventos.forEach(n => window.addEventListener(n, this._adsAuth));
     window.dispatchEvent(new CustomEvent('ads:consultar-sesion'));
   }
@@ -4280,7 +4342,7 @@ class Component extends DCLogic {
       return { t, d, onStr: on ? 'true' : 'false', trackBg: on ? 'var(--o,#F9A51A)' : 'var(--w-14,rgba(255,255,255,.14))', knobBg: on ? 'var(--btnfg,#141210)' : 'var(--mut2,#8E8B86)', knobLeft: on ? '21px' : '3px', toggle: () => { const n = s.settings.slice(); n[i] = !n[i]; this.setState({ settings: n }); } };
     });
 
-    const refV = this.refVals(s);
+    const refV = this.refVals(s, PUB.indexOf(route) >= 0);
 
     const timeline = ['Referida', 'Contactada', 'Calificada', 'Propuesta', 'Cierre'].map((label, i) => {
       const dates = sel._real ? [sel.fechaCorta, '—', sel.calificadaEl || '—', '—', '—'] : ['12 ago', '13 ago', '19 ago', '3 sep', '—'];
@@ -5045,7 +5107,8 @@ class Component extends DCLogic {
         { n: '3', t: 'Ganas puntos, beneficios y comisión', d: 'Los puntos abren beneficios; la comisión se liquida por proyecto cerrado.' }
       ],
       newOpen: s.newOpen, newForm: s.newOpen && !s.done, newDone: s.newOpen && s.done,
-      step: s.step, isStep3: s.step === 2, stepSubtitle: refV.sub,
+      step: s.step || 1, isStep3: s.step === 2, stepSubtitle: refV.sub,
+      pubRefForm: !s.done, pubRefDone: !!s.done, pubShowPrev: s.step === 2,
       stepFields: refV.fields,
       stepBars: [1, 2].map(i => ({ bg: i <= s.step ? 'var(--y,#FFCA05)' : 'var(--w-10,rgba(255,255,255,.1))' })),
       prevLabel: s.step === 1 ? 'Cancelar' : 'Atrás',

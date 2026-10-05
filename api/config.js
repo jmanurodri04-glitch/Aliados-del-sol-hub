@@ -1,6 +1,8 @@
 // GET /api/config — configuración pública de Supabase según el entorno (CLAUDE.md §1).
 // Production apunta a aliados-prod; Preview y Development, a aliados-dev.
 // Solo expone la URL y la publishable key: la seguridad la da RLS. Nunca la secret key.
+// También la site key del captcha del formulario público (Cloudflare Turnstile), que es pública por diseño;
+// su clave secreta (TURNSTILE_SECRET_KEY) solo la usa el servidor.
 
 import { urlDeSupabase } from '../lib/supabase-servidor.js';
 
@@ -18,5 +20,5 @@ export default function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
-  return res.status(200).json({ supabaseUrl, supabasePublishableKey });
+  return res.status(200).json({ supabaseUrl, supabasePublishableKey, turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || null });
 }

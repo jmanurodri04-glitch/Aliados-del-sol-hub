@@ -11,7 +11,7 @@
 // y luego:                        select content from net._http_response order by created desc limit 1;
 
 import { contextoClientify, validarCron } from '../../lib/cron.js';
-import { interpretarWebhook } from '../../lib/clientify/mapeo.js';
+import { interpretarWebhook, leerContacto, leerOportunidad } from '../../lib/clientify/mapeo.js';
 
 // Rutas confirmadas con el primer diagnóstico (la API no tiene un catálogo de Status de contacto: sus valores
 // salen de la muestra de contactos). Se siguen hasta 5 páginas.
@@ -234,6 +234,45 @@ async function sondearArchivos(clientify, idEmpresa, idContacto) {
   };
 }
 
+// Status y ID_aliado de un referido de prueba (correcciones-hub): con ?referido=<contacto> se leen, de un contacto
+// con +prueba en el correo, las claves que parecen de estado (status, estado, stage…) con su valor, cómo lee el
+// Hub su Status e ID_aliado y sus etiquetas; con ?oportunidad=<id>, los contactos vinculados y su embudo y fase.
+// Nada de nombres, correos ni teléfonos.
+async function sondearReferido(clientify, supabase, idContacto, idOportunidad) {
+  const r = {};
+  if (idContacto) {
+    const s = await clientify.sondear('GET', `/contacts/${encodeURIComponent(idContacto)}/`);
+    const c = s.cuerpo || {};
+    const correos = [c.email, ...((c.emails || []).map((x) => (x && typeof x === 'object' ? x.email : x)))].filter(Boolean).map(String);
+    if (!correos.some((x) => x.includes(MARCA_PRUEBA))) {
+      r.referido = { status: s.status, aviso: 'Solo se muestran contactos de prueba (correo con +prueba)' };
+    } else {
+      const l = leerContacto(c);
+      r.referido = {
+        status: s.status,
+        claves_de_estado: Object.fromEntries(Object.entries(c).filter(([k]) => /status|estado|stage|lifecycle|fase|etapa/i.test(k))),
+        leido_por_el_hub: { status: l.status, id_aliado: l.idAliado, etiquetas: l.etiquetas },
+        campos_personalizados: (c.custom_fields || []).map((x) => x && (x.field ?? x.name ?? x.label)),
+        es_contacto_de_aliado: !!(await supabase.from('aliados').select('codigo_aliado').eq('clientify_contact_id', String(idContacto)).maybeSingle()).data
+      };
+    }
+  }
+  if (idOportunidad) {
+    const s = await clientify.sondear('GET', `/deals/${encodeURIComponent(idOportunidad)}/`);
+    const d = s.cuerpo || {};
+    const leida = s.status === 200 ? leerOportunidad(d) : null;
+    const contactos = [];
+    for (const id of (leida ? leida.contactos : [])) {
+      const { data: aliado } = await supabase.from('aliados').select('codigo_aliado').eq('clientify_contact_id', id).maybeSingle();
+      const { data: empresa } = await supabase.from('empresas').select('empresa').eq('clientify_contact_id', id).maybeSingle();
+      contactos.push({ id, es_contacto_de_aliado: !!aliado, empresa_en_el_hub: !!empresa });
+    }
+    r.oportunidad = { status: s.status, embudo: d.pipeline_desc ?? null, fase: d.pipeline_stage_desc ?? null, estado: d.status_desc ?? null,
+      claves_de_contacto: Object.fromEntries(Object.entries(d).filter(([k]) => /contact/i.test(k)).map(([k, v]) => [k, tipo(v)])), contactos };
+  }
+  return r;
+}
+
 export default async function handler(req, res) {
   if (!validarCron(req, res)) return;
   let contexto;
@@ -243,6 +282,11 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
   const { clientify, supabase } = contexto;
+
+  const q = req.query || {};
+  const idRef = /^\d{1,20}$/.test(String(q.referido || '')) ? String(q.referido) : null;
+  const idOp = /^\d{1,20}$/.test(String(q.oportunidad || '')) ? String(q.oportunidad) : null;
+  if (idRef || idOp) return res.status(200).json({ entorno: contexto.entorno, ...(await sondearReferido(clientify, supabase, idRef, idOp)) });
 
   const idEmpresa = String((req.query && req.query.archivos) || '');
   if (/^\d{1,20}$/.test(idEmpresa)) {

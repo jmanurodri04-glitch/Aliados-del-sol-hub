@@ -20,6 +20,7 @@ const ALIADO = {
 // Clientify simulado en memoria: registra cada llamada.
 function clientifyFalso({ existente = null, fallos = {} } = {}) {
   const llamadas = [];
+  const enviados = {};
   const responder = (nombre, valor) => {
     llamadas.push(nombre);
     if (fallos[nombre]) throw fallos[nombre];
@@ -27,9 +28,10 @@ function clientifyFalso({ existente = null, fallos = {} } = {}) {
   };
   return {
     llamadas,
+    enviados,
     buscarContactoPorCorreo: async (correo) => { llamadas.push('buscar'); return existente && existente.email === correo ? existente : null; },
-    crearContacto: async (datos) => responder('crear', { id: 1001, ...datos }),
-    actualizarContacto: async (id, datos) => responder('actualizar', { id, ...datos }),
+    crearContacto: async (datos) => { enviados.crear = datos; return responder('crear', { id: 1001, ...datos }); },
+    actualizarContacto: async (id, datos) => { enviados.actualizar = datos; return responder('actualizar', { id, ...datos }); },
     agregarEtiqueta: async (id, nombre) => responder('etiqueta:' + nombre, { name: nombre })
   };
 }
@@ -84,6 +86,28 @@ test('aliado ya sincronizado que editó su perfil: se actualiza el mismo contact
   const r = await sincronizarAliado({ ...ALIADO, clientify_contact_id: '777' }, { clientify, entorno: 'production' });
   assert.deepEqual(r, { contactId: '777', accion: 'actualizado' });
   assert.deepEqual(clientify.llamadas, ['actualizar', 'etiqueta:aliados del sol', 'etiqueta:AdS EMI']);
+});
+
+test('Tipo de Clientify: todo aliado llega como "Aliados Estratégicos", sin importar su tipo_aliado', async () => {
+  for (const tipo_aliado of ['financiero', 'emi', 'linker', 'cliente_embajador', 'agremiaciones']) {
+    assert.equal(construirContacto({ ...ALIADO, tipo_aliado }, 'production').contact_type, 'Aliados Estratégicos', tipo_aliado);
+  }
+  // El tipo_aliado del Hub sigue definiendo su etiqueta; el Tipo de Clientify es otro campo.
+  assert.ok(construirContacto({ ...ALIADO, tipo_aliado: 'linker' }, 'production').tags.includes('AdS Linker'));
+
+  const nuevo = clientifyFalso();
+  await sincronizarAliado(ALIADO, { clientify: nuevo, entorno: 'preview' });
+  assert.equal(nuevo.enviados.crear.contact_type, 'Aliados Estratégicos', 'contacto creado');
+
+  const existente = clientifyFalso({ existente: { id: 555, email: ALIADO.correo } });
+  await sincronizarAliado(ALIADO, { clientify: existente, entorno: 'preview' });
+  assert.deepEqual(existente.enviados.actualizar, {
+    contact_type: 'Aliados Estratégicos', custom_fields: [{ field: 'ID_aliado', value: 'EMJJPL7K4MQ9TX' }]
+  }, 'contacto vinculado: solo Tipo e ID_aliado, sin pisar nombre ni teléfono');
+
+  const sincronizado = clientifyFalso();
+  await sincronizarAliado({ ...ALIADO, clientify_contact_id: '777' }, { clientify: sincronizado, entorno: 'production' });
+  assert.equal(sincronizado.enviados.actualizar.contact_type, 'Aliados Estratégicos', 'contacto actualizado');
 });
 
 test('si el contacto guardado ya no existe en Clientify (404), se busca o se crea de nuevo', async () => {

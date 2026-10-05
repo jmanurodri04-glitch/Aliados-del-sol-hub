@@ -41,6 +41,7 @@ test('el contacto lleva ID_aliado, la etiqueta de perfecto/imperfecto, el víncu
   assert.deepEqual(construirContactoReferido({ ...EMPRESA, es_perfecto: false }, 'preview', 'u').tags, ['Referido imperfecto', 'PRUEBA HUB']);
   assert.match(resumenReferido(EMPRESA), /Valor mensual de la factura de energía: \$ 4\.500\.000 COP/);
   assert.ok(!JSON.stringify(c).includes(EMPRESA.empresa_id), 'no se envían ids internos');
+  assert.ok(!('contact_type' in c), 'el referido no lleva el Tipo "Aliados Estratégicos" (solo los aliados)');
 });
 
 test('flujo completo: crea la empresa, adjunta la factura y crea el contacto vinculado', async () => {

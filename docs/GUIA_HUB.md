@@ -249,12 +249,14 @@ sequenceDiagram
   DB->>DB: estado = activo, libera puntos retenidos,<br/>otorga módulos pendientes, audita
   Note over DB,F: Flujo A (cada 2 min)
   F->>DB: reclama aliados activos pendientes (no admins)
-  F->>CL: crea o vincula el contacto con ID_aliado y etiquetas
+  F->>CL: crea o vincula el contacto con ID_aliado, etiquetas<br/>y Tipo "Aliados Estratégicos"
   F->>DB: guarda clientify_contact_id (o programa reintento)
   V->>H: Entra al Hub
 ```
 
 **Por qué así:** la contraseña la maneja solo Supabase Auth (nunca se guarda en las tablas). El aliado no se envía a Clientify al registrarse sino al aprobarse, para no llenar el CRM de solicitudes que se rechazarán. Si Clientify falla, ni el registro ni la aprobación fallan: queda en cola y se reintenta.
+
+**El «Tipo» en Clientify:** todo aliado llega con el Tipo de contacto **«Aliados Estratégicos»** (columna «tipo» al exportar), sea EMI, Linker, Financiero, Agremiaciones o Cliente Embajador, y también si ya existía en Clientify con otro Tipo. Así los flujos de Clientify pueden filtrar a los aliados, por ejemplo para el aviso de que su Hub está activo. Es distinto del tipo de aliado del Hub, que no cambia y sigue marcándose con las etiquetas «AdS …». Los referidos no llevan este Tipo.
 
 ### 5.2 Nueva oportunidad desde el Hub (flujo B)
 
@@ -943,6 +945,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 
 **Clientify**
 - El aliado se crea en Clientify al aprobarse, no al registrarse. Etiqueta "aliado del sol hub" para Cliente Embajador y "aliados del sol" para los demás.
+- Todo aliado llega a Clientify con el Tipo «Aliados Estratégicos» (aunque ya existiera con otro Tipo). El tipo de aliado del Hub no cambia; los referidos no llevan ese Tipo.
 - Las variables se derivan del Status del contacto, la fase de la oportunidad y las etiquetas. Clientify no tiene campos sí/no/revisión.
 - Cuentan todos los embudos de proyectos, por el nombre de la fase ("Diseño", "Presentación de oferta", "Contrato"). Con varias oportunidades se usa la más avanzada.
 - "0. lead perdido" = revisión. La fase "7. Interesado No ahora" cuenta como propuesta.

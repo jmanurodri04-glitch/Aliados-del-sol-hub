@@ -774,8 +774,8 @@ Todos ven un saludo con su **nombre completo**, su `codigo_aliado` (copiable, pa
 | Tipo | Contenido principal |
 |---|---|
 | **EMI, Linker, Cliente Embajador** | Puntos de nivel, puntos disponibles, nivel y progreso al siguiente (puntos **y** calidad faltantes), Racha Solar 4x4, calidad de referidos, historial de movimientos filtrable (semana, mes, trimestre), módulos y recompensas pendientes, lista de referidos con su estado |
-| **Financieros** | Potencia instalada (kWp), pipeline originado (millones COP), oportunidades referidas, empresas calificadas, valor cotizado. Sale de `avance_empresa` sincronizado desde Clientify. *Confirmar si también ven puntos y nivel.* |
-| **Agremiaciones** | Distribución regional de sus referidos (por `empresas.ciudad` o regional) y calidad de referidos. *Confirmar el criterio regional.* |
+| **Financieros** | Potencia instalada (kWp), pipeline originado (millones COP), oportunidades referidas, empresas calificadas, valor cotizado. Sale de `avance_empresa` sincronizado desde Clientify. También ven sus puntos y su nivel (decisión del equipo). |
+| **Agremiaciones** | Distribución regional de sus referidos (por la ciudad de la empresa referida, decisión del equipo) y calidad de referidos. |
 
 Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 
@@ -938,13 +938,14 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 **Necesarias antes de la fase del webhook** (no bloquean las fases 1 a 5):
 
 1. ~~Etiqueta de información falsa~~ Resuelta: "fraude", "no existe" e "información de contacto errónea" (§8).
-2. ~~Campo "Potencia" y valores~~ Resuelta: "Potencia (kWp)" de la oportunidad y valor cotizado = "Importe" (`amount`). **Pendiente:** ¿qué campo es el "pipeline originado" (`valor_oportunidad`)?
+2. ~~Campo "Potencia" y valores~~ Resuelta: "Potencia (kWp)" de la oportunidad, valor cotizado = suma del "Importe" (`amount`) y pipeline originado = suma del "Importe" de las oportunidades ganadas o en "Contrato" (§8, tabla D).
 10. ~~¿Qué embudos cuentan?~~ Resuelta: todos los de proyectos (§8).
 11. ~~Etiqueta de aliado~~ Resuelta: "aliado del sol hub" (Cliente Embajador) y "aliados del sol" (§8, flujo A).
 12. ~~Leads del formulario público sin oportunidad~~ Ya no aplica para los nuevos: el formulario público es del Hub y registra la empresa al enviarlo (§7.1). El reenvío desde n8n solo haría falta si siguen llegando leads con `ID_aliado` por otra vía de Clientify.
 13. ~~Etiquetas del flujo A y B~~ Resuelta: los referidos solo llevan "Referido perfecto"/"Referido imperfecto" (los flujos se disparan con esas); el aliado conserva "aliados del sol"/"aliado del sol hub" y el Tipo "Aliados Estratégicos" (§8, §13).
-20. **Claves del captcha (Cloudflare Turnstile):** widget real (modo *Managed*) para el dominio oficial en Production y, en Preview, las claves de prueba de Cloudflare (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`, pasan siempre). Pasos en la guía §10.2, paso 4. Sin ellas, en Production el formulario público no funciona (503). Además, en cada proyecto de Supabase: *Authentication → Attack Protection → Enable CAPTCHA protection*, proveedor Turnstile, con la clave secreta del mismo widget (en `aliados-dev`, la de prueba), **después** de que el despliegue tenga la site key.
+20. **Claves del captcha (Cloudflare Turnstile):** widget real (modo *Managed*) para el dominio oficial en Production y, en Preview, las claves de prueba de Cloudflare (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`, pasan siempre). Pasos en la guía §10.2, paso 4. Sin ellas, en Production el formulario público no funciona (503). Además, en cada proyecto de Supabase: *Authentication → Attack Protection → Enable CAPTCHA protection*, proveedor Turnstile, con la clave secreta del mismo widget, **después** de que el despliegue tenga la site key. **Estado:** `aliados-dev` ya lo tiene encendido con la clave de prueba y funciona en el Preview (5 oct 2026). **`aliados-prod` se configura solo al desplegar a producción** (rama `despliegue-prod`, guía §10.2, paso 4), con los mismos pasos y la clave real; antes no, porque `main` no tiene el captcha y nadie podría entrar.
 21. **`main` en producción tiene el formulario público sin lógica:** lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`.
+22. **Flujos B y C sin probar con un referido real:** en `aliados-dev` no se ha registrado ninguna empresa todavía (5 oct 2026). El flujo A sí funciona con Clientify real (aliados en `ok`, con el Tipo «Aliados Estratégicos») y los webhooks de oportunidades llegan y se procesan, pero falta comprobar con la API real la creación de empresa, la factura adjunta y el contacto con `ID_aliado` y su etiqueta (flujo B; ver «Por confirmar con la API real») y los puntos que da el avance en Clientify (flujo C). Se cubre con los casos 3, 5–8, 19 y 20 de la guía §10.1.
 
 **Generales:**
 

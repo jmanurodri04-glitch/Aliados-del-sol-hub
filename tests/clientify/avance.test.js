@@ -31,8 +31,9 @@ test('A. Status del contacto → calificado (cada fila)', () => {
 
 test('A. códigos de Status que devuelve la API (confirmados con el diagnóstico)', () => {
   const casos = [
-    ['not-qualified-lead', 'no'], ['hot-lead', 'si'], ['in-deal', 'si'], ['client', 'si'],
-    ['cold-lead', 'revision'], ['warm-lead', 'revision'], ['lost-lead', 'revision'], ['other', 'revision']
+    // Códigos calibrados con la cuenta real: «0. lead no calificado» es `other` y «0. contacto alternativo» es `not-qualified-lead`.
+    ['other', 'no'], ['hot-lead', 'si'], ['in-deal', 'si'], ['client', 'si'],
+    ['cold-lead', 'revision'], ['warm-lead', 'revision'], ['lost-lead', 'revision'], ['not-qualified-lead', 'revision'], ['visitor', 'revision']
   ];
   for (const [status, esperado] of casos) {
     const r = derivarAvance({ contacto: contacto(status) });

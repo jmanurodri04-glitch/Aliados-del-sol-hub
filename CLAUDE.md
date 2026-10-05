@@ -679,16 +679,17 @@ Supabase guarda el dato crudo (`estado_contacto_clientify`, `fase_oportunidad`�
 
 | Status en Clientify (interfaz) | Código en la API | `calificado` |
 |---|---|---|
-| 0. lead no calificado | `not-qualified-lead` | `no` |
+| 0. lead no calificado | `other` | `no` |
 | 3. lead caliente | `hot-lead` | `si` |
 | 4. en oportunidad | `in-deal` | `si` (superó "caliente") |
 | 5. cliente | `client` | `si` (superó "caliente") |
 | 1. lead frío, 2. lead templado | `cold-lead`, `warm-lead` | `revision` |
-| 0. contacto alternativo, 0. lead verificado | `other` | `revision` |
+| 0. contacto alternativo | `not-qualified-lead` | `revision` |
+| 0. lead verificado | `visitor` | `revision` |
 | 0. lead perdido | `lost-lead` | `revision` (decisión del equipo) |
-| 0. cliente perdido | `lost-client` (*por confirmar*) | sin cambio (ya fue `si`) |
+| 0. cliente perdido | `lost-client` | sin cambio (ya fue `si`) |
 
-La API devuelve el **código** del Status (confirmado con el diagnóstico); se aceptan el código y el nombre.
+La API devuelve solo el **código** del Status, no su nombre; se aceptan el código y el nombre. **Los códigos de los «0.» se calibraron con contactos de prueba reales (5 oct 2026)** y no coinciden con su sentido en inglés: en la cuenta de GEENERA «0. lead no calificado» es `other` y «0. contacto alternativo» es `not-qualified-lead` (la tabla anterior los tenía invertidos y el «no calificado» nunca restaba). Si el equipo crea, renombra o reordena un Status en Clientify, hay que volver a calibrar: poner un contacto de prueba en cada Status y leerlo con `/api/cron/clientify-diagnostico?referido=<id del contacto>`.
 
 Comparar los textos normalizados (minúsculas, sin tildes, `trim`). El mapeo vive en `lib/clientify/mapeo.ts` para que pueda ajustarse si Clientify cambia los nombres.
 

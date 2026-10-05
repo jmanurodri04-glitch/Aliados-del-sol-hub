@@ -180,7 +180,7 @@ test('un Status desconocido queda como aviso y no da puntos; un retroceso es un 
   assert.match(sql("select error from public.webhook_eventos where entidad_id = '5001' order by recibido_at desc limit 1"),
     /Status de contacto desconocido: "estado-nuevo"/);
 
-  clientify.contactos['5001'].status = 'not-qualified-lead';
+  clientify.contactos['5001'].status = 'other'; // «0. lead no calificado» en la cuenta de GEENERA
   await webhook({ event: 'contact.updated', data: { id: 5001 } });
   await cron();
   assert.match(sql("select error from public.webhook_eventos where entidad_id = '5001' order by recibido_at desc limit 1"),

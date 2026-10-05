@@ -1001,6 +1001,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - El aliado se crea en Clientify al aprobarse, no al registrarse. Etiqueta "aliado del sol hub" para Cliente Embajador y "aliados del sol" para los demás.
 - Todo aliado llega a Clientify con el Tipo «Aliados Estratégicos» (aunque ya existiera con otro Tipo). El tipo de aliado del Hub no cambia; los referidos no llevan ese Tipo.
 - Las variables se derivan del Status del contacto, la fase de la oportunidad y las etiquetas. Clientify no tiene campos sí/no/revisión.
+- Los Status «0.» de Clientify se calibraron con contactos reales (5 oct 2026): «0. lead no calificado» es el que resta (−10); «0. contacto alternativo», «0. lead verificado» y «0. lead perdido» no cambian nada, y «0. cliente perdido» conserva lo ganado. Si el equipo crea o renombra un Status, hay que volver a calibrarlo (CLAUDE.md §8, tabla A).
 - Cuentan todos los embudos de proyectos, por el nombre de la fase ("Diseño", "Presentación de oferta", "Contrato"). Con varias oportunidades se usa la más avanzada.
 - "0. lead perdido" = revisión. La fase "7. Interesado No ahora" cuenta como propuesta.
 - Información falsa = etiquetas "fraude", "no existe" o "información de contacto errónea".

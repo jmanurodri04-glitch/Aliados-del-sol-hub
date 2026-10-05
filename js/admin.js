@@ -7,6 +7,8 @@
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm';
 
+const MENSAJE_CAPTCHA = 'Confirma que no eres un robot y vuelve a intentarlo.';
+
 const TIPOS = { emi: 'EMI', linker: 'Linker', cliente_embajador: 'Cliente Embajador', financiero: 'Financiero', agremiaciones: 'Agremiaciones' };
 const NIVELES = { bronce: 'Bronce', plata: 'Plata', oro: 'Oro', platino: 'Platino', diamante: 'Diamante', circulo_solar: 'Círculo Solar' };
 const ESTADOS = { activo: ['Activo', 'ok'], pendiente: ['Pendiente', 'w'], suspendido: ['Suspendido', 'bad'], rechazado: ['Rechazado', 'bad'],
@@ -525,10 +527,15 @@ async function iniciar() {
   $('salir').addEventListener('click', async () => { await supabase.auth.signOut(); location.reload(); });
   $('form-login').addEventListener('submit', async (ev) => {
     ev.preventDefault();
+    // Captcha de Supabase Auth (js/captcha.js): sin site key no hay widget ni token.
+    const captcha = window.adsCaptcha;
+    const captchaToken = captcha ? captcha.token('login') : null;
+    if (!captchaToken && captcha && await captcha.activo()) { $('login-mensaje').textContent = MENSAJE_CAPTCHA; return; }
     $('login-boton').disabled = true; $('login-mensaje').textContent = '';
-    const { error } = await supabase.auth.signInWithPassword({ email: $('login-correo').value.trim(), password: $('login-clave').value });
+    const { error } = await supabase.auth.signInWithPassword({ email: $('login-correo').value.trim(), password: $('login-clave').value, options: { captchaToken: captchaToken || undefined } });
+    if (captcha) captcha.reiniciar('login'); // cada token sirve una vez
     $('login-boton').disabled = false;
-    if (error) { $('login-mensaje').textContent = 'Correo o contraseña incorrectos, o correo sin confirmar.'; return; }
+    if (error) { $('login-mensaje').textContent = /captcha/i.test(error.message || '') || error.code === 'captcha_failed' ? MENSAJE_CAPTCHA : 'Correo o contraseña incorrectos, o correo sin confirmar.'; return; }
     $('login-clave').value = '';
     entrarAlPanel().catch((e) => aviso(e.message));
   });

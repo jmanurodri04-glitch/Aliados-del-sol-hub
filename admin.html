@@ -12,7 +12,9 @@
 <!-- Panel de administración (CLAUDE.md §10, fases 9, 10 y 11). Lee las vistas v_admin_* con la sesión del admin;
      las acciones pasan por POST /api/admin (ver js/admin.js). -->
 <script type="module" src="./js/admin.js"></script>
+<script type="module" src="./js/captcha.js"></script>
 <style>
+  [data-captcha]:empty { display:none; } /* captcha del login (js/captcha.js); sin site key no deja hueco */
   :root {
     --bg:#F7F3EC; --panel:#FFFDF9; --fg:#1B1915; --mut:#665F55; --mut2:#8C8375; --line:rgba(27,25,21,.12);
     --soft:rgba(27,25,21,.04); --y:#A86E06; --o:#B85A0C; --g:#2E8A57; --bad:#B4533F; --btn:#1B1915; --btnfg:#F7F3EC;
@@ -104,6 +106,7 @@
       <p class="nota" style="margin:0">Solo para el equipo GEENERA. Entra con tu cuenta del Hub.</p>
       <label>Correo<input type="email" id="login-correo" autocomplete="email" required></label>
       <label>Contraseña<input type="password" id="login-clave" autocomplete="current-password" required></label>
+      <div data-captcha="login"></div>
       <span class="mensaje" id="login-mensaje" role="alert"></span>
       <button class="btn primario" type="submit" id="login-boton">Entrar</button>
       <a href="/#recuperar" style="align-self:flex-start;color:var(--y);font-size:13px;font-weight:600;text-decoration:none">¿Olvidaste tu contraseña?</a>

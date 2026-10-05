@@ -73,7 +73,8 @@ const MENSAJES = {
   sesionVencidaQR: 'Tu sesión expiró. Vuelve a iniciar sesión para ver tu QR.',
   qrNoActivo: 'Tu cuenta no está activa: aún no puedes canjear.',
   qrLimite: 'Generaste muchos QR seguidos. Espera unos minutos y vuelve a abrir «Mi QR».',
-  captchaPendiente: 'Confirma que no eres un robot y vuelve a enviar.'
+  captchaPendiente: 'Confirma que no eres un robot y vuelve a enviar.',
+  captcha: 'Confirma que no eres un robot y vuelve a intentarlo.'
 };
 
 // Se lee antes de crear el cliente, porque supabase-js limpia el hash de la URL al procesarlo.
@@ -120,6 +121,7 @@ function mensajeDeError(error) {
   if (!error) return MENSAJES.generico;
   const codigo = error.code || '';
   const texto = (error.message || '').toLowerCase();
+  if (codigo === 'captcha_failed' || texto.includes('captcha')) return MENSAJES.captcha;
   if (error.status === 429 || codigo === 'over_request_rate_limit' || codigo === 'over_email_send_rate_limit') return MENSAJES.demasiadosIntentos;
   if (codigo === 'invalid_credentials' || texto.includes('invalid login credentials')) return MENSAJES.credenciales;
   if (codigo === 'email_not_confirmed' || texto.includes('email not confirmed')) return MENSAJES.correoSinConfirmar;
@@ -179,13 +181,31 @@ async function resolverAcceso(supabase) {
   return { ok: false, motivo: aliado.estado, mensaje: MENSAJES[aliado.estado] || MENSAJES.generico };
 }
 
+// Captcha de Supabase Auth (js/captcha.js): registro, login y recuperar llevan el token de su widget. Sin site key
+// no hay widget y no se envía token (la protección CAPTCHA de Supabase debe estar apagada en ese entorno).
+// Devuelve { token } o { falta: true } si el widget está pero la persona aún no lo pasó.
+async function tokenCaptcha(nombre) {
+  const captcha = window.adsCaptcha;
+  if (!captcha) return { token: undefined };
+  const token = captcha.token(nombre);
+  if (token) return { token };
+  return (await captcha.activo()) ? { falta: true } : { token: undefined };
+}
+
+function reiniciarCaptcha(nombre) {
+  if (window.adsCaptcha) window.adsCaptcha.reiniciar(nombre); // cada token sirve una vez
+}
+
 async function registrar(datos) {
+  const captcha = await tokenCaptcha('registro');
+  if (captcha.falta) return emitir('ads:join-resultado', { ok: false, mensaje: MENSAJES.captcha });
   try {
     const supabase = await obtenerCliente();
     const { data, error } = await supabase.auth.signUp({
       email: (datos.email || '').trim(),
       password: datos.password,
       options: {
+        captchaToken: captcha.token,
         emailRedirectTo: window.location.origin + '/',
         data: {
           nombre_completo: datos.name,
@@ -213,18 +233,24 @@ async function registrar(datos) {
     emitir('ads:join-resultado', { ok: true, confirmarCorreo: !data.session });
   } catch (e) {
     emitir('ads:join-resultado', { ok: false, mensaje: mensajeDeError(e) });
+  } finally {
+    reiniciarCaptcha('registro');
   }
 }
 
 async function iniciarSesion({ email, password }) {
+  const captcha = await tokenCaptcha('login');
+  if (captcha.falta) return emitir('ads:login-resultado', { ok: false, mensaje: MENSAJES.captcha });
   try {
     const supabase = await obtenerCliente();
-    const { error } = await supabase.auth.signInWithPassword({ email: (email || '').trim(), password: password || '' });
+    const { error } = await supabase.auth.signInWithPassword({ email: (email || '').trim(), password: password || '', options: { captchaToken: captcha.token } });
+    reiniciarCaptcha('login');
     if (error) return emitir('ads:login-resultado', { ok: false, mensaje: mensajeDeError(error) });
     emitir('ads:login-resultado', await resolverAcceso(supabase));
     emitir('ads:sesion', sesionActual);
     cargarDashboard(supabase);
   } catch (e) {
+    reiniciarCaptcha('login');
     emitir('ads:login-resultado', { ok: false, mensaje: mensajeDeError(e) });
   }
 }
@@ -234,15 +260,19 @@ function limpiarHash() {
 }
 
 async function pedirRecuperacion({ email }) {
+  const captcha = await tokenCaptcha('recuperar');
+  if (captcha.falta) return emitir('ads:recuperar-resultado', { ok: false, mensaje: MENSAJES.captcha });
   try {
     const supabase = await obtenerCliente();
-    const { error } = await supabase.auth.resetPasswordForEmail((email || '').trim(), { redirectTo: window.location.origin + '/' });
-    // Supabase no revela si el correo existe; solo se informan los límites y la falta de conexión.
-    if (error && (error.status === 429 || error.name === 'AuthRetryableFetchError')) {
+    const { error } = await supabase.auth.resetPasswordForEmail((email || '').trim(), { redirectTo: window.location.origin + '/', captchaToken: captcha.token });
+    reiniciarCaptcha('recuperar');
+    // Supabase no revela si el correo existe; solo se informan el captcha, los límites y la falta de conexión.
+    if (error && (error.status === 429 || error.name === 'AuthRetryableFetchError' || mensajeDeError(error) === MENSAJES.captcha)) {
       return emitir('ads:recuperar-resultado', { ok: false, mensaje: mensajeDeError(error) });
     }
     emitir('ads:recuperar-resultado', { ok: true });
   } catch (e) {
+    reiniciarCaptcha('recuperar');
     emitir('ads:recuperar-resultado', { ok: false, mensaje: mensajeDeError(e) });
   }
 }
@@ -349,11 +379,11 @@ async function postPublico(ruta, cuerpo) {
 async function referirPublico({ datos, archivo, correo_aliado }) {
   const captcha = window.adsCaptcha;
   const fallo = (mensaje) => {
-    if (captcha) captcha.reiniciar(); // cada token sirve una vez
+    if (captcha) captcha.reiniciar('referido'); // cada token sirve una vez
     emitir('ads:referral-publico-resultado', { ok: false, mensaje: mensaje || MENSAJES.generico });
   };
   try {
-    const token = captcha ? captcha.token() : null;
+    const token = captcha ? captcha.token('referido') : null;
     if (!token && captcha && await captcha.activo()) return emitir('ads:referral-publico-resultado', { ok: false, mensaje: MENSAJES.captchaPendiente });
     let empresaId = null;
     let factura = null;
@@ -369,7 +399,7 @@ async function referirPublico({ datos, archivo, correo_aliado }) {
     }
     const r = await postPublico('/api/oportunidades', { captcha: factura ? null : token, correo_aliado, empresa_id: empresaId || crypto.randomUUID(), datos, factura });
     if (r.status !== 201) return fallo(r.datos.error);
-    if (captcha) captcha.reiniciar();
+    if (captcha) captcha.reiniciar('referido');
     emitir('ads:referral-publico-resultado', { ok: true, es_perfecto: !!r.datos.es_perfecto, puntos: r.datos.puntos });
   } catch (e) {
     fallo(mensajeDeError(e));

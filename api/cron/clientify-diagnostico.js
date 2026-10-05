@@ -180,13 +180,28 @@ async function sondearArchivos(clientify, idEmpresa) {
   const rutasRaiz = raiz.cuerpo && typeof raiz.cuerpo === 'object' && !Array.isArray(raiz.cuerpo) ? Object.keys(raiz.cuerpo) : null;
   const empresa = await clientify.sondear('GET', `/companies/${id}/`);
   const clavesEmpresa = empresa.cuerpo && typeof empresa.cuerpo === 'object' ? Object.keys(empresa.cuerpo) : null;
-  const candidatas = [`/companies/${id}/files/`, `/companies/${id}/documents/`, `/companies/${id}/attachments/`, '/files/', '/documents/', '/attachments/'];
+  const candidatas = [`/companies/${id}/files/`, `/companies/${id}/documents/`, `/companies/${id}/attachments/`,
+    `/companies/${id}/wall_entries/`, `/companies/${id}/wall-entries/`, `/companies/${id}/notes/`, `/companies/${id}/note/`,
+    '/files/', '/documents/', '/attachments/', '/wall_entries/', '/wall-entries/', '/notes/', '/companies/files/', '/companies/attachments/'];
   const rutas = {};
   for (const ruta of candidatas) {
     rutas[ruta] = { GET: resumenSondeo(await clientify.sondear('GET', ruta)), OPTIONS: resumenSondeo(await clientify.sondear('OPTIONS', ruta)) };
   }
+  // El muro de la empresa (wall_entries) suele guardar los archivos subidos a mano: se leen hasta 5 entradas
+  // (solo su estructura y las claves que parecen de archivos) para ver cómo los guarda Clientify.
+  const muro = [];
+  const entradas = empresa.cuerpo && Array.isArray(empresa.cuerpo.wall_entries) ? empresa.cuerpo.wall_entries.slice(0, 5) : [];
+  for (const entrada of entradas) {
+    const url = typeof entrada === 'string' ? entrada : entrada && entrada.url;
+    if (typeof url !== 'string' || !url.startsWith(clientify.urlBase)) { muro.push({ estructura: estructura(entrada) }); continue; }
+    const ruta = url.slice(clientify.urlBase.length);
+    const s = await clientify.sondear('GET', ruta);
+    const o = await clientify.sondear('OPTIONS', ruta);
+    muro.push({ ruta: ruta.replace(/\d+/g, '{id}'), GET: resumenSondeo(s), OPTIONS: resumenSondeo(o) });
+  }
   return {
     raiz: { status: raiz.status, rutas: rutasRaiz },
+    muro: { tipo: tipo(empresa.cuerpo && empresa.cuerpo.wall_entries), cantidad: entradas.length, entradas: muro },
     empresa: { status: empresa.status, claves: clavesEmpresa, claves_de_archivos: (clavesEmpresa || []).filter((k) => /file|document|attach|archivo/i.test(k)) },
     rutas
   };

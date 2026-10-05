@@ -2,7 +2,7 @@
 
 > **Para qué sirve este documento.** Reúne en un solo lugar cómo funciona el Hub, por qué se construyó así, las decisiones del equipo, el modelo de datos y los pasos para ponerlo en producción. Si se pierde una conversación con Claude, este archivo y `CLAUDE.md` bastan para retomar el trabajo.
 >
-> **Fecha de corte:** 5 de octubre de 2026. **Estado:** fases 1 a 11 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). La fase 11 (canje con código QR, §5.6) además pasó la prueba real con celulares Android e iPhone. El correo propio de las cuentas (§5.9) está configurado y probado en `aliados-dev`. Las correcciones previas a las pruebas de aceptación (rama `correcciones-hub`: Tipo «Aliados Estratégicos» en Clientify, formulario público propio, celular único, Hub ajustado al celular y captcha en registro y logins) están hechas y probadas en el Preview. Falta la prueba de aceptación de punta a punta del resto, sobre todo un referido real por Clientify (§10.0 y §10.1). Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
+> **Fecha de corte:** 5 de octubre de 2026. **Estado:** fases 1 a 11 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). La fase 11 (canje con código QR, §5.6) además pasó la prueba real con celulares Android e iPhone. El correo propio de las cuentas (§5.9) está configurado y probado en `aliados-dev`. Las correcciones previas a las pruebas de aceptación (rama `correcciones-hub`: Tipo «Aliados Estratégicos» en Clientify, formulario público propio, celular único, Hub ajustado al celular y captcha en registro y logins) están hechas y probadas en el Preview. La prueba de aceptación con Clientify real ya verificó los flujos A, B y C (referidos, calificación, fases de la oportunidad, penalizaciones y conflictos); los casos que faltan están marcados en §10.1. Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
 >
 > **Documentos relacionados:** `CLAUDE.md` (contexto técnico permanente, más detallado en reglas e implementación), `docs/HANDOFF.md` y `docs/DESIGN_SYSTEM.md` (diseño del Hub).
 
@@ -1063,11 +1063,11 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
 | Flujo A con Clientify real: aliado aprobado → contacto con `ID_aliado`, etiquetas y Tipo «Aliados Estratégicos» | Aprobaciones reales en el Preview (5 oct 2026) | — |
-| Webhook de oportunidades de Clientify hacia el Preview | 124 eventos recibidos y procesados (todos de oportunidades ajenas al programa) | **Ningún referido real todavía:** al 5 oct 2026 no hay empresas en `aliados-dev`, así que los flujos B (empresa, factura y contacto en Clientify) y C (puntos por el avance) solo están probados con Clientify simulado. Son los casos 3, 5–8, 19 y 20 de §10.1. **Actualización 5 oct 2026:** el flujo B quedó verificado con Clientify real; falta el flujo C (casos 5–8) |
+| Flujos B y C con Clientify real: referidos del Hub y del formulario público, empresa con factura, calificación, fases de la oportunidad, información falsa, no calificado y conflicto | 7 referidos de prueba en el Preview (5 oct 2026): +30 al calificar, Racha semana 1, +30/+50/+150 por Diseño, Presentación de oferta y Contrato, −30 por «fraude», −10 por no calificado, conflicto «calificado sí → no» en el panel; la calidad y el nivel bajaron como se esperaba (Oro → Plata) | Solo el lead creado directamente en Clientify (caso 8 de §10.1) |
 | Correo propio (§5.9): confirmación, recuperación de contraseña y aviso de cambio, con logos | Prueba real en el Preview con cuentas de Gmail, Outlook y del correo corporativo (2 oct 2026): llegaron a la bandeja de entrada, los enlaces funcionaron y la recuperación de contraseña entró al Hub | El volumen del lanzamiento (tope de Resend gratis: 100 correos al día) |
 | Canje con QR (fase 11): invitar operadores, mostrar el QR, escanear, canjear, rechazos por nivel y saldo, anular | 79 pruebas pgTAP, pruebas en navegador con cámara simulada y una **prueba real con celulares Android e iPhone** en el Preview (1 oct 2026) | Operadores y catálogo reales; pruebas de capturas de pantalla y modo avión con más personas |
 
-**Conclusión:** cada pieza está probada por separado, pero **falta la prueba de punta a punta con personas y con Clientify real**. Eso es la etapa 1, y es lo siguiente que hay que hacer.
+**Conclusión:** la prueba de punta a punta con personas y Clientify real ya cubre los flujos principales (registro, aprobación, referidos, avance en Clientify, conflictos, canje con QR, correo y captcha). La columna «Estado» de §10.1 dice qué casos faltan para cerrar la etapa 1.
 
 ### 10.1 Etapa 1 — Pruebas de aceptación en dev
 
@@ -1088,31 +1088,33 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 **Casos de prueba** (cada uno con su resultado esperado):
 
-| # | Qué hacer | Resultado esperado |
-|---|---|---|
-| 1 | Registrarse con cada tipo de aliado e intentar entrar antes de ser aprobado | "Tu solicitud está en revisión"; aparece en Solicitudes del panel |
-| 2 | Rechazar una solicitud y aprobar otra desde el panel | El rechazado ve "no fue aprobada"; el aprobado entra al Hub; en ≤ 2 min aparece como contacto en Clientify con `ID_aliado` y `PRUEBA HUB` |
-| 3 | Nueva oportunidad **perfecta** (10 campos + factura) y otra **imperfecta** | +30 (10 + 20) y +5 (10 − 5); en Clientify quedan la empresa con su sector, ciudad y el enlace de la factura en la descripción, y el contacto vinculado a esa empresa (por su nombre) con `ID_aliado`, la etiqueta correcta, ciudad, subsector y valor de la factura |
-| 4 | Referir el mismo correo dos veces, y el propio correo del aliado | Rechazo por duplicado y por autorreferido; sin puntos |
-| 5 | En Clientify, pasar el contacto a "3. lead caliente" | En ≤ 1 h (o al forzar la conciliación): +30, calidad actualizada y Racha semana 1 |
-| 6 | Crear una oportunidad para ese contacto y moverla a Diseño → Presentación de oferta → Contrato | +30, +50, +150 en ≤ 2 min cada uno; el dashboard de Financieros muestra valor y kWp tras el escaneo horario |
-| 7 | Devolver el contacto a "no calificado" | No cambian los puntos; aparece un conflicto en el panel. Resolverlo con y sin ajuste |
-| 8 | Crear directamente en Clientify un contacto `+prueba` con el `ID_aliado` de prueba y crearle una oportunidad (camino del antiguo formulario de Clientify) | La empresa aparece en el Hub del aliado con +10 |
-| 9 | Completar cursos de la Academy hasta pasar 20 puntos en el mes | Solo 20 puntos otorgados; el resto queda "pendiente" |
-| 10 | Reportar un evento que cumple y otro que no; validar y rechazar | +100 solo al que cumple; el aliado ve el motivo del rechazo |
-| 11 | Crear recompensas en el panel y canjear con la key de prueba (Claude da el comando) | Descuenta saldo, no nivel; una referencia repetida no descuenta dos veces; la anulación devuelve el saldo |
-| 11b | Invitar un operador desde el panel, abrir el enlace en el celular, crear su contraseña y canjear el QR de un aliado (también con el código corto); probar una recompensa de nivel mayor y otra sin saldo; mostrar una captura de pantalla vieja del QR | El aliado ve «¡Canje registrado!» y su nuevo saldo; las que no le alcanzan aparecen bloqueadas; la captura vieja responde «QR reemplazado» o «vencido» |
-| 12 | Suspender a un aliado, moverle un referido en Clientify y reactivarlo | Mientras está suspendido no entra ni gana puntos; al reactivar se acreditan los retenidos |
-| 13 | Ajuste de puntos y baja calidad reiterada desde el panel | Se reflejan en el historial del aliado; queda registro en Auditoría |
-| 14 | Entrar a `admin.html` con una cuenta que no es admin | "Sin acceso" |
-| 15 | Revisar el Hub con las cuentas Financiero y Agremiaciones | Ven su dashboard de gestión, su nivel y sus puntos |
-| 16 | «¿Olvidaste tu contraseña?» con una cuenta activa y con una pendiente | Llega «Restablece tu contraseña»; la activa entra al Hub y la pendiente ve «Tu solicitud está en revisión»; llega «Tu contraseña cambió» |
-| 17 | Registrarse con un celular que ya tiene otro aliado | Se rechaza el registro y no queda ninguna cuenta creada |
-| 18 | Entrar al Hub con la cuenta de admin | Va directo a `admin.html` |
-| 19 | Sin iniciar sesión, referir una empresa en el formulario público con el correo de un aliado de prueba (con y sin factura) | Pide la casilla Ley 1581 y el captcha; «Referido recibido» con los puntos; la empresa aparece en el Hub de ese aliado y en Clientify con `ID_aliado` |
-| 20 | Repetir con un correo que no es de un aliado y con el correo de una cuenta pendiente | El primero: «Hubo un problema al registrar esta oportunidad…» y no se guarda nada. El pendiente: se registra y los puntos quedan retenidos hasta aprobarlo |
-| 21 | Registrarse, entrar (Hub, `admin.html` y `canje.html`) y pedir «¿Olvidaste tu contraseña?» sin marcar el captcha, y luego marcándolo | Sin marcarlo: «Confirma que no eres un robot y vuelve a intentarlo.» y no pasa nada más. Marcándolo: funciona como siempre |
-| 22 | Abrir el Hub en un celular (o con la ventana angosta) y navegar por todas las pantallas | No se desplaza hacia los lados; «☰ Menú» abre el menú y se cierra al elegir una opción o tocar fuera |
+| # | Qué hacer | Resultado esperado | Estado al 5 oct 2026 |
+|---|---|---|---|
+| 1 | Registrarse con cada tipo de aliado e intentar entrar antes de ser aprobado | "Tu solicitud está en revisión"; aparece en Solicitudes del panel | ✅ Verificado |
+| 2 | Rechazar una solicitud y aprobar otra desde el panel | El rechazado ve "no fue aprobada"; el aprobado entra al Hub; en ≤ 2 min aparece como contacto en Clientify con `ID_aliado` y `PRUEBA HUB` | ✅ Verificado (flujo A con Clientify real) |
+| 3 | Nueva oportunidad **perfecta** (10 campos + factura) y otra **imperfecta** | +30 (10 + 20) y +5 (10 − 5); en Clientify quedan la empresa con su sector, ciudad y el enlace de la factura en la descripción, y el contacto vinculado a esa empresa (por su nombre) con `ID_aliado`, la etiqueta correcta, ciudad, subsector y valor de la factura | ✅ Verificado con Clientify real |
+| 4 | Referir el mismo correo dos veces, y el propio correo del aliado | Rechazo por duplicado y por autorreferido; sin puntos | Por confirmar |
+| 5 | En Clientify, pasar el contacto a "3. lead caliente" | En ≤ 1 h (o al forzar la conciliación): +30, calidad actualizada y Racha semana 1 | ✅ Verificado: +30 y Racha semana 1 |
+| 6 | Crear una oportunidad para ese contacto y moverla a Diseño → Presentación de oferta → Contrato | +30, +50, +150 en ≤ 2 min cada uno; el dashboard de Financieros muestra valor y kWp tras el escaneo horario | ✅ Verificado: +30, +50 y +150; valor cotizado, pipeline y kWp en la base |
+| 7 | Devolver el contacto a "no calificado" | No cambian los puntos; aparece un conflicto en el panel. Resolverlo con y sin ajuste | ✅ El conflicto aparece sin cambiar puntos; falta resolverlo desde el panel |
+| 7b | Poner en el contacto la etiqueta «fraude» (o «no existe», «información de contacto errónea») | −30 por información falsa, una sola vez | ✅ Verificado |
+| 7c | Poner un contacto en «0. lead no calificado» y los demás «0.» en otros contactos | Solo «0. lead no calificado» resta −10 (y −15 más si el referido era perfecto); los demás «0.» no cambian nada | ✅ Verificado tras calibrar los códigos (§9) |
+| 8 | Crear directamente en Clientify un contacto `+prueba` con el `ID_aliado` de prueba y crearle una oportunidad (camino del antiguo formulario de Clientify) | La empresa aparece en el Hub del aliado con +10 | Pendiente |
+| 9 | Completar cursos de la Academy hasta pasar 20 puntos en el mes | Solo 20 puntos otorgados; el resto queda "pendiente" | Pendiente |
+| 10 | Reportar un evento que cumple y otro que no; validar y rechazar | +100 solo al que cumple; el aliado ve el motivo del rechazo | Pendiente |
+| 11 | Crear recompensas en el panel y canjear con la key de prueba (Claude da el comando) | Descuenta saldo, no nivel; una referencia repetida no descuenta dos veces; la anulación devuelve el saldo | Parcial: catálogo, canje y anulación verificados con QR; falta el canje con la key de la API |
+| 11b | Invitar un operador desde el panel, abrir el enlace en el celular, crear su contraseña y canjear el QR de un aliado (también con el código corto); probar una recompensa de nivel mayor y otra sin saldo; mostrar una captura de pantalla vieja del QR | El aliado ve «¡Canje registrado!» y su nuevo saldo; las que no le alcanzan aparecen bloqueadas; la captura vieja responde «QR reemplazado» o «vencido» | ✅ Verificado con celulares Android e iPhone (1 oct) |
+| 12 | Suspender a un aliado, moverle un referido en Clientify y reactivarlo | Mientras está suspendido no entra ni gana puntos; al reactivar se acreditan los retenidos | Pendiente |
+| 13 | Ajuste de puntos y baja calidad reiterada desde el panel | Se reflejan en el historial del aliado; queda registro en Auditoría | Parcial: ajuste verificado; falta la baja calidad reiterada |
+| 14 | Entrar a `admin.html` con una cuenta que no es admin | "Sin acceso" | Por confirmar |
+| 15 | Revisar el Hub con las cuentas Financiero y Agremiaciones | Ven su dashboard de gestión, su nivel y sus puntos | Por confirmar (falta una cuenta Financiero activa) |
+| 16 | «¿Olvidaste tu contraseña?» con una cuenta activa y con una pendiente | Llega «Restablece tu contraseña»; la activa entra al Hub y la pendiente ve «Tu solicitud está en revisión»; llega «Tu contraseña cambió» | ✅ Verificado (2 oct) |
+| 17 | Registrarse con un celular que ya tiene otro aliado | Se rechaza el registro y no queda ninguna cuenta creada | Por confirmar |
+| 18 | Entrar al Hub con la cuenta de admin | Va directo a `admin.html` | Por confirmar |
+| 19 | Sin iniciar sesión, referir una empresa en el formulario público con el correo de un aliado de prueba (con y sin factura) | Pide la casilla Ley 1581 y el captcha; «Referido recibido» con los puntos; la empresa aparece en el Hub de ese aliado y en Clientify con `ID_aliado` | ✅ Verificado con Clientify real |
+| 20 | Repetir con un correo que no es de un aliado y con el correo de una cuenta pendiente | El primero: «Hubo un problema al registrar esta oportunidad…» y no se guarda nada. El pendiente: se registra y los puntos quedan retenidos hasta aprobarlo | Por confirmar |
+| 21 | Registrarse, entrar (Hub, `admin.html` y `canje.html`) y pedir «¿Olvidaste tu contraseña?» sin marcar el captcha, y luego marcándolo | Sin marcarlo: «Confirma que no eres un robot y vuelve a intentarlo.» y no pasa nada más. Marcándolo: funciona como siempre | ✅ Verificado |
+| 22 | Abrir el Hub en un celular (o con la ventana angosta) y navegar por todas las pantallas | No se desplaza hacia los lados; «☰ Menú» abre el menú y se cierra al elegir una opción o tocar fuera | ✅ Verificado |
 
 **Quién hace qué:** el equipo ejecuta los casos como usuario (Hub, panel y Clientify). Claude verifica en `aliados-dev` que la base quedó como se esperaba, puede forzar la conciliación para no esperar una hora, y corrige cualquier error en una rama con su prueba.
 
@@ -1260,7 +1262,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 12 | Endurecer el correo de `geenera.com` (área de TI). | Microsoft 365 no tiene activada la firma DKIM propia y el DMARC de `geenera.com` está en `p=none`. No afecta al Hub; conviene revisarlo con calma. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`. |
 | 13 | Claves del captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña. | Pasos en §10.2, paso 4: widget real para el dominio oficial (Production) y claves de prueba de Cloudflare en Preview; después, encender la protección CAPTCHA en cada proyecto de Supabase con la clave secreta del mismo widget. Sin ellas el formulario público no funciona en Production. **Estado:** `aliados-dev` listo (5 oct 2026); `aliados-prod` se configura solo al desplegar. |
 | 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`. |
-| 15 | Flujo C sin probar con un referido real. | El flujo B ya quedó verificado con Clientify real (5 oct 2026). Falta ver los puntos que da el avance en Clientify: casos 5–8 de §10.1. |
+| 15 | ~~Flujo C sin probar con un referido real.~~ | Resuelto (5 oct 2026): calificación, fases, información falsa, no calificado y conflicto verificados con Clientify real. Faltan el lead creado directo en Clientify (caso 8) y resolver un conflicto desde el panel (caso 7). |
 
 ---
 

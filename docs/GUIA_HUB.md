@@ -532,7 +532,7 @@ Supabase Auth envía los correos de la cuenta por **SMTP propio** con **Resend**
 | Baja calidad reiterada (la registra un admin) | −20 | Máximo una por aliado y día |
 | Módulo de Academy completado | Según el módulo (hoy 5 o 0) | Máximo 20 puntos por mes; lo que no cabe espera al mes siguiente |
 | Evento aliado validado | +100 | Una vez por evento |
-| Racha Solar 4x4 completada | +75 | Máximo una cada 28 días |
+| Racha Solar 4x4 completada | +75 | Máximo una cada 4 semanas calendario (se cuentan semanas, no horas: una racha completada un domingo y la siguiente completada el lunes de su cuarta semana reciben las dos su +75) |
 | Ajuste de admin | ± | Con justificación |
 | Canje | − (valor de la recompensa) | Solo con saldo suficiente |
 
@@ -1020,7 +1020,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Piso en 0 y sin memoria. Los puntos de un aliado no activo se retienen.
 - La calidad usa siempre la fórmula ponderada y excluye las empresas en revisión. El *lead scoring* nunca se usa.
 - Nivel = el menor entre el nivel por puntos y el nivel por calidad. El Hub no muestra el requisito de calidad.
-- Racha: cuenta la fecha de calificación; se reinicia el lunes después de completarla; lo retenido no cuenta.
+- Racha: cuenta la fecha de calificación; se reinicia el lunes después de completarla; lo retenido no cuenta; máximo un +75 cada 4 semanas calendario (corregido en oct 2026: antes se medía en horas y una racha completada el lunes, 22 días después de otra completada un domingo, perdía su +75).
 - Módulos: cada uno vale lo que diga el catálogo; tope de 20 puntos al mes, sin partir módulos y en orden de llegada.
 - Máximo 20 referidos por hora.
 

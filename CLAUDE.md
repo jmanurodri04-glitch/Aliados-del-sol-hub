@@ -436,7 +436,7 @@ Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre,
   - Luego `racha_ultima_semana = S`.
 - **Al completar 4 de 4:** se inserta `racha_solar` (+75). La racha se ve completa el resto de esa semana y el cron del lunes siguiente la vuelve a `0 0 0 0` (decisión del equipo).
 - **Cron semanal** (lunes 00:05 Bogotá): vuelve a `0 0 0 0` la racha completada la semana anterior y la de quien no calificó ninguna empresa en la semana recién terminada.
-- **Garantía:** no puede existir más de un `racha_solar` por aliado en 28 días. Se valida en la función antes de insertar.
+- **Garantía:** no puede existir más de un `racha_solar` por aliado en **4 semanas calendario**. Se valida en la función antes de insertar, comparando el **lunes** de la semana de la racha anterior con el de la actual (`interno.lunes_bogota(fecha) > semana − 28 días` bloquea), no los momentos exactos. Antes se comparaban los momentos: una racha completada un domingo y la siguiente el lunes de su cuarta semana quedaban a 22 días y el segundo +75 **se perdía** (la semana ya quedaba contada y nada lo volvía a intentar). Corregido en la migración `racha_semanas_calendario` (oct 2026, hallado en las pruebas de aceptación).
 - Una calificación retenida mientras la cuenta no estaba activa (§4.7) no cuenta para la racha (decisión del equipo).
 - Implementación: trigger `movimientos_puntos_racha` sobre el movimiento `empresa_calificada`, `interno.actualizar_racha` e `interno.reiniciar_rachas` (migración `racha_solar`).
 
@@ -866,7 +866,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - **Ramas actuales:** `config-smtp` reúne las fases 1–11 y el correo propio (§10). Sobre ella, **`correcciones-hub`** reúne las correcciones previas a la etapa 1 de pruebas de aceptación (guía §10.1) y es la rama cuyo Preview se prueba. El despliegue a producción se trabaja aparte, en `despliegue-prod`.
 - **Migraciones con el conector de Supabase:** el conector corta los envíos grandes (~60 s) y pide una confirmación que no llega cuando el SQL contiene `delete`. En esos casos se aplica por partes o la persona pega el SQL en el *SQL Editor* de `aliados-dev`, y se registra en `supabase_migrations.schema_migrations` con la versión del nombre del archivo. Las pruebas pgTAP se corren en dev dentro de un bloque que termina con un error a propósito (así todo se deshace).
 - **Tests:** `npm run test:db` (pgTAP, base local con `npx supabase start`) y `npm test` (`node --test` de `/lib` y `/api`; las pruebas de integración se omiten si no están `PRUEBAS_SUPABASE_URL`, `PRUEBAS_SUPABASE_SECRET_KEY`, `PRUEBAS_SUPABASE_PUBLISHABLE_KEY` y `PRUEBAS_DB_URL`; corren en serie porque comparten la base local).
-- Incluir tests de las reglas críticas: idempotencia de puntos, límites de nivel, tope mensual de módulos, racha (incluido el reinicio y el bloqueo de 28 días), el cálculo de calidad con `revision` y el saldo con piso en 0 sin memoria (ejemplo +10, −30, +20 = 20).
+- Incluir tests de las reglas críticas: idempotencia de puntos, límites de nivel, tope mensual de módulos, racha (incluido el reinicio y el bloqueo de 4 semanas calendario, con el caso domingo → lunes), el cálculo de calidad con `revision` y el saldo con piso en 0 sin memoria (ejemplo +10, −30, +20 = 20).
 
 ## 13. Decisiones tomadas
 
@@ -906,7 +906,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Valor cotizado = suma del Importe de todas las oportunidades del referido; pipeline originado = suma del Importe de las que se cierran (ganadas o en "Contrato") (§8, tabla D).
 - Las etiquetas "aliado del sol hub" / "aliados del sol" marcan **referidos** (el formulario público pone "aliado del sol hub"); el contacto de un aliado se reconoce por su ID (§7.1, §8).
 - Las etiquetas de tipo ("AdS Financieros", "AdS EMI", "AdS Linker", "AdS Cliente Embajador", "AdS Agremiaciones") son las mismas del formulario público y del registro del Hub; se dejan así.
-- Racha Solar: al completar 4 de 4 se reinicia el lunes siguiente; las calificaciones retenidas no cuentan (§5.2).
+- Racha Solar: al completar 4 de 4 se reinicia el lunes siguiente; las calificaciones retenidas no cuentan; máximo un +75 cada 4 semanas calendario, medido por semanas y no por horas (§5.2).
 - Módulos: cada uno vale lo que indique el catálogo y el tope es de 20 puntos por mes, sin partir módulos y en orden de llegada (§5.3).
 - `empresas` exige los campos obligatorios del formulario solo para `origen = 'hub'`; el formulario público de Clientify puede traerlos incompletos (§4.4, §7.1).
 - Financieros y Agremiaciones también ven sus puntos y su nivel (§9).

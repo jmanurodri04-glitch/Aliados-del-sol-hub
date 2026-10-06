@@ -2,7 +2,7 @@
 -- Semanas de prueba (lunes, hora Bogotá): W1 2026-06-01 · W2 06-08 · W3 06-15 · W4 06-22 · W5 06-29.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(30);
 
 create function pg_temp.aliado(id uuid, email text, activo boolean default true)
 returns void language plpgsql as $$
@@ -130,6 +130,23 @@ select pg_temp.calificar('d1000000-0000-0000-0000-000000000001', '2026-06-15 12:
 select pg_temp.calificar('d1000000-0000-0000-0000-000000000001', '2026-06-22 12:00-05');
 select is(pg_temp.racha('d1000000-0000-0000-0000-000000000001'), '1111', 'la racha se completa');
 select is(pg_temp.bonos('d1000000-0000-0000-0000-000000000001'), 1::bigint, 'pero no hay un segundo racha_solar en menos de 28 días');
+
+-- F: dos rachas seguidas, la primera completada un domingo y la segunda un lunes (22 días entre ambos) -----
+-- Antes de la migración racha_semanas_calendario el segundo +75 se perdía (oct 2026).
+
+select pg_temp.aliado('f1000000-0000-0000-0000-000000000001', 'f@racha.test');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-09-07 10:00-05');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-09-14 10:00-05');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-09-21 10:00-05');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-10-04 20:00-05');
+select is(pg_temp.bonos('f1000000-0000-0000-0000-000000000001'), 1::bigint, 'primera racha completada el domingo: +75');
+select interno.reiniciar_rachas('2026-10-05 00:05-05');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-10-05 10:00-05');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-10-12 10:00-05');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-10-19 10:00-05');
+select pg_temp.calificar('f1000000-0000-0000-0000-000000000001', '2026-10-26 09:00-05');
+select is(pg_temp.bonos('f1000000-0000-0000-0000-000000000001'), 2::bigint,
+  'segunda racha completada el lunes de su cuarta semana: +75 en el momento, aunque solo pasaron 22 días');
 
 -- E: calificación retenida mientras la cuenta no estaba activa --------------------------------------------
 

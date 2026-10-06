@@ -2,7 +2,7 @@
 -- conflictos, retención, conciliación y depuración (CLAUDE.md §4.7, §5, §5.1, §7.1, §8).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(62);
+select plan(65);
 
 create function pg_temp.aliado(id uuid, email text, celular text, estado text)
 returns void language sql as $$
@@ -220,6 +220,15 @@ select is((select count(*) from public.clientify_cola_entidades where entidad_id
 select is((select count(*) from public.clientify_cola_entidades where origen = 'conciliacion' and entidad_id in ('101', '103', '104')), 3::bigint,
   'los contactos en curso quedan en la cola con origen conciliación');
 select is(public.clientify_encolar_conciliacion(), 0, 'repetirla no duplica la cola');
+select is(public.clientify_encolar_conciliacion(true),
+  (select count(*)::integer from public.empresas e join public.avance_empresa a on a.empresa_id = e.id
+   where e.clientify_contact_id is not null and a.negocio_cerrado = 'si'),
+  'una vez al día (02:00 Bogotá) también encola los referidos cerrados');
+select is((select count(*) from public.clientify_cola_entidades where entidad_id = '105' and origen = 'conciliacion'), 1::bigint,
+  'el negocio cerrado queda en la cola con origen conciliación');
+select ok(not has_function_privilege('authenticated', 'public.clientify_encolar_conciliacion(boolean)', 'execute')
+  and has_function_privilege('service_role', 'public.clientify_encolar_conciliacion(boolean)', 'execute'),
+  'solo el servidor puede pedir la conciliación con cerrados');
 
 -- Depuración de payloads (90 días) --------------------------------------------------------------------------
 

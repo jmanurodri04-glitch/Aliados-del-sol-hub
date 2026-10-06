@@ -325,7 +325,7 @@ flowchart TD
   N8N[n8n: contacto con etiqueta de aliado] -.->|reenvío planeado| WH
   WH --> Q[(webhook_eventos +<br/>clientify_cola_entidades)]
   CRON[pg_cron cada 2 min] --> P[/api/cron/clientify/]
-  CONC[pg_cron cada hora<br/>+ Vercel diario] --> C2[/api/cron/clientify-conciliacion<br/>escanea oportunidades y<br/>contactos en curso/]
+  CONC[pg_cron cada hora<br/>+ Vercel diario] --> C2[/api/cron/clientify-conciliacion<br/>escanea oportunidades y contactos en curso;<br/>a las 2 a. m. también los cerrados/]
   C2 --> Q
   P --> Q
   Q --> R[Vuelve a consultar el contacto<br/>y sus oportunidades en Clientify]
@@ -344,6 +344,7 @@ flowchart TD
 - **Se vuelve a consultar Clientify** en vez de confiar en el webhook: el webhook puede llegar incompleto, repetido o desordenado.
 - **La cola agrupa eventos:** si llegan cinco eventos de la misma oportunidad, se procesa una sola vez.
 - **La conciliación horaria** cubre lo que no llega por webhook. El webhook de contactos va a n8n, así que los cambios de Status llegan como máximo con una hora de retraso.
+- **Los referidos ya cerrados se revisan una vez al día** (a las 2 de la mañana, hora de Bogotá; decisión del equipo, oct 2026). La revisión horaria solo mira los referidos en curso, porque son muchos menos y es lo que cambia a diario. Pero a un referido cerrado le pueden poner después una etiqueta de «fraude» o devolverle el Status, y su oportunidad ya no se mueve, así que nadie avisaría. Con la revisión diaria eso se detecta en máximo un día, sin llamar a Clientify por cada cerrado cada hora.
 - **Cada variable da puntos una sola vez en toda su vida** (clave única). Por eso reprocesar es inofensivo.
 
 ### 5.4 Cómo se mueven los puntos
@@ -1009,7 +1010,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - La factura queda en la **empresa** en Clientify como un enlace privado de descarga de 180 días en su descripción, porque la API de Clientify no permite subir archivos (lo confirmó su soporte). La empresa se crea siempre, con sector y ciudad, y el contacto se vincula por su nombre.
 - Un contacto se refiere una sola vez (gana el primer aliado) y no se admite el autorreferido.
 - Los referidos solo llevan «Referido perfecto» o «Referido imperfecto» (los flujos de Clientify se disparan con «referido perfecto»; el imperfecto va a n8n). No llevan «aliado del sol hub» ni «aliados del sol».
-- El webhook de contactos sigue en n8n; al Hub llega el de oportunidades, más una conciliación horaria.
+- El webhook de contactos sigue en n8n; al Hub llega el de oportunidades, más una conciliación horaria de los referidos en curso y una diaria (2 a. m.) que incluye los cerrados.
 - Los eventos de webhook ajenos al programa se borran al procesarlos. El resto se vacía a los 90 días.
 - Un cambio de Clientify sobre un valor definitivo queda como conflicto para un admin.
 
@@ -1263,6 +1264,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 13 | Claves del captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña. | Pasos en §10.2, paso 4: widget real para el dominio oficial (Production) y claves de prueba de Cloudflare en Preview; después, encender la protección CAPTCHA en cada proyecto de Supabase con la clave secreta del mismo widget. Sin ellas el formulario público no funciona en Production. **Estado:** `aliados-dev` listo (5 oct 2026); `aliados-prod` se configura solo al desplegar. |
 | 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`. |
 | 15 | ~~Flujo C sin probar con un referido real.~~ | Resuelto (5 oct 2026): calificación, fases, información falsa, no calificado y conflicto verificados con Clientify real. Faltan el lead creado directo en Clientify (caso 8) y resolver un conflicto desde el panel (caso 7). |
+| 16 | ~~Un referido ya cerrado al que solo le cambian el contacto no se volvía a revisar.~~ | Resuelto (6 oct 2026): además de la revisión horaria de los referidos en curso, una vez al día (2 a. m., hora de Bogotá) se revisan también los cerrados, así una etiqueta de «fraude» o un retroceso de Status puesto después del cierre se detecta en máximo un día (§5.3). |
 
 ---
 

@@ -17,6 +17,7 @@ const ACCIONES = { aprobar_aliado: 'Aprobó la solicitud', rechazar_aliado: 'Rec
   reactivar_aliado: 'Reactivó la cuenta', ajuste_puntos: 'Ajuste de puntos', baja_calidad: 'Baja calidad reiterada (−20)',
   validar_evento: 'Validó un evento (+100)', rechazar_evento: 'Rechazó un evento', resolver_conflicto: 'Resolvió un conflicto',
   anular_canje: 'Anuló un canje', guardar_recompensa: 'Guardó una recompensa', invitar_operador: 'Invitó un operador',
+  otorgar_meddpicc: 'Otorgó el MEDDPICC (+20)', reintentar_correo: 'Reintentó un correo',
   estado_operador: 'Cambió el estado de un operador', eliminar_operador: 'Eliminó un operador' };
 const VARIABLES = { calificado: 'Calificado', perfecto: 'Referido perfecto', fuera_perfil: 'Fuera del perfil', oportunidad_tecnica: 'Evaluación técnica',
   propuesta_comercial: 'Propuesta comercial', negocio_cerrado: 'Negocio cerrado', informacion_falsa: 'Información falsa', integridad_informacion: 'Integridad' };
@@ -224,11 +225,31 @@ async function cargarResumen() {
     ['Calidad promedio', r.calidad_promedio == null ? '—' : Math.round(r.calidad_promedio) + ' %'], ['Puntos otorgados este mes', numero(r.puntos_otorgados_mes)],
     ['Rachas 4x4 completas', numero(r.rachas_completas)], ['Eventos por revisar', numero(r.eventos_pendientes), r.eventos_pendientes > 0],
     ['Conflictos abiertos', numero(r.conflictos_abiertos), r.conflictos_abiertos > 0],
-    ['Canjes este mes', numero(r.canjes_mes)], ['Puntos redimidos este mes', numero(r.puntos_redimidos_mes)], ['Recompensas activas', numero(r.recompensas_activas)]
+    ['Canjes este mes', numero(r.canjes_mes)], ['Puntos redimidos este mes', numero(r.puntos_redimidos_mes)], ['Recompensas activas', numero(r.recompensas_activas)],
+    ['Correos no enviados', numero(r.correos_no_enviados), r.correos_no_enviados > 0]
   ];
   const porTipo = Object.entries(r.activos_por_tipo || {}).map(([t, n]) => `${esc(TIPOS[t] || t)}: ${numero(n)}`).join(' · ');
   $('resumen').innerHTML = kpis.map(([k, v, alerta]) => `<div class="tarjeta kpi ${alerta ? 'alerta' : ''}"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')
     + `<div class="tarjeta kpi" style="grid-column:1 / -1"><span>Activos por tipo</span><div>${porTipo || '—'}</div></div>`;
+  await cargarCorreos(r.correos_no_enviados > 0);
+}
+
+// Correos «Confirmación de empresa referida» que no se pudieron enviar (MEDDPICC). Si Resend llega a su límite, el
+// equipo lo ve aquí sin entrar a Resend.
+async function cargarCorreos(hay) {
+  const caja = $('correos-fallidos');
+  if (!hay) { caja.hidden = true; caja.innerHTML = ''; return; }
+  const filas = await leer(supabase.from('v_admin_correos').select('*').order('created_at', { ascending: false }).limit(200));
+  caja.hidden = !filas.length;
+  caja.innerHTML = `<h2 style="margin:0 0 4px;font-size:17px">Correos no enviados</h2>
+    <p class="nota" style="margin:0 0 10px">Correos de «Confirmación de empresa referida» que Resend no pudo enviar. Se reintentan solos (15 min, 30, 1 h… hasta 8 veces); «Reintentar» lo envía enseguida.</p>
+    <table><thead><tr><th>Referido</th><th>Registrado</th><th>Motivo</th><th>Intentos</th><th></th></tr></thead><tbody>${filas.map((c) => `<tr>
+      <td><b>${esc(c.empresa)}</b><span class="sub">${esc(c.nombre_completo)} · <span class="codigo">${esc(c.codigo_aliado)}</span></span></td>
+      <td>${fecha(c.created_at)}</td>
+      <td>${esc(c.error || 'Esperando el envío')}</td>
+      <td>${numero(c.intentos)}<span class="sub">${c.proximo_at ? 'próximo: ' + fecha(c.proximo_at) : (c.estado === 'error' ? 'detenido: reintenta a mano' : '')}</span></td>
+      <td><button class="btn" data-accion="reintentar_correo" data-empresa="${esc(c.empresa_id)}" data-nombre="${esc(c.empresa)}">Reintentar</button></td>
+    </tr>`).join('')}</tbody></table>`;
 }
 
 // Solicitudes -------------------------------------------------------------------------------------------------------
@@ -276,7 +297,13 @@ async function abrirAliado(codigo) {
   if (!a) return;
   const movs = await leer(supabase.from('v_admin_movimientos').select('*').eq('codigo_aliado', codigo)
     .order('fecha', { ascending: false }).order('secuencia', { ascending: false }).limit(100));
+  const referidos = await leer(supabase.from('v_admin_referidos').select('*').eq('codigo_aliado', codigo)
+    .order('created_at', { ascending: false }).limit(200));
   const racha = [a.racha_semana_1, a.racha_semana_2, a.racha_semana_3, a.racha_semana_4].filter(Boolean).length;
+  const CORREO = { enviado: ['activo', 'Enviado'], pendiente: ['pendiente', 'Por enviar'], error: ['rechazado', 'No enviado'] };
+  const meddpicc = (e) => e.meddpicc_otorgado ? chip('activo', 'Otorgado +20')
+    : e.meddpicc_aplica ? `<button class="btn" data-accion="otorgar_meddpicc" data-empresa="${esc(e.empresa_id)}" data-nombre="${esc(e.empresa)}" data-codigo="${esc(codigo)}">MEDDPICC +20</button>`
+    : '<span class="sub">No aplica (imperfecto sin ciudad)</span>';
   $('aliado-detalle').innerHTML = `<div class="detalle">
     <div class="tarjeta">
       <h2 style="margin:0 0 4px">${esc(a.nombre_completo)} ${chip(a.estado)}</h2><span class="codigo">${esc(a.codigo_aliado)}</span>
@@ -305,7 +332,17 @@ async function abrirAliado(codigo) {
         return `<tr><td>${fecha(m.fecha)}</td><td>${esc(m.descripcion)}${m.empresa ? `<span class="sub">${esc(m.empresa)}</span>` : ''}${m.nota ? `<span class="sub">${esc(m.nota)}</span>` : ''}</td>
           <td><b style="color:${m.tipo === 'ganado' ? 'var(--g)' : 'var(--bad)'}">${signo}${numero(m.puntos)}</b>${parcial}</td><td class="codigo">${esc(m.creado_por)}</td></tr>`;
       }).join('')}</tbody></table>` : '<p class="vacio">Sin movimientos.</p>'}
-    </div></div>`;
+    </div></div>
+    <div class="tarjeta tabla" style="margin-top:16px">
+      <h2 style="margin:0 0 4px;font-size:17px">Referidos y MEDDPICC</h2>
+      <p class="nota" style="margin:0 0 10px">Cuando el aliado envíe la información MEDDPICC de un referido y el equipo la revise, otórgale los +20 (una vez por referido).</p>
+      ${referidos.length ? `<table><thead><tr><th>Referido</th><th>Ciudad</th><th>Registrado</th><th>Correo</th><th>MEDDPICC</th></tr></thead><tbody>${referidos.map((e) => {
+        const c = CORREO[e.correo_estado];
+        return `<tr><td><b>${esc(e.empresa || '—')}</b><span class="sub">${e.es_perfecto ? 'Perfecto' : 'Imperfecto'}</span></td>
+          <td>${esc(e.ciudad || '—')}</td><td>${fecha(e.created_at)}</td>
+          <td>${c ? chip(c[0], c[1]) : '<span class="sub">—</span>'}</td><td>${meddpicc(e)}</td></tr>`;
+      }).join('')}</tbody></table>` : '<p class="vacio">Sin referidos.</p>'}
+    </div>`;
   $('aliado-detalle').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -545,6 +582,20 @@ async function alHacerClic(ev) {
     accion: async (v) => { await llamarAdmin('eliminar_operador', { operador_id: b.dataset.operador, motivo: v.motivo }); await recargar(); return 'Operador eliminado.'; } });
   if (accion === 'reactivar_operador') pedir({ titulo: 'Reactivar operador', texto: `${nombre} podrá volver a registrar canjes.`, confirmar: 'Reactivar',
     accion: async () => { await llamarAdmin('estado_operador', { operador_id: b.dataset.operador, activo: true }); await recargar(); return 'Operador reactivado.'; } });
+  if (accion === 'otorgar_meddpicc') pedir({ titulo: 'MEDDPICC (+20)', texto: `Otorga +20 Puntos Sol por la información MEDDPICC de «${nombre}». Solo una vez por referido.`,
+    campos: [{ id: 'nota', etiqueta: 'Nota (opcional)', tipo: 'area', ayuda: 'El aliado la ve en su historial.' }], confirmar: 'Otorgar +20',
+    accion: async (v) => {
+      const r = await llamarAdmin('otorgar_meddpicc', { empresa_id: b.dataset.empresa, nota: v.nota });
+      return tras(r.retenido ? 'MEDDPICC registrado: queda retenido hasta que la cuenta esté activa.' : 'MEDDPICC otorgado: +20.');
+    } });
+  if (accion === 'reintentar_correo') {
+    b.disabled = true;
+    try {
+      const r = await llamarAdmin('reintentar_correo', { empresa_id: b.dataset.empresa });
+      await recargar();
+      aviso(r.enviado ? `Correo de «${nombre}» enviado.` : `No se pudo enviar: ${r.error || 'quedó en la cola'}.`);
+    } catch (e) { aviso(e.message); } finally { b.disabled = false; }
+  }
   if (accion === 'nueva_recompensa') formularioRecompensa(null);
   if (accion === 'editar_recompensa') formularioRecompensa(recompensas.find((r) => r.recompensa_id === recompensa));
   if (accion === 'resolver') {

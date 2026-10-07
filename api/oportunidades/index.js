@@ -4,7 +4,9 @@
 // 2. public.registrar_oportunidad valida y guarda empresa, factura y avance, y otorga los puntos, todo en una
 //    transacción: o queda completo o no queda nada (con límite de 20 por hora, duplicados y autorreferidos).
 // 3. Intenta sincronizar con Clientify en el momento (flujo B); si falla, la cola lo reintenta por cron.
-// 4. Responde con los puntos otorgados y el saldo actualizado.
+// 4. Envía el correo «Confirmación de empresa referida» (con la invitación al MEDDPICC si aplica) con Resend; si falla,
+//    el cron lo reintenta y el panel lo muestra en «Correos no enviados». Corre a la vez que Clientify.
+// 5. Responde con los puntos otorgados y el saldo actualizado.
 //
 // Formulario público (`publico: true`, sin sesión): el aliado se busca por `correo_aliado` con captcha, límite por
 // conexión y mensajes ambiguos (lib/referido-publico.js). Responde solo { es_perfecto, puntos, clientify }.
@@ -12,6 +14,7 @@
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { crearClienteClientify } from '../../lib/clientify/cliente.js';
 import { procesarEmpresas } from '../../lib/clientify/cola.js';
+import { enviarCorreoAhora } from '../../lib/correo/cola.js';
 import { aliadoDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
 import { registrarPublico } from '../../lib/referido-publico.js';
 
@@ -54,6 +57,15 @@ async function sincronizarAhora(supabase, empresaId, entorno) {
   }
 }
 
+// Clientify y el correo en paralelo (ninguno hace fallar el registro). El resultado del correo no se devuelve.
+async function despuesDeRegistrar(supabase, empresaId, entorno, fetchImpl) {
+  const [clientify] = await Promise.all([
+    sincronizarAhora(supabase, empresaId, entorno),
+    enviarCorreoAhora(supabase, empresaId, entorno, fetchImpl || fetch)
+  ]);
+  return clientify;
+}
+
 // `inyectado` solo lo usan las pruebas (cliente de Supabase, variables de entorno y fetch simulados).
 export default async function handler(req, res, inyectado = {}) {
   if (req.method !== 'POST') {
@@ -87,7 +99,7 @@ export default async function handler(req, res, inyectado = {}) {
     if (publico) {
       const resultado = await registrarPublico(req, cuerpo, { supabase, entorno, fetchImpl: inyectado.fetch, empresaId, datos, factura });
       porBorrar = null;
-      return res.status(201).json({ ...resultado, clientify: await sincronizarAhora(supabase, empresaId, entorno) });
+      return res.status(201).json({ ...resultado, clientify: await despuesDeRegistrar(supabase, empresaId, entorno, inyectado.fetch) });
     }
 
     const { data: resultado, error } = await supabase.rpc('registrar_oportunidad', {
@@ -96,7 +108,7 @@ export default async function handler(req, res, inyectado = {}) {
     if (error) throw errorDeRegistro(error.message) || new Error('registrar_oportunidad falló');
     porBorrar = null; // quedó registrada: ya no se borra
 
-    return res.status(201).json({ ...resultado, clientify: await sincronizarAhora(supabase, empresaId, entorno) });
+    return res.status(201).json({ ...resultado, clientify: await despuesDeRegistrar(supabase, empresaId, entorno, inyectado.fetch) });
   } catch (e) {
     // Si el registro falló, se borra la factura que se alcanzó a subir.
     if (porBorrar && supabase) await supabase.storage.from('facturas').remove([porBorrar]).catch(() => {});

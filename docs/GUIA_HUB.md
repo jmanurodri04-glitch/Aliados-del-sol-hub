@@ -315,6 +315,25 @@ sequenceDiagram
 - **Protecciones:** captcha de Cloudflare Turnstile, máximo 20 intentos por hora por conexión (se guarda una huella, nunca la IP) y la respuesta no muestra el saldo ni el nivel del aliado.
 - **Etiquetas en Clientify:** como en el Hub, solo «Referido perfecto» o «Referido imperfecto». Los flujos de Clientify se disparan con «referido perfecto» y el imperfecto va a n8n.
 
+#### Correo de confirmación y MEDDPICC (oct 2026)
+
+Cada referido **nuevo** del Hub (Nueva oportunidad o formulario público) le envía al aliado el correo **«Confirmación de empresa referida»**, con Resend desde `no-reply@notificaciones.geenera.com`. Los referidos que ya existían no lo reciben.
+
+- **Invitación al MEDDPICC (+20):** el correo explica qué es MEDDPICC (Métricas, Comprador económico, Criterios de decisión, Proceso de decisión, Proceso de papeles, Dolor identificado, Campeón y Competencia) y trae las 8 preguntas. Solo va si el referido **aplica**: es perfecto, o es imperfecto pero tiene ciudad. Un imperfecto sin ciudad recibe solo la confirmación.
+- **A quién le llega la respuesta:** el aliado responde el mismo correo o usa el botón «Enviar mi MEDDPICC», que abre un correo con el asunto *MEDDPICC · {Empresa} · {código del aliado}*. El buzón depende de la **ciudad que se escribió al referir** (nunca de la regional del aliado): primero la ciudad y, si no se reconoce, el departamento.
+
+| Regional | Buzón | Departamentos (y sus ciudades principales) |
+|---|---|---|
+| Costa | d.ariza@geenera.com | Atlántico, Bolívar, Magdalena, Cesar, La Guajira, Córdoba, Sucre, San Andrés |
+| Oriente | h.zambrano@geenera.com | Santander, Norte de Santander |
+| Centro | c.buitrago@geenera.com | Bogotá, Cundinamarca, Boyacá, Tolima, Meta, Huila |
+| Otra o no reconocida | c.lizarazo@geenera.com | Antioquia, Valle, Eje Cafetero, el resto o texto que no se reconoce |
+
+  La lista vive en `lib/correo/regiones.js` y se puede ampliar (ciudades o departamentos en minúscula y sin tildes).
+- **Los +20:** cuando el equipo revisa la información, un admin abre al aliado en el panel (pestaña Aliados) y, en «Referidos y MEDDPICC», toca **MEDDPICC +20**. Se otorga una vez por referido y no hay plazo. Si la cuenta está pendiente o suspendida, queda retenido como los demás puntos (el correo lo avisa).
+- **Si el correo no sale:** se reintenta solo (15 min, 30, 1 h… hasta 8 veces). En el **Resumen del panel** aparecen la tarjeta «Correos no enviados» y la lista con el motivo (por ejemplo, «Resend: se alcanzó el límite diario de envíos») y el botón **Reintentar**. Así, si Resend llega a su límite, el equipo lo ve sin entrar a Resend (decisión del equipo).
+- **Límites de Resend (plan gratuito):** 100 correos al día y 3.000 al mes, compartidos con los correos de las cuentas (§5.9). Si se acercan, conviene el plan de pago.
+
 **La factura en Clientify (decisión del equipo, oct 2026):** la API de Clientify no permite subir archivos, así que el Hub deja en la descripción de la empresa un **enlace privado de descarga** que vale 180 días. Cualquiera que tenga el enlace puede abrir la factura, que trae datos personales del contacto. Por eso el equipo comercial **no debe copiarlo, reenviarlo ni pegarlo en otros lugares**: lo abre, descarga la factura y la guarda según la política de tratamiento de datos. La factura original sigue privada en el Hub.
 
 ### 5.3 Avance comercial desde Clientify (flujo C) y conciliación
@@ -496,6 +515,7 @@ Supabase Auth envía los correos de la cuenta por **SMTP propio** con **Resend**
 | Restablece tu contraseña | «¿Olvidaste tu contraseña?» en el login del Hub (también desde `admin.html` y `canje.html`) | `recuperacion.html` |
 | Confirma el cambio de correo | Si cambia el correo de una cuenta (se confirma en el correo anterior y en el nuevo) | `cambio_correo.html` |
 | Tu contraseña cambió | Después de cambiar la contraseña (aviso de seguridad) | `contrasena_cambiada.html` |
+| Confirmación de empresa referida | Al registrar un referido nuevo (§5.2). No lo envía Supabase: lo envía el Hub con la API de Resend | `lib/correo/confirmacion.js` |
 
 **Cómo está armado y por qué:**
 
@@ -519,6 +539,7 @@ Supabase Auth envía los correos de la cuenta por **SMTP propio** con **Resend**
 
 | Qué pasa | Puntos | Se otorga… |
 |---|---|---|
+| Información MEDDPICC de un referido (la otorga un admin al revisarla) | +20 | Una vez por referido; solo perfectos o imperfectos con ciudad; sin plazo |
 | Bienvenida: GEENERA aprueba la cuenta | +10 | Una sola vez por aliado (oct 2026; también se dio a los que ya estaban aprobados). Las cuentas de admin no la reciben |
 | Registro válido de un referido | +10 | Una vez por empresa |
 | Referido perfecto (10 campos + factura) | +20 | Una vez por empresa (comparte clave con imperfecto) |
@@ -902,6 +923,16 @@ Cada código inexistente que prueba un operador (usuario y hora). Sirve para fre
 
 Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llaves foráneas: el permiso existe antes que la empresa.
 
+#### `correos_referido` — correo de confirmación de cada referido (oct 2026)
+
+| Columna | Qué representa |
+|---|---|
+| `empresa_id` | Referido (una fila por referido nuevo del Hub; la crea un trigger al registrarlo). |
+| `estado` | `pendiente`, `enviado` o `error`. Un correo enviado nunca se vuelve a enviar. |
+| `intentos`, `proximo_at` | Reintentos (15 min, 30, 1 h… máximo 6 h); tras 8 intentos se detiene hasta «Reintentar». |
+| `error` | Motivo del último fallo, sin datos personales (lo muestra el panel). |
+| `enviado_at`, `created_at`, `updated_at` | Fechas. |
+
 #### `acciones_admin` — auditoría del panel (solo inserción)
 
 | Columna | Qué representa |
@@ -917,7 +948,7 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 ### 7.8 Vistas, archivos y funciones
 
 - **Vistas del aliado** (cada una devuelve solo lo del usuario de la sesión): `v_aliado_dashboard`, `v_mis_movimientos`, `v_mis_referidos`, `v_mis_modulos`, `v_mis_eventos`, `v_mis_canjes` y `v_recompensas`. **Ninguna expone `aliados.id`.**
-- **Vistas del admin** (vacías para quien no es admin): `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_canjes`, `v_admin_recompensas`, `v_admin_operadores` y `v_admin_acciones`.
+- **Vistas del admin** (vacías para quien no es admin): `v_admin_resumen`, `v_admin_aliados`, `v_admin_movimientos`, `v_admin_eventos`, `v_admin_conflictos`, `v_admin_canjes`, `v_admin_recompensas`, `v_admin_operadores`, `v_admin_acciones`, `v_admin_correos` (correos no enviados) y `v_admin_referidos` (referidos con su estado de MEDDPICC).
 - **Páginas:** `index.html` (Hub y sitio público), `admin.html` (panel) y `canje.html` (registro de canjes con QR, fase 11).
 - **Buckets privados de Storage:**
   - `facturas`: PDF, JPG o PNG de hasta 10 MB.
@@ -961,6 +992,7 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 | `CRON_SECRET` | Protege `/api/cron/*` (debe ser igual al `cron_secret` del Vault). | **Nunca.** |
 | `CANJES_API_KEYS` | `proveedor:key,proveedor:key` (keys de 24+ caracteres). | **Nunca.** |
 | `TURNSTILE_SITE_KEY` | Clave pública del captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña. | Sí, por `/api/config`. |
+| `RESEND_API_KEY` | Key de Resend **solo con permiso de envío** para el correo «Confirmación de empresa referida» (oct 2026). Es otra key, distinta de la contraseña SMTP de Supabase, que sigue solo en Supabase. Sin ella los correos quedan en «Correos no enviados». | **Nunca.** |
 | `TURNSTILE_SECRET_KEY` | Clave secreta del captcha del formulario público. Sin ella, en Production ese formulario no funciona. La misma clave se pega en el panel de Supabase (*Attack Protection*) para el registro y el login; allí no es una variable de Vercel. | **Nunca.** |
 
 **Funciones de `/api` (12):**
@@ -1023,6 +1055,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 
 **Puntos, calidad y niveles**
 - "Información disponible" se eliminó. Referido perfecto = +20.
+- **MEDDPICC:** +20 una vez por referido, lo otorga un admin desde el panel cuando revisa la información; aplica a perfectos o imperfectos con ciudad, sin plazo. Cada referido nuevo recibe el correo «Confirmación de empresa referida» por Resend desde el Hub (no desde Clientify, porque el contacto que se crea es el de la empresa y no el del aliado). El MEDDPICC va al buzón de la regional según la ciudad del referido; si no se reconoce, a c.lizarazo. El panel muestra los correos no enviados con su motivo.
 - **Bienvenida:** +10 Puntos Sol una sola vez, cuando GEENERA aprueba la cuenta (también se dieron a los aliados ya aprobados; no a los admins). Conviene mencionarlo en los Términos o en la política de beneficios.
 - Fuera del perfil (−15) se suma a no calificado (−10).
 - Piso en 0 y sin memoria. Los puntos de un aliado no activo se retienen.
@@ -1066,8 +1099,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 | Ya verificado | Cómo | Qué **no** cubre |
 |---|---|---|
-| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 652 pruebas pgTAP en 18 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
-| Funciones `/api` | 120 pruebas de `npm test`: 97 con Supabase, Clientify y el captcha simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
+| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 678 pruebas pgTAP en 19 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
+| Funciones `/api` | 132 pruebas de `npm test`: 109 con Supabase, Clientify y el captcha simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
 | Pantallas del Hub y del panel (incluido el formulario público, el captcha del registro y los logins, y el Hub a 390 px de ancho, oct 2026) | Pruebas en navegador con Supabase y el captcha simulados | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
@@ -1084,7 +1117,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 1. **Usar un Preview fijo.** Vercel da a cada rama una URL estable del tipo `https://<proyecto>-git-correcciones-hub-<equipo>.vercel.app`. Esa URL es la que se usa en todos los pasos siguientes.
    *Por qué:* la URL de un despliegue concreto cambia en cada *push*; la de la rama no.
-2. **Variables de Preview** en Vercel: las de `aliados-dev`, más un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`) y las **claves de prueba** del captcha que publica Cloudflare (pasan siempre, en cualquier dominio): `TURNSTILE_SITE_KEY = 1x00000000000000000000AA` y `TURNSTILE_SECRET_KEY = 1x0000000000000000000000000000000AA`. Sin ellas el Preview no muestra ningún captcha y el servidor lo omite. **Después de un nuevo despliegue con esas variables**, en `aliados-dev` → Authentication → *Attack Protection* → *Enable CAPTCHA protection*: proveedor **Turnstile** y como *Secret key* la de prueba (`1x0000000000000000000000000000000AA`).
+2. **Variables de Preview** en Vercel: las de `aliados-dev`, más una `RESEND_API_KEY` solo de envío (para el correo de confirmación de los referidos, §5.2), un `CANJES_API_KEYS` de prueba (p. ej. `pruebas:<clave de 24+ caracteres>`) y las **claves de prueba** del captcha que publica Cloudflare (pasan siempre, en cualquier dominio): `TURNSTILE_SITE_KEY = 1x00000000000000000000AA` y `TURNSTILE_SECRET_KEY = 1x0000000000000000000000000000000AA`. Sin ellas el Preview no muestra ningún captcha y el servidor lo omite. **Después de un nuevo despliegue con esas variables**, en `aliados-dev` → Authentication → *Attack Protection* → *Enable CAPTCHA protection*: proveedor **Turnstile** y como *Secret key* la de prueba (`1x0000000000000000000000000000000AA`).
    *Por qué en ese orden:* con la protección encendida, Supabase rechaza todo registro, login y recuperación sin captcha; si el Preview aún no tiene la site key, nadie podría entrar.
 3. **Vault de `aliados-dev`:** `clientify_sync_url` = `<URL del Preview>/api/cron/clientify`, y `vercel_bypass_secret` si el Preview está protegido.
    *Por qué:* los cron de dev llaman a esa URL. Si apunta a un Preview viejo, se prueba código viejo.
@@ -1124,6 +1157,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 20 | Repetir con un correo que no es de un aliado y con el correo de una cuenta pendiente | El primero: «Hubo un problema al registrar esta oportunidad…» y no se guarda nada. El pendiente: se registra y los puntos quedan retenidos hasta aprobarlo | Por confirmar |
 | 21 | Registrarse, entrar (Hub, `admin.html` y `canje.html`) y pedir «¿Olvidaste tu contraseña?» sin marcar el captcha, y luego marcándolo | Sin marcarlo: «Confirma que no eres un robot y vuelve a intentarlo.» y no pasa nada más. Marcándolo: funciona como siempre | ✅ Verificado |
 | 22 | Abrir el Hub en un celular (o con la ventana angosta) y navegar por todas las pantallas | No se desplaza hacia los lados; «☰ Menú» abre el menú y se cierra al elegir una opción o tocar fuera | ✅ Verificado |
+| 23 | Referir una empresa perfecta en Bucaramanga, otra imperfecta en Medellín y otra imperfecta sin ciudad (con `RESEND_API_KEY` en Preview) | Llega «[PRUEBA] Confirmación de empresa referida» a cada una; las dos primeras traen el MEDDPICC y al responder van a h.zambrano y a c.lizarazo; la tercera solo confirma. En el panel, «MEDDPICC +20» suma una vez y la segunda vez lo rechaza | Pendiente |
+| 24 | Con `RESEND_API_KEY` vacía o inválida en Preview, referir una empresa | El referido se registra igual; en el Resumen aparece «Correos no enviados» con el motivo; al corregir la key, «Reintentar» lo envía | Pendiente |
 
 **Quién hace qué:** el equipo ejecuta los casos como usuario (Hub, panel y Clientify). Claude verifica en `aliados-dev` que la base quedó como se esperaba, puede forzar la conciliación para no esperar una hora, y corrige cualquier error en una rama con su prueba.
 
@@ -1179,6 +1214,7 @@ El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resen
 - `CLIENTIFY_WEBHOOK_SECRET` y `CRON_SECRET` **nuevos**, distintos de los de pruebas;
 - `CANJES_API_KEYS` cuando exista el proveedor;
 - `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget real de Cloudflare Turnstile (ver «Captcha» abajo). **Sin ellas el formulario público no funciona en Production.**
+- `RESEND_API_KEY`: en Resend → *API Keys* → *Create API Key*, permiso **Sending access** y dominio `notificaciones.geenera.com`; marcarla *Sensitive* en Vercel. Una key para Preview y otra para Production. Sin ella no sale el correo de confirmación de los referidos (queda en «Correos no enviados»).
 
 **Captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña, paso a paso:**
 1. Entrar a dash.cloudflare.com con la cuenta de GEENERA (la misma de los DNS). Turnstile es gratis y no exige que el dominio esté en Cloudflare.
@@ -1273,6 +1309,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`. |
 | 15 | ~~Flujo C sin probar con un referido real.~~ | Resuelto (5 oct 2026): calificación, fases, información falsa, no calificado y conflicto verificados con Clientify real. Faltan el lead creado directo en Clientify (caso 8) y resolver un conflicto desde el panel (caso 7). |
 | 16 | ~~Un referido ya cerrado al que solo le cambian el contacto no se volvía a revisar.~~ | Resuelto (6 oct 2026): además de la revisión horaria de los referidos en curso, una vez al día (2 a. m., hora de Bogotá) se revisan también los cerrados, así una etiqueta de «fraude» o un retroceso de Status puesto después del cierre se detecta en máximo un día (§5.3). |
+| 17 | Key de Resend para el correo de confirmación de los referidos (MEDDPICC). | Pendiente: crear en Resend una key con permiso solo de envío para Preview y otra para Production, y guardarlas en Vercel como `RESEND_API_KEY` (§10.2, paso 4). Mientras no exista, los correos quedan en «Correos no enviados» del panel. Mencionar el MEDDPICC y la bienvenida en los Términos o en la política de beneficios. |
 
 ---
 

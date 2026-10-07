@@ -15,6 +15,7 @@
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { randomUUID } from 'node:crypto';
 import { adminDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
+import { procesarCorreos } from '../../lib/correo/cola.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CODIGO = /^[A-Za-z0-9]{6,20}$/;
@@ -22,7 +23,7 @@ const CODIGO = /^[A-Za-z0-9]{6,20}$/;
 // Errores de la base (prefijo estable) → código HTTP. El detalle de la base ya está en español.
 const ERRORES = {
   no_autorizado: 403, no_permitido: 403, aliado_inexistente: 404, evento_inexistente: 404, conflicto_inexistente: 404,
-  canje_inexistente: 404, recompensa_inexistente: 404, operador_inexistente: 404, estado_invalido: 409, dato_invalido: 422,
+  canje_inexistente: 404, recompensa_inexistente: 404, operador_inexistente: 404, empresa_inexistente: 404, estado_invalido: 409, dato_invalido: 422,
   evento_incompleto: 422
 };
 
@@ -78,6 +79,7 @@ const ACCIONES = {
   guardar_recompensa: ['admin_guardar_recompensa', (c, a) => ({
     p_admin: a, p_recompensa: c.recompensa_id ? uuid(c.recompensa_id, 'la recompensa') : null, p_datos: recompensa(c)
   })],
+  otorgar_meddpicc: ['admin_otorgar_meddpicc', (c, a) => ({ p_admin: a, p_empresa: uuid(c.empresa_id, 'el referido'), p_nota: texto(c.nota) || null })],
   estado_operador: ['admin_estado_operador', (c, a) => ({
     p_admin: a, p_operador: uuid(c.operador_id, 'el operador'), p_activo: c.activo === true, p_motivo: texto(c.motivo) || null
   })]
@@ -149,6 +151,20 @@ async function guardarRecompensa(supabase, cuerpo, adminId) {
   return data;
 }
 
+// Vuelve a poner en la cola el correo de un referido y lo intenta enviar enseguida. Si Resend vuelve a fallar, el
+// motivo nuevo queda en «Correos no enviados» y el cron lo reintenta.
+async function reintentarCorreo(supabase, cuerpo, adminId, entorno, fetchImpl) {
+  const empresaId = uuid(cuerpo.empresa_id, 'el referido');
+  const { error } = await supabase.rpc('admin_reintentar_correo', { p_admin: adminId, p_empresa: empresaId });
+  if (error) throw errorDeAdmin(error.message) || new Error('admin_reintentar_correo falló');
+  let r = { ok: 0, detalle: [] };
+  try {
+    r = await procesarCorreos({ supabase, entorno: entorno.VERCEL_ENV || 'development', env: entorno, fetchImpl, empresaId, limite: 1 });
+  } catch { /* queda en la cola */ }
+  const fallo = (r.detalle || []).find((d) => d.error);
+  return { empresa_id: empresaId, enviado: r.ok === 1, error: fallo ? fallo.error : null };
+}
+
 // URL firmada de corta duración para el registro de asistentes de un evento.
 async function archivoEvento(supabase, cuerpo) {
   const eventoId = uuid(cuerpo.evento_id, 'el evento');
@@ -162,7 +178,7 @@ async function archivoEvento(supabase, cuerpo) {
 }
 
 // `supabase` solo se inyecta en los tests; Vercel llama al handler con (req, res).
-export default async function handler(req, res, supabase = null) {
+export default async function handler(req, res, supabase = null, inyectado = {}) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Método no permitido' });
@@ -176,6 +192,9 @@ export default async function handler(req, res, supabase = null) {
     if (cuerpo.accion === 'invitar_operador') return res.status(200).json(await invitarOperador(supabase, cuerpo, admin.id, req));
     if (cuerpo.accion === 'eliminar_operador') return res.status(200).json(await eliminarOperador(supabase, cuerpo, admin.id));
     if (cuerpo.accion === 'subir_imagen_recompensa') return res.status(200).json(await subirImagenRecompensa(supabase, cuerpo));
+    if (cuerpo.accion === 'reintentar_correo') {
+      return res.status(200).json(await reintentarCorreo(supabase, cuerpo, admin.id, inyectado.entorno || process.env, inyectado.fetch || fetch));
+    }
     if (cuerpo.accion === 'guardar_recompensa') return res.status(200).json(await guardarRecompensa(supabase, cuerpo, admin.id));
 
     const accion = ACCIONES[cuerpo.accion];

@@ -239,6 +239,7 @@
             <h3 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-.03em">Referido recibido</h3>
             <p style="margin:0;font-size:15px;color:var(--mut,#9A968F);max-width:40ch;line-height:1.5">{{ refEmpresa }} ya está en nuestro proceso comercial y quedó en el Hub del aliado que la refirió.</p>
             <div style="display:flex;align-items:center;gap:10px;padding:11px 18px;border:1px solid rgba(255,202,5,.32);border-radius:99px;background:rgba(255,202,5,.08)"><span style="font-size:19px;font-weight:700;color:var(--y,#FFCA05)">{{ refDonePts }}</span><span style="font-size:13.5px;color:var(--t2,#C9C5BE)">{{ refDoneLabel }}</span></div>
+            <sc-if value="{{ refHasAviso }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:13.5px;color:var(--mut,#9A968F);max-width:44ch;line-height:1.5">{{ refAviso }}</p></sc-if>
             <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-top:6px">
               <button onClick="{{ goJoin }}" style="padding:11px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;cursor:pointer">Quiero ser Aliado del Sol</button>
               <button onClick="{{ resetNew }}" style="padding:11px 18px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:10px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer">Referir otra empresa</button>
@@ -3068,6 +3069,7 @@
         <span style="font-size:19px;font-weight:700;color:var(--y,#FFCA05)">{{ refDonePts }}</span>
         <span style="font-size:13.5px;color:var(--t2,#C9C5BE)">{{ refDoneLabel }}</span>
       </div>
+      <sc-if value="{{ refHasAviso }}" hint-placeholder-val="{{ false }}"><p style="position:relative;margin:0;font-size:13.5px;color:var(--mut,#9A968F);max-width:44ch;line-height:1.5">{{ refAviso }}</p></sc-if>
       <sc-if value="{{ isPublicContext }}" hint-placeholder-val="{{ false }}">
       <div style="position:relative;display:flex;flex-direction:column;gap:10px;align-items:center;padding:16px 20px;margin-top:6px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:14px;background:var(--w-03,rgba(255,255,255,.03));max-width:420px">
         <b style="font-size:15px;font-weight:600">¿Quieres seguir el avance de tus oportunidades y acceder a beneficios?</b>
@@ -3175,6 +3177,8 @@ const POINTS_CONFIG = {
     { id: 'cierre', label: 'Negocio cerrado', pts: 150, desc: 'El proyecto pasa a ejecución.' }
   ],
   perfectFields: ['Empresa', 'Nombre del contacto', 'Cargo', 'Teléfono', 'Correo', 'Sector', 'Subsector', 'Ciudad', 'Valor de la factura', 'Factura adjunta'],
+  /* MEDDPICC: +20 una vez por referido cuando GEENERA revisa la información que envía el aliado (correo de confirmación). */
+  meddpicc: { label: 'Información MEDDPICC del referido', pts: 20, desc: 'Responde el correo de confirmación con el MEDDPICC de la empresa. Aplica a referidos perfectos o con ciudad.' },
   academy: { label: 'Módulo de Academy completado', pts: 5, monthlyCap: 20, category: 'Academy' },
   event: { label: 'Evento aliado validado', pts: 100, category: 'Eventos', requires: ['Evento realizado', 'GEENERA involucrada', 'Registro de asistentes', 'Mínimo 5 empresas dentro del perfil'], minCompanies: 5, note: 'Las oportunidades generadas en el evento acumulan sus Puntos Sol normalmente; el evento no las sustituye.' },
   penalties: [
@@ -3958,6 +3962,11 @@ class Component extends DCLogic {
     const ptsRes = res && Array.isArray(res.movimientos) ? res.movimientos.reduce((a, m) => a + (m.tipo === 'perdido' ? -m.puntos : m.puntos), 0)
       : res && typeof res.puntos === 'number' ? res.puntos : null;
     const perfRes = res ? !!res.es_perfecto : isPerfect;
+    /* Tras un registro real llega el correo «Confirmación de empresa referida»; el MEDDPICC (+20) aplica si es perfecto o tiene ciudad. */
+    const meddpiccRes = perfRes || !!(d.ciudad || '').trim();
+    const refAviso = !res ? '' : pub
+      ? 'Enviamos un correo de confirmación al aliado.' + (meddpiccRes ? ' Si responde con la información MEDDPICC de esta empresa, gana +' + POINTS_CONFIG.meddpicc.pts + ' Puntos Sol adicionales.' : '')
+      : 'Te enviamos un correo de confirmación.' + (meddpiccRes ? ' Respóndelo con la información MEDDPICC de esta empresa y gana +' + POINTS_CONFIG.meddpicc.pts + ' Puntos Sol adicionales.' : '');
     const autErr = tr && step === 2 && !d.autoriza;
     return { sub: cur.sub, fields, out: {
       refPerfectCount: perfectDone + '/' + perfectTotal,
@@ -3973,7 +3982,7 @@ class Component extends DCLogic {
       refAutToggle: () => this.refSet('autoriza', !d.autoriza),
       refHasError: !!s.refError, refError: s.refError || '',
       refNextOpacity: stepValid ? 1 : 0.45, refNextCursor: stepValid ? 'pointer' : 'not-allowed',
-      refEmpresa: d.empresa || 'La empresa',
+      refEmpresa: d.empresa || 'La empresa', refAviso, refHasAviso: !!refAviso,
       refDonePts: ptsRes != null ? (ptsRes >= 0 ? '+' : '') + ptsRes : perfRes ? '+30' : '+5',
       refDoneLabel: pub ? (perfRes ? 'Puntos Sol para el aliado por un Referido Perfecto' : 'Puntos Sol para el aliado: +10 por registro y −5 por datos incompletos')
         : perfRes ? 'Puntos Sol por un Referido Perfecto' : 'Puntos Sol: +10 por registro y −5 por datos incompletos',
@@ -4924,7 +4933,7 @@ class Component extends DCLogic {
       histTabs, historyRows, histEmpty: historyRows.length === 0, histPeriodTabs,
       ...this.eventoVals(s, real),
       gainedLabel: '+' + this.n(gained), lostLabel: '−' + this.n(Math.abs(lost)),
-      earnOpportunity: POINTS_CONFIG.opportunity.map(m => ({ label: m.label, pts: '+' + m.pts, desc: m.desc })),
+      earnOpportunity: POINTS_CONFIG.opportunity.concat([POINTS_CONFIG.meddpicc]).map(m => ({ label: m.label, pts: '+' + m.pts, desc: m.desc })),
       perfectFields: POINTS_CONFIG.perfectFields.map(t => ({ t })),
       academyRule: 'Puntos Sol según el módulo · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' al mes',
       hasModulosPendientes: modulosPendientes.length > 0,
@@ -5104,6 +5113,7 @@ class Component extends DCLogic {
       beneDemoTag: !!real && !recompensasReales, misCanjes, misCanjesVacio: misCanjes.length === 0,
       hayQR: !!real, abrirQR,
       earnRules: POINTS_CONFIG.opportunity.map(m => ({ pts: m.pts, label: m.label, note: m.desc })).concat([
+        { pts: POINTS_CONFIG.meddpicc.pts, label: POINTS_CONFIG.meddpicc.label, note: POINTS_CONFIG.meddpicc.desc },
         { pts: POINTS_CONFIG.academy.pts, label: 'Módulo de Academy', note: 'Según el módulo · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' Puntos Sol al mes' },
         { pts: STREAK_CONFIG.bonus, label: STREAK_CONFIG.name, note: STREAK_CONFIG.rule }
       ]),

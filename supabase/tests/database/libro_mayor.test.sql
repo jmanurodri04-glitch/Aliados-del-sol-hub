@@ -34,7 +34,7 @@ select pg_temp.aliado('d0000000-0000-0000-0000-00000000000d', 'd@libro.test', 'c
 
 -- Reglas (§5) -------------------------------------------------------------------------
 
-select is((select count(*) from public.reglas_puntos), 16::bigint, 'el catálogo tiene los 16 motivos');
+select is((select count(*) from public.reglas_puntos), 17::bigint, 'el catálogo tiene los 17 motivos (con la bienvenida)');
 select is((select puntos from public.reglas_puntos where motivo = 'racha_solar'), 75, 'la Racha Solar vale 75');
 select is((select count(*) from public.reglas_puntos where motivo like '%disponible%'), 0::bigint, '"Información disponible" no existe');
 
@@ -161,7 +161,7 @@ select ok(
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub": "a0000000-0000-0000-0000-00000000000a", "role": "authenticated"}', true);
-select is((select count(*) from public.reglas_puntos), 16::bigint, 'un aliado puede leer las reglas de puntos');
+select is((select count(*) from public.reglas_puntos), 17::bigint, 'un aliado puede leer las reglas de puntos');
 select throws_ok($$update public.reglas_puntos set puntos = 1000 where motivo = 'registro_valido'$$,
   '42501', null, 'un aliado no puede cambiar las reglas');
 reset role;

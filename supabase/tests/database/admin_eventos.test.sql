@@ -1,7 +1,7 @@
 -- Tests del panel de administración y de los eventos (CLAUDE.md §3, §4.8, §5, §5.1, §10).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(46);
+select plan(49);
 
 create function pg_temp.aliado(id uuid, email text, tipo text default 'emi')
 returns void language sql as $$
@@ -44,6 +44,8 @@ select is(public.admin_aprobar_aliado('a9000000-0000-0000-0000-00000000000a', lo
 select row_eq($$select estado, aprobado_por from public.aliados where id = 'a9000000-0000-0000-0000-000000000001'$$,
   row('activo'::text, 'a9000000-0000-0000-0000-00000000000a'::uuid), 'queda activa con aprobado_por');
 select ok((select aprobado_at is not null from public.aliados where id = 'a9000000-0000-0000-0000-000000000001'), 'y con aprobado_at');
+select row_eq($$select puntos, vinculo, clave_unica from public.movimientos_puntos where motivo = 'bienvenida' and aliado_id = 'a9000000-0000-0000-0000-000000000001'$$,
+  row(10, 'aliados'::text, 'aliado:a9000000-0000-0000-0000-000000000001:bienvenida'::text), 'al aprobarlo recibe +10 de bienvenida');
 select throws_ok($$select public.admin_aprobar_aliado('a9000000-0000-0000-0000-00000000000a', (select codigo_aliado from public.aliados where id = 'a9000000-0000-0000-0000-000000000001'))$$,
   'P0001', null, 'no se aprueba dos veces');
 
@@ -53,6 +55,9 @@ select is(public.admin_rechazar_aliado('a9000000-0000-0000-0000-00000000000a', p
   'rechazado', 'el admin rechaza una solicitud pendiente');
 select is(public.admin_aprobar_aliado('a9000000-0000-0000-0000-00000000000a', pg_temp.cod('a9000000-0000-0000-0000-000000000003')) ->> 'estado',
   'activo', 'una solicitud rechazada se puede reconsiderar y aprobar');
+select is(pg_temp.saldo('a9000000-0000-0000-0000-000000000003'), 10, 'la solicitud reconsiderada también recibe la bienvenida al aprobarse');
+select is((select count(*) from public.movimientos_puntos where motivo = 'bienvenida' and aliado_id in ('a9000000-0000-0000-0000-00000000000a', 'a9000000-0000-0000-0000-00000000000b')), 0::bigint,
+  'las cuentas de admin no reciben bienvenida');
 
 -- Suspensión ----------------------------------------------------------------------------------------------------
 
@@ -88,7 +93,7 @@ select is((select creado_por from public.movimientos_puntos where clave_unica = 
 
 select public.admin_ajuste_puntos('a9000000-0000-0000-0000-00000000000a', pg_temp.cod('a9000000-0000-0000-0000-000000000001'), 100, 'Saldo inicial de prueba', 'b9000000-0000-0000-0000-000000000003');
 select public.admin_baja_calidad('a9000000-0000-0000-0000-00000000000a', pg_temp.cod('a9000000-0000-0000-0000-000000000001'), 'Retroalimentación del 1 de septiembre');
-select is(pg_temp.saldo('a9000000-0000-0000-0000-000000000001'), 80, 'la baja calidad reiterada resta 20');
+select is(pg_temp.saldo('a9000000-0000-0000-0000-000000000001'), 90, 'la baja calidad reiterada resta 20 (10 de bienvenida + 100 − 20)');
 select throws_ok($$select public.admin_baja_calidad('a9000000-0000-0000-0000-00000000000a', (select codigo_aliado from public.aliados where id = 'a9000000-0000-0000-0000-000000000001'), 'Retroalimentación del 1 de septiembre')$$,
   'P0001', 'estado_invalido: ya se registró una baja calidad reiterada para este aliado hoy', 'una sola baja calidad por aliado y día');
 
@@ -116,7 +121,7 @@ select throws_ok($$select public.admin_validar_evento('a9000000-0000-0000-0000-0
   'P0001', 'evento_incompleto: no hay registro de asistentes', 'un evento sin las 4 condiciones no se valida');
 select is(public.admin_validar_evento('a9000000-0000-0000-0000-00000000000a', 'e9000000-0000-0000-0000-000000000001', 'Asistencia verificada') ->> 'estado',
   'validado', 'el admin valida un evento que cumple');
-select is(pg_temp.saldo('a9000000-0000-0000-0000-000000000001'), 180, 'validar el evento otorga +100');
+select is(pg_temp.saldo('a9000000-0000-0000-0000-000000000001'), 190, 'validar el evento otorga +100');
 select is((select vinculo || ':' || clave_unica from public.movimientos_puntos where motivo = 'evento_validado'),
   'eventos:evento:e9000000-0000-0000-0000-000000000001', 'con vínculo al evento y clave evento:{id}');
 select throws_ok($$select public.admin_validar_evento('a9000000-0000-0000-0000-00000000000a', 'e9000000-0000-0000-0000-000000000001')$$,

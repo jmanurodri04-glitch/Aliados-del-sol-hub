@@ -17,7 +17,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const MENSAJE_CAPTCHA = 'Confirma que no eres un robot y vuelve a intentarlo.';
 
-const NIVELES = { bronce: 'Bronce', plata: 'Plata', oro: 'Oro', platino: 'Platino', diamante: 'Diamante', circulo_solar: 'Círculo Solar' };
+const NIVELES = { kilo: 'KILO', mega: 'MEGA', giga: 'GIGA', tera: 'TERA', peta: 'PETA', exa: 'EXA' };
 const CODIGO_CORTO = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/;
 const FICHA = /^[A-Za-z0-9_-]{40,64}$/;
 

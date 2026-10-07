@@ -76,10 +76,10 @@ select ok(
   'guarda la fecha de autorización de datos y de aceptación de términos'
 );
 select is(
-  (select count(*) from public.aliados where puntos_nivel = 0 and puntos_disponibles = 0 and nivel = 'bronce'
+  (select count(*) from public.aliados where puntos_nivel = 0 and puntos_disponibles = 0 and nivel = 'kilo'
      and clientify_sync_estado = 'pendiente'),
   5::bigint,
-  'todo aliado nuevo empieza en bronce, sin puntos y pendiente de sincronizar con Clientify'
+  'todo aliado nuevo empieza en kilo, sin puntos y pendiente de sincronizar con Clientify'
 );
 
 -- Datos opcionales y normalización ---------------------------------------------------------

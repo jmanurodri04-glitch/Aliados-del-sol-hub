@@ -83,7 +83,7 @@ select row_eq($$select pg_temp.en_libro('70000000-0000-0000-0000-000000000007'),
   row(0::bigint, 1::bigint), 'pendiente: el movimiento queda retenido');
 update public.aliados set estado = 'activo', aprobado_at = now() where id = '70000000-0000-0000-0000-000000000007';
 select row_eq($$select puntos_disponibles, nivel::text from public.aliados where id = '70000000-0000-0000-0000-000000000007'$$,
-  row(10, 'bronce'::text), 'al aprobarse la cuenta se acredita lo retenido');
+  row(10, 'kilo'::text), 'al aprobarse la cuenta se acredita lo retenido');
 
 -- Visibilidad -----------------------------------------------------------------------------------
 

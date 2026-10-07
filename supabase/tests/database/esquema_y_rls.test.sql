@@ -20,7 +20,7 @@ select is(
 );
 
 select enum_has_labels('public', 'nivel',
-  array['bronce', 'plata', 'oro', 'platino', 'diamante', 'circulo_solar'],
+  array['kilo', 'mega', 'giga', 'tera', 'peta', 'exa'],
   'el enum nivel va de menor a mayor');
 
 -- Datos de prueba ---------------------------------------------------------------------

@@ -76,7 +76,7 @@ select row_eq(
   row(2, 1, 1, 1, 0), 'conteos de referidos: 2 en total, 1 calificado, 1 que no continúa, 1 activo');
 select row_eq(
   $$select puntos_disponibles, puntos_nivel, nivel::text from public.v_aliado_dashboard$$,
-  row(10 - 5 + 30 + 30 - 10 + 5, 10 - 5 + 30 + 30 - 10 + 5, 'bronce'::text),
+  row(10 - 5 + 30 + 30 - 10 + 5, 10 - 5 + 30 + 30 - 10 + 5, 'kilo'::text),
   'puntos del libro mayor (registro, imperfecto, calificada, evaluación, no calificado y módulo)');
 select row_eq(
   $$select potencia_kwp, valor_cotizado, pipeline_originado from public.v_aliado_dashboard$$,

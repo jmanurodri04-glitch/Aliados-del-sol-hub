@@ -58,7 +58,7 @@ select is(public.admin_guardar_recompensa('ac000000-0000-0000-0000-00000000000a'
   '{"codigo":"cafe","nombre":"Bono de café","puntos":50,"categoria":"Gastronomía"}') ->> 'codigo', 'cafe', 'el admin crea una recompensa');
 select throws_ok($$select public.admin_guardar_recompensa('ac000000-0000-0000-0000-00000000000a', null, '{"codigo":"cafe","nombre":"Otro café","puntos":10}')$$,
   'P0001', 'estado_invalido: ya existe una recompensa con el código cafe', 'el código no se repite');
-select public.admin_guardar_recompensa('ac000000-0000-0000-0000-00000000000a', null, '{"codigo":"cena","nombre":"Cena para dos","puntos":200,"nivel_minimo":"oro"}');
+select public.admin_guardar_recompensa('ac000000-0000-0000-0000-00000000000a', null, '{"codigo":"cena","nombre":"Cena para dos","puntos":200,"nivel_minimo":"giga"}');
 select public.admin_guardar_recompensa('ac000000-0000-0000-0000-00000000000a', null, '{"codigo":"solo-x","nombre":"Beneficio exclusivo","puntos":10,"proveedor":"prov-x"}');
 select public.admin_guardar_recompensa('ac000000-0000-0000-0000-00000000000a', null, '{"codigo":"vieja","nombre":"Recompensa retirada","puntos":5,"activa":false}');
 
@@ -91,15 +91,15 @@ select is(public.registrar_canje('prov2', pg_temp.cod('ac000000-0000-0000-0000-0
 select is(pg_temp.saldo('ac000000-0000-0000-0000-000000000001'), 180, 'saldo tras el segundo canje: 240 − 60');
 
 select throws_ok($$select public.registrar_canje('prov', (select codigo_aliado from public.aliados where id = 'ac000000-0000-0000-0000-000000000001'), 'cena', 'R-2')$$,
-  'P0001', 'nivel_insuficiente: la recompensa requiere nivel oro y el aliado es bronce', 'el nivel actual debe alcanzar el mínimo de la recompensa');
-select pg_temp.nivel('ac000000-0000-0000-0000-000000000001', 'oro');
+  'P0001', 'nivel_insuficiente: la recompensa requiere nivel giga y el aliado es kilo', 'el nivel actual debe alcanzar el mínimo de la recompensa');
+select pg_temp.nivel('ac000000-0000-0000-0000-000000000001', 'giga');
 select throws_ok($$select public.registrar_canje('prov', (select codigo_aliado from public.aliados where id = 'ac000000-0000-0000-0000-000000000001'), 'cena', 'R-2')$$,
   'P0001', 'saldo_insuficiente: la recompensa vale 200 puntos y el saldo disponible es 180', 'el saldo debe cubrir la recompensa');
 select public.admin_ajuste_puntos('ac000000-0000-0000-0000-00000000000a', pg_temp.cod('ac000000-0000-0000-0000-000000000001'), 100, 'Saldo adicional de prueba', 'bc000000-0000-0000-0000-000000000002');
-select pg_temp.nivel('ac000000-0000-0000-0000-000000000001', 'oro');
+select pg_temp.nivel('ac000000-0000-0000-0000-000000000001', 'giga');
 select is(public.registrar_canje('prov', pg_temp.cod('ac000000-0000-0000-0000-000000000001'), 'cena', 'R-2') ->> 'puntos_disponibles',
   '80', 'con nivel y saldo suficientes el canje procede: 280 − 200');
-select is((select nivel_requerido::text from public.canjes where referencia_externa = 'R-2'), 'oro', 'el canje guarda el nivel exigido');
+select is((select nivel_requerido::text from public.canjes where referencia_externa = 'R-2'), 'giga', 'el canje guarda el nivel exigido');
 
 select throws_ok($$select public.registrar_canje('prov', (select codigo_aliado from public.aliados where id = 'ac000000-0000-0000-0000-000000000001'), 'solo-x', 'R-3')$$,
   'P0001', 'recompensa_inexistente: la recompensa no existe, no está activa o no corresponde a este proveedor', 'una recompensa de otro proveedor no se canjea');
@@ -124,7 +124,7 @@ select throws_ok($$select public.registrar_canje('prov', (select codigo_aliado f
 -- Consulta del proveedor ----------------------------------------------------------------------------------------------------
 
 select is(public.consultar_canjes('prov', lower(pg_temp.cod('ac000000-0000-0000-0000-000000000001'))) - 'recompensas',
-  jsonb_build_object('codigo_aliado', pg_temp.cod('ac000000-0000-0000-0000-000000000001'), 'activo', true, 'nivel', 'bronce', 'puntos_disponibles', 70),
+  jsonb_build_object('codigo_aliado', pg_temp.cod('ac000000-0000-0000-0000-000000000001'), 'activo', true, 'nivel', 'kilo', 'puntos_disponibles', 70),
   'la consulta devuelve estado, nivel y saldo, sin datos personales');
 select is((select jsonb_agg(r ->> 'codigo' order by r ->> 'codigo') from jsonb_array_elements(public.consultar_canjes('prov', pg_temp.cod('ac000000-0000-0000-0000-000000000001')) -> 'recompensas') r),
   '["cafe", "cena"]'::jsonb, 'lista solo las recompensas activas de ese proveedor o de todos');

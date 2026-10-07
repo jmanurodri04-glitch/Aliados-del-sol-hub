@@ -24,7 +24,7 @@ function supabaseFalso({ aliado = ALIADO, rpc = null, rpcError = null } = {}) {
       select: (cols) => ({
         eq: () => ({
           maybeSingle: async () => ({
-            data: cols.startsWith('id,') ? aliado : { puntos_disponibles: 45, puntos_nivel: 45, nivel: 'bronce' },
+            data: cols.startsWith('id,') ? aliado : { puntos_disponibles: 45, puntos_nivel: 45, nivel: 'kilo' },
             error: null
           })
         })
@@ -45,7 +45,7 @@ test('registra el módulo con el aliado de la sesión, nunca con uno del cuerpo'
   await handler(pedido({ codigo: 'C11', aliado_id: 'otro' }), res, sb);
   assert.equal(res.statusCode, 200);
   assert.deepEqual(sb.llamadas, [{ nombre: 'completar_modulo', args: { p_aliado: ALIADO.id, p_codigo: 'c11' } }]);
-  assert.deepEqual(res.cuerpo, { codigo: 'c11', nuevo: true, puntos: 5, recompensa_estado: 'otorgada', puntos_disponibles: 45, puntos_nivel: 45, nivel: 'bronce' });
+  assert.deepEqual(res.cuerpo, { codigo: 'c11', nuevo: true, puntos: 5, recompensa_estado: 'otorgada', puntos_disponibles: 45, puntos_nivel: 45, nivel: 'kilo' });
 });
 
 test('rechaza un código con formato inválido sin llamar a la base', async () => {

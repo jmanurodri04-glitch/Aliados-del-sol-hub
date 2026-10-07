@@ -351,7 +351,7 @@
           <div style="display:flex;flex-direction:column;gap:12px;max-width:52ch">
             <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Progreso</span>
             <h2 data-reveal="1" style="margin:0;font-size:clamp(26px,3.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.03em;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">Seis niveles. Un solo camino, medido por calidad.</h2>
-            <p data-reveal="1" style="margin:0;font-size:15.5px;line-height:1.55;color:var(--mut,#9A968F);opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 140ms,transform 820ms cubic-bezier(.22,.61,.36,1) 140ms">Bronce → Plata → Oro → Platino → Diamante → Círculo Solar. Tu nivel se calcula con tu actividad de los últimos 6 meses. No premia volumen: premia mejores oportunidades.</p>
+            <p data-reveal="1" style="margin:0;font-size:15.5px;line-height:1.55;color:var(--mut,#9A968F);opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 140ms,transform 820ms cubic-bezier(.22,.61,.36,1) 140ms">KILO → MEGA → GIGA → TERA → PETA → EXA. Tu nivel se calcula con tu actividad de los últimos 6 meses. No premia volumen: premia mejores oportunidades.</p>
           </div>
           <div data-reveal="1" style="display:flex;flex-direction:column;gap:12px;padding:20px 24px;border:1px solid rgba(255,202,5,.22);border-radius:16px;background:rgba(255,202,5,.05);min-width:270px;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 200ms,transform 820ms cubic-bezier(.22,.61,.36,1) 200ms">
             <span style="font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold,#8E7A45)">Racha Solar 4x4</span>
@@ -629,7 +629,7 @@
           <p style="margin:0;font-size:clamp(15px,1.4vw,18px);line-height:1.55;color:var(--mut,#9A968F);max-width:46ch">Refieres empresas y aprendes; acumulas puntos; subes de nivel; accedes a experiencias, formación y beneficios de partners.</p>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:14px;min-width:0;max-width:100%">
-          <dc-import name="GProgress" variant="editorial" size="{{ 220 }}" pct="{{ 0.62 }}" target="Círculo Solar" detail="620 / 1.000 Puntos Sol · ejemplo" note="La G de GEENERA se completa al llegar al siguiente nivel." style="max-width:100%;min-width:0" hint-size="480px,240px"></dc-import>
+          <dc-import name="GProgress" variant="editorial" size="{{ 220 }}" pct="{{ 0.62 }}" target="EXA" detail="1.490 / 2.400 Puntos Sol · ejemplo" note="La G de GEENERA se completa al llegar al siguiente nivel." style="max-width:100%;min-width:0" hint-size="480px,240px"></dc-import>
         </div>
       </div>
 
@@ -1150,7 +1150,7 @@
         <div style="height:3px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden">
           <div style="height:100%;border-radius:99px;background:linear-gradient(90deg,#FFCA05,#F37920);width:{{ pctCss }}"></div>
         </div>
-        <div style="font-size:12.5px;color:var(--mut2,#8E8B86)">{{ pointsLabel }} pts · faltan {{ remainingLabel }}</div>
+        <div style="font-size:12.5px;color:var(--mut2,#8E8B86)">{{ pointsLabel }} pts · faltan {{ remainingLabel }}{{ quoteSuffix }}</div>
       </button>
 
       <button onClick="{{ goPerfil }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:none;border-radius:10px;background:{{ perfilBg }};cursor:pointer;text-align:left;transition:background 160ms ease" style-hover="background:var(--w-05,rgba(255,255,255,.05))">
@@ -1374,7 +1374,7 @@
               <h3 style="margin:0;font-size:27px;line-height:1.12;font-weight:700;letter-spacing:-.02em;text-wrap:pretty">Visita técnica a la planta solar de Guamito</h3>
               <p style="margin:0;font-size:14px;line-height:1.5;color:var(--t3,#B4B0A9);max-width:34ch">Un día con el equipo de ingeniería de GEENERA. Cupos limitados para 12 aliados.</p>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:4px">
-                <span style="font-size:13.5px;color:var(--t3,#B4B0A9)"><b style="color:var(--y,#FFCA05);font-weight:700">120 pts</b> · Oro</span>
+                <span style="font-size:13.5px;color:var(--t3,#B4B0A9)"><b style="color:var(--y,#FFCA05);font-weight:700">120 pts</b> · GIGA</span>
                 <button onClick="{{ goBeneficios }}" style="padding:9px 16px;border:none;border-radius:9px;background:var(--btn,#F2F0EC);color:var(--btnfg,#141210);font-size:13.5px;font-weight:700;cursor:pointer;transition:transform 160ms ease" style-hover="transform:translateY(-1px)">Reclamar</button>
               </div>
             </div>
@@ -1905,7 +1905,7 @@
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
             <dc-import name="GProgress" variant="gap" size="{{ 180 }}" pct="{{ pct }}" subLabel="{{ nextLevel }}" hint-size="180px,180px"></dc-import>
-            <div style="font-size:13px;color:var(--mut2,#8E8B86);text-align:center"><b style="color:var(--y,#FFCA05);font-weight:600">{{ pctCss }}</b> hacia {{ nextLevel }}<br>faltan {{ remainingLabel }} pts</div>
+            <div style="font-size:13px;color:var(--mut2,#8E8B86);text-align:center"><b style="color:var(--y,#FFCA05);font-weight:600">{{ pctCss }}</b> hacia {{ nextLevel }}<br>faltan {{ remainingLabel }} pts{{ quoteSuffix }}</div>
           </div>
         </div>
 
@@ -2037,7 +2037,7 @@
 
         <div style="display:flex;flex-direction:column;gap:14px;padding-bottom:40px">
           <h2 style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.015em">Tu camino de niveles</h2>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:0;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
             <sc-for list="{{ levelPath }}" as="l" hint-placeholder-count="5">
               <div style="display:flex;flex-direction:column;gap:11px;padding-right:10px">
                 <span style="display:flex;align-items:center">
@@ -2047,6 +2047,7 @@
                 <span style="display:flex;flex-direction:column;gap:3px">
                   <span style="font-size:14px;font-weight:{{ l.fw }};color:{{ l.color }};line-height:1.25">{{ l.name }}</span>
                   <span style="font-size:12px;color:var(--mut4,#6B6762)">{{ l.range }} pts</span>
+                  <sc-if value="{{ l.quote }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;color:var(--mut4,#6B6762)">+ referido en presentación de oferta</span></sc-if>
                 </span>
               </div>
             </sc-for>
@@ -3202,12 +3203,14 @@ const LEVEL_CONFIG = {
   windowNote: 'Tu nivel se calcula con tu actividad de los últimos 6 meses.',
   activeAlly: { days: 30, qualifiedMin: 1, label: 'Al menos 1 oportunidad calificada en los últimos 30 días' },
   levels: [
-    { id: 'bronce', name: 'Bronce', min: 0, max: 99, minQuality: null, tone: '#B8926A', perks: ['Catálogo base de beneficios', 'Academy y recursos comerciales', 'Cotizador Solar y Casos y proyectos'] },
-    { id: 'plata', name: 'Plata', min: 100, max: 249, minQuality: null, tone: '#C9CCD1', perks: ['Beneficios de gastronomía y negocios', 'Racha Solar 4x4 · +75 Puntos Sol', 'Consultora de referencia'] },
-    { id: 'oro', name: 'Oro', min: 250, max: 449, minQuality: null, tone: 'var(--o,#F9A51A)', perks: ['Experiencias y beneficios de partners', 'Auditoría energética de cortesía', 'Consultora comercial asignada'] },
-    { id: 'platino', name: 'Platino', min: 450, max: 699, minQuality: null, tone: '#DCE3EA', perks: ['Experiencias exclusivas del programa', 'Acompañamiento comercial conjunto', 'Prioridad en la evaluación de tus referidos'] },
-    { id: 'diamante', name: 'Diamante', min: 700, max: 999, minQuality: null, tone: '#9ED2F0', perks: ['Presencia en eventos GEENERA', 'Formación avanzada con el equipo de ingeniería', 'Reconocimiento anual del programa'] },
-    { id: 'circulo', name: 'Círculo Solar', min: 1000, max: null, minQuality: null, tone: 'var(--y,#FFCA05)', premium: true, recentQualifiedDays: 30, recentQualifiedMin: 1, perks: ['Retiro anual del Círculo Solar', 'Acceso directo al comité de GEENERA', 'Condiciones preferenciales del programa'] }
+    /* Niveles del programa (oct 2026): KILO…EXA. Desde GIGA exigen al menos un referido en «Presentación de oferta» o
+       una fase posterior (requiresQuote). La calidad mínima la aplica la base; el Hub no la muestra (CLAUDE.md §6.3). */
+    { id: 'kilo', name: 'KILO', min: 0, max: 479, minQuality: null, tone: '#B8926A', perks: ['Catálogo base de beneficios', 'Academy y recursos comerciales', 'Cotizador Solar y Casos y proyectos'] },
+    { id: 'mega', name: 'MEGA', min: 480, max: 959, minQuality: null, tone: '#C9CCD1', perks: ['Beneficios de gastronomía y negocios', 'Racha Solar 4x4 · +75 Puntos Sol', 'Consultora de referencia'] },
+    { id: 'giga', name: 'GIGA', min: 960, max: 1439, minQuality: null, requiresQuote: true, tone: 'var(--o,#F9A51A)', perks: ['Experiencias y beneficios de partners', 'Auditoría energética de cortesía', 'Consultora comercial asignada'] },
+    { id: 'tera', name: 'TERA', min: 1440, max: 1919, minQuality: null, requiresQuote: true, tone: '#DCE3EA', perks: ['Experiencias exclusivas del programa', 'Acompañamiento comercial conjunto', 'Prioridad en la evaluación de tus referidos'] },
+    { id: 'peta', name: 'PETA', min: 1920, max: 2399, minQuality: null, requiresQuote: true, tone: '#9ED2F0', perks: ['Presencia en eventos GEENERA', 'Formación avanzada con el equipo de ingeniería', 'Reconocimiento anual del programa'] },
+    { id: 'exa', name: 'EXA', min: 2400, max: null, minQuality: null, requiresQuote: true, tone: 'var(--y,#FFCA05)', premium: true, recentQualifiedDays: 30, recentQualifiedMin: 1, perks: ['Retiro anual de los aliados EXA', 'Acceso directo al comité de GEENERA', 'Condiciones preferenciales del programa'] }
   ]
 };
 
@@ -3593,7 +3596,7 @@ const ACADEMY_CONFIG = {
       ] },
       { id: 'c52', name: 'Puntos Sol, niveles y calidad', minutes: 9, points: true, lessons: [
         { t: 'Puntos Sol', body: 'Se acumulan a medida que una oportunidad avanza. También suman Academy, los eventos y la Racha Solar 4x4.', example: '' },
-        { t: 'Niveles', body: 'Bronce, Plata, Oro, Platino, Diamante y Círculo Solar. Se calculan con tu actividad de los últimos 6 meses.', example: '' },
+        { t: 'Niveles', body: 'KILO, MEGA, GIGA, TERA, PETA y EXA. Se calculan con tu actividad de los últimos 6 meses; desde GIGA necesitas al menos un referido que haya llegado a la presentación de oferta.', example: '' },
         { t: 'Calidad de tus referidos', body: 'Un indicador de 0 a 100% que mide qué tan buenas son tus oportunidades. Mientras ninguna de tus empresas haya terminado su evaluación verás “Calidad en construcción”.', example: '' },
         { t: 'Racha Solar 4x4', body: 'Una empresa calificada por semana durante cuatro semanas: +75 Puntos Sol.', example: '', quiz: { q: '¿Qué exige la Racha Solar 4x4?', options: ['Cuatro contactos cualquiera', 'Una empresa calificada por semana durante cuatro semanas', 'Cuatro módulos de Academy'], answer: 1 } }
       ] },
@@ -3701,20 +3704,20 @@ const MS = {};
 POINTS_CONFIG.opportunity.forEach(m => { MS[m.id] = m; });
 
 const BENEFITS = [
-  { id: 'b1', name: "Café + producto de panadería", partner: "Amasa", aud: '', logo: 'amasa', cat: 'Gastronomía', pts: 80, req: 'Bronce', state: 'destacado', phase: 'Lanzamiento', cond: "Combo cerrado; cupos mensuales.", ph: "foto · amasa" },
-  { id: 'b2', name: "Combo oblea o dulce + bebida", partner: "Dulces El Paragüitas", aud: '', logo: 'dulces-el-paraguitas', cat: 'Gastronomía', pts: 100, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Producto cerrado, fácil de redimir.", ph: "foto · dulces el paragüitas" },
-  { id: 'b3', name: "Caja para compartir en la oficina", partner: "Dulces El Paragüitas", aud: 'Para equipos', logo: 'dulces-el-paraguitas', cat: 'Equipos', pts: 250, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Para tu equipo de trabajo.", ph: "foto · dulces el paragüitas" },
-  { id: 'b4', name: "Coworking por 2 horas", partner: "Greccomotors", aud: '', logo: null, cat: 'Experiencias', pts: 150, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Reserva previa, cupos y horarios definidos.", ph: "foto · greccomotors" },
-  { id: 'b5', name: "5%–10% en categorías o compras seleccionadas", partner: "Más x Menos", aud: '', logo: null, cat: 'Descuentos', pts: 250, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Categorías seleccionadas. No acumulable.", ph: "foto · más x menos" },
-  { id: 'b6', name: "Brunch o menú cerrado para 1", partner: "Mia Nonna", aud: '', logo: 'mia-nonna', cat: 'Experiencias', pts: 300, req: 'Bronce', state: 'destacado', phase: 'Lanzamiento', cond: "Menú cerrado, sin alcohol, sujeto a reserva.", ph: "foto · mia nonna" },
-  { id: 'b7', name: "5%–10% en referencias seleccionadas", partner: "Espumas Santander", aud: '', logo: 'espumas-santander', cat: 'Descuentos', pts: 350, req: 'Bronce', state: 'ok', phase: 'Lanzamiento', cond: "Con tope; no acumulable.", ph: "foto · espumas santander" },
-  { id: 'b8', name: "Cena o menú cerrado individual", partner: "Zekkei", aud: '', logo: null, cat: 'Experiencias', pts: 500, req: 'Bronce', state: 'destacado', phase: 'Lanzamiento', cond: "Menú cerrado, sin alcohol, reserva previa.", ph: "foto · zekkei" },
-  { id: 'b9', name: "Jugo + snack o producto seleccionado", partner: "Gramaluz Jugos y Frutas", aud: '', logo: 'jugos-y-frutas-de-colombia', cat: 'Gastronomía', pts: 100, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Producto cerrado.", ph: "foto · gramaluz jugos y frutas" },
-  { id: 'b10', name: "Combo o descuento corporativo", partner: "Domino's", aud: 'Para equipos', logo: 'domino-s', cat: 'Gastronomía', pts: 180, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Código corporativo.", ph: "foto · domino's" },
-  { id: 'b11', name: "Descuento en servicio automotriz seleccionado", partner: "Fersautos", aud: '', logo: 'fersautos', cat: 'Descuentos', pts: 300, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Servicio seleccionado.", ph: "foto · fersautos" },
-  { id: 'b12', name: "Descuento en mantenimiento o diagnóstico", partner: "Codiesel", aud: '', logo: 'codiesel', cat: 'Descuentos', pts: 300, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Mano de obra y servicios seleccionados.", ph: "foto · codiesel" },
-  { id: 'b13', name: "Cupón o crédito promocional", partner: "Rappi", aud: '', logo: null, cat: 'Descuentos', pts: 300, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Sujeto a convenio.", ph: "foto · rappi" },
-  { id: 'b14', name: "Tarifa preferencial de alojamiento", partner: "Posada El Peregrino", aud: '', logo: 'posada-del-peregrino', cat: 'Experiencias', pts: 400, req: 'Bronce', state: 'pronto', phase: 'Fase 2', cond: "Sujeto a disponibilidad.", ph: "foto · posada el peregrino" }
+  { id: 'b1', name: "Café + producto de panadería", partner: "Amasa", aud: '', logo: 'amasa', cat: 'Gastronomía', pts: 80, req: 'KILO', state: 'destacado', phase: 'Lanzamiento', cond: "Combo cerrado; cupos mensuales.", ph: "foto · amasa" },
+  { id: 'b2', name: "Combo oblea o dulce + bebida", partner: "Dulces El Paragüitas", aud: '', logo: 'dulces-el-paraguitas', cat: 'Gastronomía', pts: 100, req: 'KILO', state: 'ok', phase: 'Lanzamiento', cond: "Producto cerrado, fácil de redimir.", ph: "foto · dulces el paragüitas" },
+  { id: 'b3', name: "Caja para compartir en la oficina", partner: "Dulces El Paragüitas", aud: 'Para equipos', logo: 'dulces-el-paraguitas', cat: 'Equipos', pts: 250, req: 'KILO', state: 'ok', phase: 'Lanzamiento', cond: "Para tu equipo de trabajo.", ph: "foto · dulces el paragüitas" },
+  { id: 'b4', name: "Coworking por 2 horas", partner: "Greccomotors", aud: '', logo: null, cat: 'Experiencias', pts: 150, req: 'KILO', state: 'ok', phase: 'Lanzamiento', cond: "Reserva previa, cupos y horarios definidos.", ph: "foto · greccomotors" },
+  { id: 'b5', name: "5%–10% en categorías o compras seleccionadas", partner: "Más x Menos", aud: '', logo: null, cat: 'Descuentos', pts: 250, req: 'KILO', state: 'ok', phase: 'Lanzamiento', cond: "Categorías seleccionadas. No acumulable.", ph: "foto · más x menos" },
+  { id: 'b6', name: "Brunch o menú cerrado para 1", partner: "Mia Nonna", aud: '', logo: 'mia-nonna', cat: 'Experiencias', pts: 300, req: 'KILO', state: 'destacado', phase: 'Lanzamiento', cond: "Menú cerrado, sin alcohol, sujeto a reserva.", ph: "foto · mia nonna" },
+  { id: 'b7', name: "5%–10% en referencias seleccionadas", partner: "Espumas Santander", aud: '', logo: 'espumas-santander', cat: 'Descuentos', pts: 350, req: 'KILO', state: 'ok', phase: 'Lanzamiento', cond: "Con tope; no acumulable.", ph: "foto · espumas santander" },
+  { id: 'b8', name: "Cena o menú cerrado individual", partner: "Zekkei", aud: '', logo: null, cat: 'Experiencias', pts: 500, req: 'KILO', state: 'destacado', phase: 'Lanzamiento', cond: "Menú cerrado, sin alcohol, reserva previa.", ph: "foto · zekkei" },
+  { id: 'b9', name: "Jugo + snack o producto seleccionado", partner: "Gramaluz Jugos y Frutas", aud: '', logo: 'jugos-y-frutas-de-colombia', cat: 'Gastronomía', pts: 100, req: 'KILO', state: 'pronto', phase: 'Fase 2', cond: "Producto cerrado.", ph: "foto · gramaluz jugos y frutas" },
+  { id: 'b10', name: "Combo o descuento corporativo", partner: "Domino's", aud: 'Para equipos', logo: 'domino-s', cat: 'Gastronomía', pts: 180, req: 'KILO', state: 'pronto', phase: 'Fase 2', cond: "Código corporativo.", ph: "foto · domino's" },
+  { id: 'b11', name: "Descuento en servicio automotriz seleccionado", partner: "Fersautos", aud: '', logo: 'fersautos', cat: 'Descuentos', pts: 300, req: 'KILO', state: 'pronto', phase: 'Fase 2', cond: "Servicio seleccionado.", ph: "foto · fersautos" },
+  { id: 'b12', name: "Descuento en mantenimiento o diagnóstico", partner: "Codiesel", aud: '', logo: 'codiesel', cat: 'Descuentos', pts: 300, req: 'KILO', state: 'pronto', phase: 'Fase 2', cond: "Mano de obra y servicios seleccionados.", ph: "foto · codiesel" },
+  { id: 'b13', name: "Cupón o crédito promocional", partner: "Rappi", aud: '', logo: null, cat: 'Descuentos', pts: 300, req: 'KILO', state: 'pronto', phase: 'Fase 2', cond: "Sujeto a convenio.", ph: "foto · rappi" },
+  { id: 'b14', name: "Tarifa preferencial de alojamiento", partner: "Posada El Peregrino", aud: '', logo: 'posada-del-peregrino', cat: 'Experiencias', pts: 400, req: 'KILO', state: 'pronto', phase: 'Fase 2', cond: "Sujeto a disponibilidad.", ph: "foto · posada el peregrino" }
 ];
 
 /* ============================================================
@@ -3733,7 +3736,8 @@ const TIPO_ALIADO_HUB = {
   agremiaciones: { role: 'gremio', label: 'Aliado · Agremiaciones' }
 };
 /* enum nivel → id de LEVEL_CONFIG. El nivel lo calcula la base con puntos y calidad (CLAUDE.md §6.3). */
-const NIVEL_HUB = { bronce: 'bronce', plata: 'plata', oro: 'oro', platino: 'platino', diamante: 'diamante', circulo_solar: 'circulo' };
+const NIVEL_HUB = { kilo: 'kilo', mega: 'mega', giga: 'giga', tera: 'tera', peta: 'peta', exa: 'exa' };
+const REQUISITO_COTIZACION = 'Requiere al menos un referido en Presentación de oferta';
 /* Paso de la línea de tiempo del detalle: Referida, Contactada, Calificada, Propuesta, Cierre. */
 const ETAPA_PASO = { recibida: 0, validacion: 1, calificacion: 2, dtp: 2, propuesta: 3, cerrado: 4, noviable: 1 };
 const ETAPA_SIGUIENTE = {
@@ -4294,12 +4298,16 @@ class Component extends DCLogic {
     const needQ = next ? next.minQuality : null;
     const qualityGap = (next && needQ != null && quality != null && quality < needQ) ? (needQ - quality) : 0;
     const pointsReady = next ? points >= next.min : false;
+    /* Desde GIGA hace falta un referido en «Presentación de oferta» o después (lo cuenta v_aliado_dashboard). */
+    const hasQuote = a ? (Number(a.referidos_propuesta) > 0 || Number(a.referidos_cerrados) > 0) : true;
+    const needsQuote = !!(next && next.requiresQuote && !hasQuote);
     return {
       levels: L, points, balance, quality, qualityReady, sample,
       levelName: cur.name, level: cur, nextLevel: next ? next.name : null, next,
       pct, top, remaining: next ? Math.max(0, top - points) : 0,
       needQuality: needQ, qualityGap, pointsReady,
       blockedByQuality: pointsReady && qualityGap > 0,
+      hasQuote, needsQuote, blockedByQuote: pointsReady && needsQuote,
       windowNote: LEVEL_CONFIG.windowNote
     };
   }
@@ -4444,7 +4452,7 @@ class Component extends DCLogic {
       return {
         name: l.name.toUpperCase(),
         range: (l.max == null ? this.n(l.min) + '+ pts' : this.n(l.min) + ' – ' + this.n(l.max) + ' pts'),
-        qLabel: l.minQuality == null ? 'Sin requisito mínimo de calidad' : 'Calidad mínima ' + l.minQuality + '%',
+        qLabel: l.requiresQuote ? REQUISITO_COTIZACION : l.minQuality == null ? 'Sin requisito mínimo de calidad' : 'Calidad mínima ' + l.minQuality + '%',
         perks: l.perks.map(t => ({ t })),
         state: on ? 'Tu nivel actual' : (past ? 'Superado' : (i === rank[c.levelName] + 1 ? 'Siguiente nivel' : 'Por desbloquear')),
         border: on ? 'rgba(255,202,5,.3)' : 'var(--w-07,rgba(255,255,255,.07))',
@@ -4627,7 +4635,7 @@ class Component extends DCLogic {
       const isNext = withCurrent && i === rank[c.levelName] + 1;
       return {
         name: l.name, range: l.max == null ? this.n(l.min) + '+ pts' : this.n(l.min) + ' – ' + this.n(l.max) + ' pts',
-        qLabel: l.minQuality == null ? 'Sin requisito de calidad' : 'Calidad mínima ' + l.minQuality + '%',
+        qLabel: l.requiresQuote ? REQUISITO_COTIZACION : l.minQuality == null ? 'Sin requisito de calidad' : 'Calidad mínima ' + l.minQuality + '%',
         perks: l.perks.map(t => ({ t })), premium: !!l.premium, regular: !l.premium,
         tone: l.tone, on, past, isNext,
         state: on ? 'Tu nivel actual' : (past ? 'Superado' : (isNext ? 'Siguiente nivel' : (withCurrent ? 'Por desbloquear' : ''))),
@@ -4658,7 +4666,7 @@ class Component extends DCLogic {
         name: l.name, tone: l.tone, toneOp: i <= pickIdx ? '1' : '.35',
         pts: l.max == null ? this.n(l.min) + '+' : this.n(l.min) + '–' + this.n(l.max),
         count: accumOf(i) + ' benef.',
-        q: l.minQuality == null ? '—' : l.minQuality + '%',
+        q: l.requiresQuote ? 'Cotización' : l.minQuality == null ? '—' : l.minQuality + '%',
         qColor: sel ? 'var(--y,#FFCA05)' : 'var(--mut3,#7C7873)',
         headBg: sel ? 'rgba(255,202,5,.07)' : 'transparent',
         nameColor: sel ? 'var(--y,#FFCA05)' : 'var(--t2,#C9C5BE)',
@@ -4873,7 +4881,7 @@ class Component extends DCLogic {
       levelJourney, levelJourneyPub, mxCols, mxRows,
       pickName: pk.name,
       pickRange: pk.max == null ? this.n(pk.min) + '+ Puntos Sol' : this.n(pk.min) + ' – ' + this.n(pk.max) + ' Puntos Sol',
-      pickQ: pk.minQuality == null ? 'sin requisito de calidad' : 'calidad mínima ' + pk.minQuality + '%',
+      pickQ: pk.requiresQuote ? REQUISITO_COTIZACION.toLowerCase() : pk.minQuality == null ? 'sin requisito de calidad' : 'calidad mínima ' + pk.minQuality + '%',
       pickAccumN: accumOf(pickIdx),
       pickInherit: pickIdx === 0 ? 'Punto de partida: así empieza todo aliado del programa.' : 'Incluye los ' + accumOf(pickIdx - 1) + ' beneficios de ' + LV[pickIdx - 1].name + ' y suma ' + pk.perks.length + ' propios.',
       pickNameColor: pk.premium ? 'var(--y,#FFCA05)' : 'var(--fg,#F2F0EC)',
@@ -4918,11 +4926,13 @@ class Component extends DCLogic {
       /* La calidad real no tiene ventana de tiempo (CLAUDE.md §6.2). */
       qualityWindow: real ? (c.sample === 1 ? '1 empresa evaluada' : this.n(c.sample) + ' empresas evaluadas') + ' · todas tus empresas evaluadas cuentan' : 'Últimos ' + QUALITY_CONFIG.periodMonths + ' meses · ' + c.sample + ' oportunidades evaluadas',
       needQualityLabel: c.needQuality != null ? c.needQuality + '%' : '—',
-      blockedByQuality: c.blockedByQuality,
-      qualityNudge: c.next && c.needQuality != null ? 'Mejora tu calidad de referidos de ' + c.quality + '% a ' + c.needQuality + '% para convertirte en ' + c.next.name + '.' : '',
+      blockedByQuality: c.blockedByQuality || c.blockedByQuote,
+      qualityNudge: c.blockedByQuote ? 'Para llegar a ' + c.next.name + ' necesitas al menos un referido en Presentación de oferta (o una fase posterior). Cuando una de tus empresas llegue ahí, subes automáticamente.'
+        : c.next && c.needQuality != null ? 'Mejora tu calidad de referidos de ' + c.quality + '% a ' + c.needQuality + '% para convertirte en ' + c.next.name + '.' : '',
       windowNote: c.windowNote, windowMonths: LEVEL_CONFIG.windowMonths,
       levelProgressLabel: this.n(c.points) + ' / ' + this.n(c.top) + ' pts',
-      remainingToNext: c.nextLevel ? (c.remaining > 0 ? this.n(c.remaining) + ' pts para ' + c.nextLevel : 'Sigue refiriendo empresas de calidad para llegar a ' + c.nextLevel) : 'Nivel máximo alcanzado',
+      remainingToNext: c.nextLevel ? (c.remaining > 0 ? this.n(c.remaining) + ' pts para ' + c.nextLevel + (c.needsQuote ? ' · y un referido en Presentación de oferta' : '')
+        : c.needsQuote ? 'Te falta un referido en Presentación de oferta para llegar a ' + c.nextLevel : 'Sigue refiriendo empresas de calidad para llegar a ' + c.nextLevel) : 'Nivel máximo alcanzado',
       howLevelWorks: () => this.ping('Tu nivel usa una ventana móvil de ' + LEVEL_CONFIG.windowMonths + ' meses: solo cuenta la actividad calificable neta de ese período.'),
       streakName: STREAK_CONFIG.name, streakRule: STREAK_CONFIG.rule, streakNudge: STREAK_CONFIG.nudge,
       streakBonus: '+' + STREAK_CONFIG.bonus + ' Puntos Sol',
@@ -5079,9 +5089,9 @@ class Component extends DCLogic {
         try { if (navigator.clipboard) navigator.clipboard.writeText(code); } catch (e) {}
         this.setState({ copied: true }); this.ping('Código copiado: ' + code); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: false }), 2200);
       },
-      levelName: c.levelName, nextLevel: c.nextLevel || 'Círculo Solar', pct: c.pct, pctCss: Math.round(c.pct * 100) + '%',
-      subLabel: 'Hacia ' + (c.nextLevel || 'Círculo Solar'),
-      pointsLabel: this.n(c.points), remainingLabel: this.n(c.remaining),
+      levelName: c.levelName, nextLevel: c.nextLevel || 'EXA', pct: c.pct, pctCss: Math.round(c.pct * 100) + '%',
+      subLabel: 'Hacia ' + (c.nextLevel || 'EXA'),
+      pointsLabel: this.n(c.points), remainingLabel: this.n(c.remaining), quoteSuffix: c.needsQuote ? ' + cotización' : '',
       nav, demoNav: [ { label: 'Ver el sitio público', go: () => this.go('home') }, { label: 'Login y onboarding', go: () => this.go('login') }, { label: 'Nuevo nivel desbloqueado', go: () => this.setState({ levelUp: true }) }, { label: 'Vista mobile', go: () => this.go('mobile') } ],
       perfilBg: route === 'perfil' || route === 'comisiones' ? 'var(--w-05,rgba(255,255,255,.05))' : 'transparent',
       stats: real ? [
@@ -5120,12 +5130,12 @@ class Component extends DCLogic {
       levels: levelCards,
       levelPath: LEVEL_CONFIG.levels.map((l, i) => {
         const on = l.name === c.levelName, past = i < rank[c.levelName];
-        return { name: l.name, range: l.max == null ? this.n(l.min) + '+' : this.n(l.min) + '–' + this.n(l.max),
+        return { name: l.name, quote: !!l.requiresQuote, range: l.max == null ? this.n(l.min) + '+' : this.n(l.min) + '–' + this.n(l.max),
           color: on ? 'var(--y,#FFCA05)' : (past ? 'var(--t2,#C9C5BE)' : 'var(--mut4,#6B6762)'), fw: on ? 700 : 500,
           dotBg: on ? 'linear-gradient(180deg,#FFCA05,#F37920)' : (past ? 'rgba(255,202,5,.45)' : 'var(--w-14,rgba(255,255,255,.14))'),
           dotRing: on ? '0 0 0 5px rgba(255,202,5,.14)' : 'none',
           line: i < LEVEL_CONFIG.levels.length - 1 ? (past ? 'rgba(249,165,26,.5)' : 'var(--w-10,rgba(255,255,255,.1))') : 'transparent',
-          qLabel: l.minQuality == null ? 'Sin requisito de calidad' : 'Calidad mínima ' + l.minQuality + '%' };
+          qLabel: l.requiresQuote ? REQUISITO_COTIZACION : l.minQuality == null ? 'Sin requisito de calidad' : 'Calidad mínima ' + l.minQuality + '%' };
       }),
       ledger: historyRows,
       tools: this.withPublic([

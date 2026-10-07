@@ -160,7 +160,7 @@ async function recibirQR(d) {
   actual = { url: d.url, codigo: d.codigo_corto, venceAt: ahora + d.vence_en * 1000, renovarAt: ahora + RENOVAR_CADA * 1000 };
   $('[data-qr="codigo"]').textContent = formatoCodigo(d.codigo_corto);
   $('[data-qr="saldo"]').textContent = numero(d.puntos_disponibles);
-  $('[data-qr="nivel"]').textContent = String(d.nivel || '').replace('circulo_solar', 'Círculo Solar').replace(/^./, (c) => c.toUpperCase());
+  $('[data-qr="nivel"]').textContent = String(d.nivel || '').toUpperCase();
   await dibujar(d.url);
   tic();
 }

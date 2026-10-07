@@ -40,7 +40,7 @@ select public.admin_ajuste_puntos('ad000000-0000-0000-0000-00000000000a', pg_tem
 select public.admin_ajuste_puntos('ad000000-0000-0000-0000-00000000000a', pg_temp.cod('ad000000-0000-0000-0000-000000000003'), 100,
   'Saldo inicial de prueba', 'bd000000-0000-0000-0000-000000000003');
 select public.admin_guardar_recompensa('ad000000-0000-0000-0000-00000000000a', null, '{"codigo":"qr-cafe","nombre":"Bono de café","puntos":50}');
-select public.admin_guardar_recompensa('ad000000-0000-0000-0000-00000000000a', null, '{"codigo":"qr-cena","nombre":"Cena para dos","puntos":200,"nivel_minimo":"oro"}');
+select public.admin_guardar_recompensa('ad000000-0000-0000-0000-00000000000a', null, '{"codigo":"qr-cena","nombre":"Cena para dos","puntos":200,"nivel_minimo":"giga"}');
 select public.admin_guardar_recompensa('ad000000-0000-0000-0000-00000000000a', null, '{"codigo":"qr-otro","nombre":"Beneficio de otro","puntos":10,"proveedor":"otro"}');
 select public.admin_guardar_recompensa('ad000000-0000-0000-0000-00000000000a', null, '{"codigo":"qr-viaje","nombre":"Viaje solar","puntos":1000}');
 
@@ -160,7 +160,7 @@ select is(public.consultar_qr_canje(lower(substr(pg_temp.codigo(), 1, 4)) || '-'
 -- Canjear ------------------------------------------------------------------------------------------------------------------
 
 select throws_ok(format('select public.canjear_qr(%L, %L)', pg_temp.ficha(), 'qr-cena'), 'P0001',
-  'nivel_insuficiente: la recompensa requiere nivel oro y el aliado es bronce', 'se mantiene la regla de nivel');
+  'nivel_insuficiente: la recompensa requiere nivel giga y el aliado es kilo', 'se mantiene la regla de nivel');
 select throws_ok(format('select public.canjear_qr(%L, %L)', pg_temp.ficha(), 'qr-viaje'), 'P0001',
   'saldo_insuficiente: la recompensa vale 1000 puntos y el saldo disponible es 300', 'se mantiene la regla de saldo');
 select throws_ok(format('select public.canjear_qr(%L, %L)', pg_temp.ficha(), 'qr-otro'), 'P0001',

@@ -1,7 +1,7 @@
 -- Tests del libro mayor y los recálculos (CLAUDE.md §5, §5.1, §5.4, §6.1, §6.2, §6.3).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(36);
 
 -- Aliados de prueba, creados como en el registro real y activados.
 create function pg_temp.aliado(id uuid, email text, tipo text)
@@ -58,7 +58,7 @@ select is((select puntos_aplicados from public.movimientos_puntos where clave_un
   '−30 con saldo 10: se descontaron 10 (puntos_aplicados)');
 select is(public.calcular_puntos_nivel('b0000000-0000-0000-0000-00000000000b'), 20, 'puntos_nivel: +10, −30, +20 → 20');
 select is(public.calcular_puntos_disponibles('b0000000-0000-0000-0000-00000000000b'), 20, 'puntos_disponibles: 10 − 10 + 20 → 20');
-select row_eq($$select * from pg_temp.saldo('b0000000-0000-0000-0000-00000000000b')$$, row(20, 20, 'bronce'::text),
+select row_eq($$select * from pg_temp.saldo('b0000000-0000-0000-0000-00000000000b')$$, row(20, 20, 'kilo'::text),
   'la caché del aliado se recalcula sola al insertar');
 
 -- El mismo ejemplo en un solo INSERT (misma fecha): el orden lo da `secuencia`.
@@ -121,33 +121,46 @@ update public.avance_empresa set calificado = 'si', perfecto = 'si', oportunidad
 select is((select calidad_referidos from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 100.00,
   'la empresa en revisión queda fuera del promedio: calidad 100');
 
-select pg_temp.mov('c0000000-0000-0000-0000-00000000000c', 'evento_validado', 'c:1');
-select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'plata', '100 pts y calidad 100 → plata');
+-- Niveles KILO…EXA: MEGA desde 480 pts y 50 %; GIGA desde 960 pts, 60 % y al menos una cotización (§6.3).
+select pg_temp.mov('c0000000-0000-0000-0000-00000000000c', 'evento_validado', 'c:' || n) from generate_series(1, 5) n;
+select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'mega', '500 pts y calidad 100 → mega');
 
-select pg_temp.mov('c0000000-0000-0000-0000-00000000000c', 'negocio_cerrado', 'c:2');
-select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'oro', '250 pts y calidad 100 → oro');
+select pg_temp.mov('c0000000-0000-0000-0000-00000000000c', 'evento_validado', 'c:' || n) from generate_series(6, 10) n;
+select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'mega',
+  '1000 pts y calidad 100 sin ninguna cotización → mega (giga exige cotización)');
+
+update public.avance_empresa set propuesta_comercial = 'si' where empresa_id = 'e0000000-0000-0000-0000-000000000001';
+select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'giga',
+  'con un referido en presentación de oferta sube a giga');
 
 update public.avance_empresa set calificado = 'no', perfecto = 'no', oportunidad_tecnica = 'no', integridad_informacion = 'no'
   where empresa_id = 'e0000000-0000-0000-0000-000000000002';
 select row_eq($$select calidad_referidos, nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'$$,
-  row(50.00::numeric(5,2), 'plata'::text), 'una empresa en 0 baja la calidad a 50 y el nivel a plata (manda la calidad)');
+  row(50.00::numeric(5,2), 'mega'::text), 'una empresa en 0 baja la calidad a 50 y el nivel a mega (manda la calidad)');
 
 update public.avance_empresa set oportunidad_tecnica = 'revision' where empresa_id = 'e0000000-0000-0000-0000-000000000002';
-select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'oro',
-  'si esa empresa vuelve a revisión, sale del promedio y el nivel vuelve a oro');
+select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'giga',
+  'si esa empresa vuelve a revisión, sale del promedio y el nivel vuelve a giga');
+
+update public.avance_empresa set propuesta_comercial = 'revision' where empresa_id = 'e0000000-0000-0000-0000-000000000001';
+select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'mega',
+  'si el referido deja de contar como cotización (corrección del panel), baja a mega');
+update public.avance_empresa set negocio_cerrado = 'si' where empresa_id = 'e0000000-0000-0000-0000-000000000002';
+select is((select nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'), 'giga',
+  'un referido en Contrato también cuenta como cotización');
 
 delete from public.empresas where aliado_id = 'c0000000-0000-0000-0000-00000000000c';
 select row_eq($$select calidad_referidos, nivel::text from public.aliados where id = 'c0000000-0000-0000-0000-00000000000c'$$,
-  row(null::numeric(5,2), 'bronce'::text), 'sin empresas evaluables la calidad cuenta como 0: bronce aunque tenga 250 pts');
+  row(null::numeric(5,2), 'kilo'::text), 'sin empresas (ni calidad ni cotización) queda en kilo aunque tenga 1000 pts');
 
 -- Recálculo diario ---------------------------------------------------------------------------
 
 select is((select schedule from cron.job where jobname = 'recalcular-puntos-diario'), '15 5 * * *',
   'el cron diario corre a las 00:15 hora Bogotá (05:15 UTC)');
 
-update public.aliados set puntos_nivel = 999, puntos_disponibles = 999, nivel = 'diamante' where id = 'c0000000-0000-0000-0000-00000000000c';
+update public.aliados set puntos_nivel = 999, puntos_disponibles = 999, nivel = 'peta' where id = 'c0000000-0000-0000-0000-00000000000c';
 select interno.recalcular_todos();
-select row_eq($$select * from pg_temp.saldo('c0000000-0000-0000-0000-00000000000c')$$, row(250, 250, 'bronce'::text),
+select row_eq($$select * from pg_temp.saldo('c0000000-0000-0000-0000-00000000000c')$$, row(1000, 1000, 'kilo'::text),
   'recalcular_todos corrige cualquier caché desactualizada');
 
 -- Permisos ------------------------------------------------------------------------------------

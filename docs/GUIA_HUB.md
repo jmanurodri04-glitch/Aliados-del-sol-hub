@@ -578,16 +578,21 @@ Cada variable vale 1 si es "sí" y 0 si es "no". Si **alguna** está "en revisi�
 
 ### 6.3 Niveles
 
-| Nivel | Puntos de nivel ≥ | Calidad ≥ |
-|---|---|---|
-| Círculo Solar | 1000 | 85 % |
-| Diamante | 700 | 80 % |
-| Platino | 450 | 70 % |
-| Oro | 250 | 60 % |
-| Plata | 100 | 50 % |
-| Bronce | 0 | — |
+Desde oct 2026 los niveles se llaman **KILO, MEGA, GIGA, TERA, PETA y EXA** (antes Bronce, Plata, Oro, Platino, Diamante y Círculo Solar).
 
-El nivel es **el menor** entre el que dan los puntos y el que da la calidad. Ejemplo: 1000 puntos con 60 % de calidad = Oro. El Hub no muestra los requisitos de calidad, pero la regla sí se aplica.
+| Nivel | Puntos de nivel | Calidad ≥ | Cotización |
+|---|---|---|---|
+| EXA | 2400 o más | 85 % | Sí |
+| PETA | 1920 – 2399 | 80 % | Sí |
+| TERA | 1440 – 1919 | 70 % | Sí |
+| GIGA | 960 – 1439 | 60 % | Sí |
+| MEGA | 480 – 959 | 50 % | No |
+| KILO | 0 – 479 | — | No |
+
+- **Cotización:** desde GIGA, el aliado necesita al menos un referido que haya llegado a «Presentación de oferta» o a una fase posterior (Interesado no ahora, Financiación, Contrato). No vence: con que exista una, se mantiene.
+- **Los puntos se miran primero, pero hay que cumplir todo.** Si a un aliado le falta la calidad o la cotización, se queda en el nivel más alto que sí cumple. Ejemplos: 2000 puntos con 100 % de calidad y sin cotización = MEGA; 2000 puntos con cotización y 65 % = GIGA. Nadie queda sin nivel: KILO es el piso.
+- El Hub muestra los rangos y el requisito de cotización (y avisa cuando ya tiene los puntos pero le falta la cotización). La calidad mínima no se muestra, pero la regla sí se aplica.
+- **El canje no cambió:** los niveles se renombraron en el mismo orden, así que el nivel mínimo de cada recompensa y el de cada canje se tradujeron solos (Oro → GIGA, etc.).
 
 ### 6.4 Racha Solar 4x4
 
@@ -653,7 +658,7 @@ flowchart LR
 |---|---|---|
 | `estado_triple` | `si`, `no`, `revision` | Variables de avance y calidad: "revision" = aún no se sabe. |
 | `tipo_aliado` | `financiero`, `emi`, `linker`, `cliente_embajador`, `agremiaciones` | Define el formulario, el perfil y el dashboard. |
-| `nivel` | `bronce`, `plata`, `oro`, `platino`, `diamante`, `circulo_solar` | Nivel del aliado y nivel mínimo de una recompensa (el orden importa: se comparan). |
+| `nivel` | `kilo`, `mega`, `giga`, `tera`, `peta`, `exa` (antes `bronce`…`circulo_solar`) | Nivel del aliado y nivel mínimo de una recompensa (el orden importa: se comparan). |
 | `aliados.estado` | `pendiente`, `activo`, `suspendido`, `rechazado` | Solo `activo` entra al Hub y gana puntos. |
 | `clientify_sync_estado` | `pendiente`, `ok`, `error`, `excluido` | Estado del envío a Clientify; `excluido` = cuenta de admin. |
 
@@ -1055,6 +1060,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 
 **Puntos, calidad y niveles**
 - "Información disponible" se eliminó. Referido perfecto = +20.
+- **Niveles KILO, MEGA, GIGA, TERA, PETA y EXA** (oct 2026): 480 puntos por nivel, la misma calidad mínima de antes y, desde GIGA, al menos un referido en «Presentación de oferta» o después (sin vencimiento). Nadie queda sin nivel. El canje y el QR siguen igual.
 - **MEDDPICC:** +20 una vez por referido, lo otorga un admin desde el panel cuando revisa la información; aplica a perfectos o imperfectos con ciudad, sin plazo. Cada referido nuevo recibe el correo «Confirmación de empresa referida» por Resend desde el Hub (no desde Clientify, porque el contacto que se crea es el de la empresa y no el del aliado). El MEDDPICC va al buzón de la regional según la ciudad del referido; si no se reconoce, a c.lizarazo. El panel muestra los correos no enviados con su motivo.
 - **Bienvenida:** +10 Puntos Sol una sola vez, cuando GEENERA aprueba la cuenta (también se dieron a los aliados ya aprobados; no a los admins). Conviene mencionarlo en los Términos o en la política de beneficios.
 - Fuera del perfil (−15) se suma a no calificado (−10).
@@ -1099,13 +1105,13 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 | Ya verificado | Cómo | Qué **no** cubre |
 |---|---|---|
-| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 678 pruebas pgTAP en 19 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
+| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 689 pruebas pgTAP en 19 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
 | Funciones `/api` | 132 pruebas de `npm test`: 109 con Supabase, Clientify y el captcha simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
 | Pantallas del Hub y del panel (incluido el formulario público, el captcha del registro y los logins, y el Hub a 390 px de ancho, oct 2026) | Pruebas en navegador con Supabase y el captcha simulados | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
 | Flujo A con Clientify real: aliado aprobado → contacto con `ID_aliado`, etiquetas y Tipo «Aliados Estratégicos» | Aprobaciones reales en el Preview (5 oct 2026) | — |
-| Flujos B y C con Clientify real: referidos del Hub y del formulario público, empresa con factura, calificación, fases de la oportunidad, información falsa, no calificado y conflicto | 7 referidos de prueba en el Preview (5 oct 2026): +30 al calificar, Racha semana 1, +30/+50/+150 por Diseño, Presentación de oferta y Contrato, −30 por «fraude», −10 por no calificado, conflicto «calificado sí → no» en el panel; la calidad y el nivel bajaron como se esperaba (Oro → Plata) | Solo el lead creado directamente en Clientify (caso 8 de §10.1) |
+| Flujos B y C con Clientify real: referidos del Hub y del formulario público, empresa con factura, calificación, fases de la oportunidad, información falsa, no calificado y conflicto | 7 referidos de prueba en el Preview (5 oct 2026): +30 al calificar, Racha semana 1, +30/+50/+150 por Diseño, Presentación de oferta y Contrato, −30 por «fraude», −10 por no calificado, conflicto «calificado sí → no» en el panel; la calidad y el nivel bajaron como se esperaba (Oro → Plata, hoy GIGA → MEGA) | Solo el lead creado directamente en Clientify (caso 8 de §10.1) |
 | Correo propio (§5.9): confirmación, recuperación de contraseña y aviso de cambio, con logos | Prueba real en el Preview con cuentas de Gmail, Outlook y del correo corporativo (2 oct 2026): llegaron a la bandeja de entrada, los enlaces funcionaron y la recuperación de contraseña entró al Hub | El volumen del lanzamiento (tope de Resend gratis: 100 correos al día) |
 | Canje con QR (fase 11): invitar operadores, mostrar el QR, escanear, canjear, rechazos por nivel y saldo, anular | 79 pruebas pgTAP, pruebas en navegador con cámara simulada y una **prueba real con celulares Android e iPhone** en el Preview (1 oct 2026) | Operadores y catálogo reales; pruebas de capturas de pantalla y modo avión con más personas |
 

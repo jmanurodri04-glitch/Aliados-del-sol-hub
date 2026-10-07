@@ -121,7 +121,7 @@ tipo_aliado             enum tipo_aliado NOT NULL
 puntos_nivel            int NOT NULL DEFAULT 0      -- "Puntos de sol": ganados − perdidos, últimos 6 meses, mínimo 0
 puntos_disponibles      int NOT NULL DEFAULT 0      -- ganados − perdidos − redimidos (histórico), mínimo 0
 calidad_referidos       numeric(5,2) NULL           -- 0–100 %, promedio de calidad_empresa; NULL si no hay empresas evaluables
-nivel                   enum nivel NOT NULL DEFAULT 'bronce'
+nivel                   enum nivel NOT NULL DEFAULT 'kilo'   -- kilo | mega | giga | tera | peta | exa (§6.3)
 -- Racha Solar 4x4
 racha_semana_1..4       boolean NOT NULL DEFAULT false
 racha_ultima_semana     date NULL                   -- lunes de la última semana contada
@@ -496,23 +496,26 @@ calidad_empresa = 100 × (0.40·calificado + 0.30·perfecto + 0.20·oportunidad_
 - Si no hay empresas evaluables, vale `NULL` y cuenta como 0 para los niveles.
 - Se recalcula en un trigger cada vez que cambia `avance_empresa`.
 
-### 6.3 Niveles (se evalúan **de arriba hacia abajo**; deben cumplirse puntos **y** calidad)
+### 6.3 Niveles: KILO, MEGA, GIGA, TERA, PETA y EXA (se evalúan **de arriba hacia abajo**)
 
-| Orden | Nivel | `puntos_nivel` ≥ | `calidad_referidos` ≥ |
-|---|---|---|---|
-| 1 | Círculo Solar | 1000 | 85 % |
-| 2 | Diamante | 700 | 80 % |
-| 3 | Platino | 450 | 70 % |
-| 4 | Oro | 250 | 60 % |
-| 5 | Plata | 100 | 50 % |
-| 6 | Bronce | 0 | — (cualquier caso restante) |
+**Desde oct 2026** (decisión del equipo, migración `niveles_orbitas`; antes eran Bronce, Plata, Oro, Platino, Diamante y Círculo Solar, con 0/100/250/450/700/1000 puntos):
 
-- Se asigna el **primer** nivel cuyas dos condiciones se cumplan. Ejemplo: 1000 puntos con 60 % de calidad → **Oro**.
-- Dicho de otra forma (decisión del equipo): el nivel es el **menor** entre el que dan los puntos y el que da la calidad. Con muchos puntos y baja calidad, manda la calidad; con buena calidad y pocos puntos, mandan los puntos. Nadie queda por fuera.
-- Bronce es el nivel por defecto, así que **ningún aliado queda sin nivel.**
-- El nivel **no depende de `puntos_disponibles`**. Mucho saldo con baja calidad o sin actividad reciente puede significar Bronce.
-- Las recompensas canjeables dependen del nivel **actual**.
-- Implementarlo como función SQL pura `calcular_nivel(puntos int, calidad numeric) → nivel`, con **tests** para cada límite: 99/100, 249/250, calidad 49.99/50, etc.
+| Orden | Nivel | `puntos_nivel` | `calidad_referidos` ≥ | Cotización |
+|---|---|---|---|---|
+| 1 | EXA | 2400 o más | 85 % | Sí |
+| 2 | PETA | 1920 – 2399 | 80 % | Sí |
+| 3 | TERA | 1440 – 1919 | 70 % | Sí |
+| 4 | GIGA | 960 – 1439 | 60 % | Sí |
+| 5 | MEGA | 480 – 959 | 50 % | No |
+| 6 | KILO | 0 – 479 | — (cualquier caso restante) | No |
+
+- **Cotización** = al menos un referido del aliado con `propuesta_comercial = 'si'` (llegó a «Presentación de oferta») o `negocio_cerrado = 'si'`; cuentan las fases posteriores (Interesado no ahora, Financiación, Contrato). **No vence**: basta con que exista (`interno.tiene_cotizacion`). Si Clientify o el panel corrigen ese avance, el nivel se recalcula (trigger `avance_empresa_recalcular_cotizacion`).
+- Se asigna el **primer** nivel cuyas condiciones se cumplan **todas**. Los puntos se miran primero; la calidad y la cotización pueden bajarlo. Ejemplos: 2000 pts, 100 % y sin cotización → **MEGA**; 2000 pts con cotización y 65 % → **GIGA**; 2000 pts con cotización y 45 % → **KILO**.
+- Dicho de otra forma (decisión del equipo): el nivel es el **menor** entre el que dan los puntos, el que da la calidad y el tope sin cotización (MEGA). Nadie queda por fuera: **KILO** es el nivel por defecto.
+- El nivel **no depende de `puntos_disponibles`**. Mucho saldo con baja calidad o sin actividad reciente puede significar KILO.
+- Las recompensas canjeables dependen del nivel **actual**. El enum `nivel` conserva el orden (kilo < mega < giga < tera < peta < exa), así que el canje por API y por QR, el nivel mínimo de las recompensas y el `nivel_requerido` de cada canje no cambiaron: al renombrar, lo guardado quedó traducido (bronce → kilo, plata → mega, oro → giga, platino → tera, diamante → peta, circulo_solar → exa).
+- Función SQL pura `calcular_nivel(puntos int, calidad numeric, cotizacion boolean) → nivel`, con tests de cada límite (479/480, 959/960, 1439/1440, 1919/1920, 2399/2400, calidad 49.99/50… y con y sin cotización). La versión de dos argumentos se conserva y equivale a «sin cotización».
+- **Hub:** muestra los rangos y, desde GIGA, el requisito «+ referido en presentación de oferta» en «Tu camino de niveles». Si el aliado ya tiene los puntos pero no la cotización, ve «Para llegar a GIGA necesitas al menos un referido en Presentación de oferta…» y «faltan 0 + cotización». La calidad mínima la aplica la base, pero el Hub no la muestra (decisión del equipo).
 
 ---
 
@@ -905,6 +908,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Celular internacional con selector de país; regla colombiana cuando el indicativo es +57 (§3).
 - Regional opcional; "¿Cómo llegas a las empresas?" obligatoria para EMI, Linker y Cliente Embajador (§3).
 - Nivel = el menor entre el nivel por puntos y el nivel por calidad (§6.3).
+- **Niveles KILO, MEGA, GIGA, TERA, PETA y EXA** (oct 2026): 0/480/960/1440/1920/2400 puntos de nivel, la misma calidad de antes (50/60/70/80/85 %) y, desde GIGA, al menos un referido en «Presentación de oferta» o después, sin vencimiento. Se renombró el enum en el mismo orden, así que el canje no cambió; las recompensas de prueba no se ajustaron (§6.3).
 - Los Términos y condiciones aplican a todos los tipos de aliado (§11).
 - El contacto del aliado en Clientify se crea cuando GEENERA aprueba la solicitud, no al registrarse (§3, §8 flujo A).
 - La Política de Tratamiento de Datos debe incluir la transferencia internacional (§11).

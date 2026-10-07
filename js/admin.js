@@ -10,7 +10,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const MENSAJE_CAPTCHA = 'Confirma que no eres un robot y vuelve a intentarlo.';
 
 const TIPOS = { emi: 'EMI', linker: 'Linker', cliente_embajador: 'Cliente Embajador', financiero: 'Financiero', agremiaciones: 'Agremiaciones' };
-const NIVELES = { bronce: 'Bronce', plata: 'Plata', oro: 'Oro', platino: 'Platino', diamante: 'Diamante', circulo_solar: 'Círculo Solar' };
+const NIVELES = { kilo: 'KILO', mega: 'MEGA', giga: 'GIGA', tera: 'TERA', peta: 'PETA', exa: 'EXA' };
 const ESTADOS = { activo: ['Activo', 'ok'], pendiente: ['Pendiente', 'w'], suspendido: ['Suspendido', 'bad'], rechazado: ['Rechazado', 'bad'],
   validado: ['Validado', 'ok'], confirmado: ['Confirmado', 'ok'], anulado: ['Anulado', 'bad'], excluido: ['Excluido', ''] };
 const ACCIONES = { aprobar_aliado: 'Aprobó la solicitud', rechazar_aliado: 'Rechazó la solicitud', suspender_aliado: 'Suspendió la cuenta',
@@ -445,7 +445,7 @@ function formularioRecompensa(r) {
       { id: 'codigo', etiqueta: 'Código', tipo: 'texto', obligatorio: true, minimo: 2, valor: r ? r.codigo : '', soloLectura: !nueva, ayuda: nueva ? 'Minúsculas, números, guion y guion bajo (p. ej. bono-cafe).' : '' },
       { id: 'nombre', etiqueta: 'Nombre', tipo: 'texto', obligatorio: true, minimo: 3, valor: r ? r.nombre : '' },
       { id: 'puntos', etiqueta: 'Puntos', tipo: 'numero', obligatorio: true, valor: r ? r.puntos : '' },
-      { id: 'nivel_minimo', etiqueta: 'Nivel mínimo', tipo: 'lista', valor: r ? r.nivel_minimo : 'bronce', opciones: Object.entries(NIVELES) },
+      { id: 'nivel_minimo', etiqueta: 'Nivel mínimo', tipo: 'lista', valor: r ? r.nivel_minimo : 'kilo', opciones: Object.entries(NIVELES) },
       { id: 'categoria', etiqueta: 'Categoría (opcional)', tipo: 'texto', valor: r ? r.categoria : '' },
       { id: 'proveedor', etiqueta: 'Proveedor (opcional)', tipo: 'texto', valor: r ? r.proveedor : '', ayuda: 'Vacío: cualquier proveedor puede canjearla.' },
       { id: 'descripcion', etiqueta: 'Descripción (opcional)', tipo: 'area', valor: r ? r.descripcion : '' },

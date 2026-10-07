@@ -4383,7 +4383,7 @@ class Component extends DCLogic {
       else if (!r.disponible) { tag = 'Faltan ' + this.n(r.puntos_faltantes); tagBg = 'rgba(249,165,26,.16)'; tagColor = 'var(--o,#F9A51A)'; cta = 'Cómo ganar'; ctaBg = 'transparent'; ctaColor = 'var(--o,#F9A51A)'; ctaBorder = 'rgba(249,165,26,.4)'; op = .55; action = () => this.go('puntos'); }
       return {
         name: r.nombre, partner: 'GEENERA', logoUrl: 'none', hasLogo: false, noLogo: true, aud: r.descripcion || '', hasAud: !!r.descripcion, cat: r.categoria || 'Recompensa',
-        ph: 'recompensa', imgUrl: 'none', phOp: 1, ptsLabel: this.n(r.puntos) + ' pts', reqLabel: 'Nivel ' + nivel,
+        ph: 'recompensa', imgUrl: r.imagen_url ? 'url("' + r.imagen_url + '")' : 'none', phOp: r.imagen_url ? 0 : 1, ptsLabel: this.n(r.puntos) + ' pts', reqLabel: 'Nivel ' + nivel,
         tag, tagBg, tagColor, cta, ctaBg, ctaColor, ctaBorder, ctaCursor: cursor, op, ptsColor, titleColor, act: action
       };
     };

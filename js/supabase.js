@@ -426,8 +426,12 @@ async function cargarDashboard(supabaseDado) {
       return;
     }
     ultimaRecarga = Date.now();
+    // La imagen de cada recompensa está en el bucket público `recompensas` (no necesita URL firmada).
+    const conImagen = (recompensas.data || []).map((r) => Object.assign({}, r, {
+      imagen_url: r.imagen_path ? supabase.storage.from('recompensas').getPublicUrl(r.imagen_path).data.publicUrl : null
+    }));
     dashboardActual = { ok: true, aliado: aliado.data, movimientos: movimientos.data, referidos: referidos.data, modulos: modulos.data, eventos: eventos.data,
-      canjes: canjes.data, recompensas: recompensas.data };
+      canjes: canjes.data, recompensas: conImagen };
     emitir('ads:dashboard', dashboardActual);
   } catch (e) {
     emitir('ads:dashboard', { ok: false, mensaje: mensajeDeError(e) });

@@ -41,7 +41,8 @@ function supabaseFalso({ usuario = ADMIN, rpc = { ok: true }, rpcError = null, e
     storage: {
       from: (bucket) => ({
         createSignedUrl: async (ruta, seg) => { llamadas.push({ firmada: bucket, ruta, seg }); return { data: { signedUrl: 'https://firmada' }, error: null }; },
-        createSignedUploadUrl: async (ruta) => { llamadas.push({ subida: bucket, ruta }); return { data: { path: ruta, token: 'tk' }, error: null }; }
+        createSignedUploadUrl: async (ruta) => { llamadas.push({ subida: bucket, ruta }); return { data: { path: ruta, token: 'tk' }, error: null }; },
+        remove: async (rutas) => { llamadas.push({ borrar: bucket, rutas }); return { data: [], error: null }; }
       })
     }
   };
@@ -121,6 +122,36 @@ test('admin: anular un canje y guardar una recompensa (fase 10)', async () => {
   await admin(pedido({ accion: 'guardar_recompensa', recompensa_id: 'no-es-uuid', datos: {} }), res, sb);
   assert.equal(res.statusCode, 400);
   assert.equal(errorDeAdmin('canje_inexistente: el canje no existe').status, 404);
+});
+
+test('admin: imagen de una recompensa (oct 2026)', async () => {
+  let sb = supabaseFalso();
+  let res = respuesta();
+  await admin(pedido({ accion: 'subir_imagen_recompensa', tipo: 'image/webp', tamano: 500000 }), res, sb);
+  assert.equal(res.statusCode, 200);
+  assert.match(res.cuerpo.ruta, /^[0-9a-f-]{36}\.webp$/, 'el nombre lo pone el servidor');
+  assert.equal(res.cuerpo.token, 'tk');
+  assert.deepEqual(sb.llamadas[0], { subida: 'recompensas', ruta: res.cuerpo.ruta });
+
+  for (const [cuerpo, mensaje] of [[{ tipo: 'image/gif', tamano: 100 }, 'JPG, PNG o WebP'], [{ tipo: 'image/png', tamano: 3 * 1024 * 1024 }, '2 MB']]) {
+    res = respuesta();
+    await admin(pedido({ accion: 'subir_imagen_recompensa', ...cuerpo }), res, sb);
+    assert.equal(res.statusCode, 422);
+    assert.match(res.cuerpo.error, new RegExp(mensaje));
+  }
+
+  const ruta = '11111111-1111-1111-1111-111111111111.png';
+  sb = supabaseFalso({ rpc: { recompensa_id: CLAVE, codigo: 'cafe', imagen_path: ruta, imagen_anterior: '22222222-2222-2222-2222-222222222222.jpg' } });
+  res = respuesta();
+  await admin(pedido({ accion: 'guardar_recompensa', recompensa_id: CLAVE, datos: { nombre: 'Café', puntos: 60, imagen_path: ruta } }), res, sb);
+  assert.equal(res.statusCode, 200);
+  assert.equal(sb.llamadas[0].args.p_datos.imagen_path, ruta);
+  assert.deepEqual(sb.llamadas[1], { borrar: 'recompensas', rutas: ['22222222-2222-2222-2222-222222222222.jpg'] },
+    'la imagen reemplazada se borra del bucket');
+
+  sb = supabaseFalso({ rpc: { recompensa_id: CLAVE, codigo: 'cafe', imagen_path: ruta, imagen_anterior: null } });
+  await admin(pedido({ accion: 'guardar_recompensa', recompensa_id: CLAVE, datos: { nombre: 'Café', puntos: 60 } }), respuesta(), sb);
+  assert.equal(sb.llamadas.length, 1, 'si la imagen no cambió no se borra nada');
 });
 
 test('admin: invitar operador genera el enlace según la cuenta (fase 11)', async () => {

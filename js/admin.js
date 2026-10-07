@@ -87,6 +87,7 @@ function pedir({ titulo, texto, campos = [], confirmar = 'Confirmar', peligro = 
   $('dialogo-ok').className = 'btn ' + (peligro ? 'peligro' : 'primario');
   $('dialogo-campos').innerHTML = campos.map((c) => {
     if (c.tipo === 'casilla') return `<label class="casilla"><input type="checkbox" id="campo-${c.id}" ${c.valor ? 'checked' : ''}> ${esc(c.etiqueta)}</label>`;
+    if (c.tipo === 'imagen') return campoImagen(c);
     const valor = c.valor == null ? '' : c.valor;
     const control = c.tipo === 'area'
       ? `<textarea id="campo-${c.id}" rows="3" maxlength="1000">${esc(valor)}</textarea>`
@@ -95,6 +96,7 @@ function pedir({ titulo, texto, campos = [], confirmar = 'Confirmar', peligro = 
         : `<input id="campo-${c.id}" ${c.tipo === 'numero' ? 'type="number" step="1"' : 'type="text" maxlength="1000"'} value="${esc(valor)}" ${c.soloLectura ? 'readonly' : ''}>`;
     return `<label>${esc(c.etiqueta)}${c.ayuda ? `<span class="sub">${esc(c.ayuda)}</span>` : ''}${control}</label>`;
   }).join('');
+  campos.filter((c) => c.tipo === 'imagen').forEach(activarImagen);
   d.showModal();
   const primero = d.querySelector('input:not([readonly]), textarea'); if (primero) primero.focus();
 
@@ -104,6 +106,7 @@ function pedir({ titulo, texto, campos = [], confirmar = 'Confirmar', peligro = 
     const valores = {};
     for (const c of campos) {
       const el = $('campo-' + c.id);
+      if (c.tipo === 'imagen') { valores[c.id] = el.estado; continue; }
       valores[c.id] = c.tipo === 'casilla' ? el.checked : el.value.trim();
       if (c.obligatorio && String(valores[c.id]).length < (c.minimo || 1)) {
         $('dialogo-mensaje').textContent = `${c.etiqueta}: mínimo ${c.minimo || 1} caracteres.`;
@@ -121,6 +124,70 @@ function pedir({ titulo, texto, campos = [], confirmar = 'Confirmar', peligro = 
       boton.disabled = false;
     }
   };
+}
+
+// Campo de imagen (recompensas): vista previa, elegir archivo y «Quitar imagen». El estado queda en el elemento:
+// { archivo } si se eligió uno nuevo, { quitar: true } si se quitó, {} si no cambió.
+const IMAGEN = { tipos: ['image/jpeg', 'image/png', 'image/webp'], maximo: 2 * 1024 * 1024, ancho: 1200, alto: 600 };
+const urlImagenRecompensa = (ruta) => ruta ? supabase.storage.from('recompensas').getPublicUrl(ruta).data.publicUrl : '';
+
+function campoImagen(c) {
+  const url = urlImagenRecompensa(c.valor);
+  return `<div class="campo-imagen" id="campo-${c.id}">
+    <span class="etiqueta">${esc(c.etiqueta)}<span class="sub">${esc(c.ayuda || '')}</span></span>
+    <div class="img-rec" data-vista ${url ? `style="background-image:url('${esc(url)}')"` : ''}>${url ? '' : 'Sin imagen'}</div>
+    <span class="sub" data-aviso></span>
+    <div class="fila izq">
+      <label class="btn">Elegir imagen<input type="file" accept="${IMAGEN.tipos.join(',')}" hidden data-archivo></label>
+      <button type="button" class="btn" data-quitar ${url ? '' : 'hidden'}>Quitar imagen</button>
+    </div>
+  </div>`;
+}
+
+function activarImagen(c) {
+  const caja = $('campo-' + c.id);
+  const vista = caja.querySelector('[data-vista]');
+  const aviso = caja.querySelector('[data-aviso]');
+  const quitar = caja.querySelector('[data-quitar]');
+  let objeto = null;
+  caja.estado = {};
+  const pintar = (url) => {
+    if (objeto && objeto !== url) { URL.revokeObjectURL(objeto); objeto = null; }
+    vista.style.backgroundImage = url ? `url('${url}')` : '';
+    vista.textContent = url ? '' : 'Sin imagen';
+    quitar.hidden = !url;
+  };
+  caja.querySelector('[data-archivo]').onchange = (ev) => {
+    const archivo = ev.target.files[0];
+    ev.target.value = '';
+    if (!archivo) return;
+    if (!IMAGEN.tipos.includes(archivo.type)) { aviso.textContent = 'La imagen debe ser JPG, PNG o WebP.'; return; }
+    if (archivo.size > IMAGEN.maximo) { aviso.textContent = 'La imagen pesa más de 2 MB. Redúcela o comprímela.'; return; }
+    caja.estado = { archivo };
+    objeto = URL.createObjectURL(archivo);
+    pintar(objeto);
+    aviso.textContent = '';
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth < IMAGEN.ancho || img.naturalHeight < IMAGEN.alto) {
+        aviso.textContent = `Mide ${img.naturalWidth}×${img.naturalHeight}. Se verá, pero puede salir borrosa: lo ideal es ${IMAGEN.ancho}×${IMAGEN.alto} o más.`;
+      }
+    };
+    img.src = objeto;
+  };
+  quitar.onclick = () => { caja.estado = { quitar: true }; aviso.textContent = ''; pintar(''); };
+}
+
+// Sube la imagen elegida con una URL firmada de un solo uso y devuelve el valor de `imagen_path` para guardar:
+// la ruta nueva, '' para quitarla o undefined si no cambió.
+async function imagenParaGuardar(estado) {
+  if (estado && estado.quitar) return '';
+  if (!estado || !estado.archivo) return undefined;
+  const a = estado.archivo;
+  const { ruta, token } = await llamarAdmin('subir_imagen_recompensa', { tipo: a.type, tamano: a.size });
+  const { error } = await supabase.storage.from('recompensas').uploadToSignedUrl(ruta, token, a, { contentType: a.type });
+  if (error) throw new Error('No pudimos subir la imagen. Intenta de nuevo.');
+  return ruta;
 }
 
 // Pestañas --------------------------------------------------------------------------------------------------------
@@ -323,7 +390,7 @@ async function cargarRecompensas() {
   recompensas = await leer(supabase.from('v_admin_recompensas').select('*').order('activa', { ascending: false }).order('puntos'));
   $('recompensas').innerHTML = recompensas.length ? `<table><thead><tr><th>Recompensa</th><th>Puntos</th><th>Nivel mínimo</th><th>Proveedor</th><th>Canjes</th><th>Estado</th><th></th></tr></thead><tbody>${
     recompensas.map((r) => `<tr>
-      <td><b>${esc(r.nombre)}</b><span class="codigo">${esc(r.codigo)}</span>${r.categoria ? `<span class="sub">${esc(r.categoria)}</span>` : ''}${r.descripcion ? `<span class="sub">${esc(r.descripcion)}</span>` : ''}</td>
+      <td>${r.imagen_path ? `<img class="mini-rec" src="${esc(urlImagenRecompensa(r.imagen_path))}" alt="">` : ''}<b>${esc(r.nombre)}</b><span class="codigo">${esc(r.codigo)}</span>${r.categoria ? `<span class="sub">${esc(r.categoria)}</span>` : ''}${r.descripcion ? `<span class="sub">${esc(r.descripcion)}</span>` : ''}</td>
       <td><b>${numero(r.puntos)}</b></td><td>${esc(NIVELES[r.nivel_minimo] || r.nivel_minimo)}</td>
       <td>${esc(r.proveedor || 'Todos')}</td>
       <td>${numero(r.canjes_confirmados)}<span class="sub">${numero(r.puntos_redimidos)} puntos</span></td>
@@ -345,12 +412,16 @@ function formularioRecompensa(r) {
       { id: 'categoria', etiqueta: 'Categoría (opcional)', tipo: 'texto', valor: r ? r.categoria : '' },
       { id: 'proveedor', etiqueta: 'Proveedor (opcional)', tipo: 'texto', valor: r ? r.proveedor : '', ayuda: 'Vacío: cualquier proveedor puede canjearla.' },
       { id: 'descripcion', etiqueta: 'Descripción (opcional)', tipo: 'area', valor: r ? r.descripcion : '' },
+      { id: 'imagen', etiqueta: 'Imagen (opcional)', tipo: 'imagen', valor: r ? r.imagen_path : null,
+        ayuda: 'JPG, PNG o WebP de máximo 2 MB. Ideal: 1200×600, horizontal y con lo importante en el centro (los bordes se recortan).' },
       { id: 'activa', etiqueta: 'Activa (se puede canjear)', tipo: 'casilla', valor: r ? r.activa : true }
     ],
     confirmar: nueva ? 'Crear' : 'Guardar',
     accion: async (v) => {
       const datos = { codigo: v.codigo.toLowerCase(), nombre: v.nombre, puntos: Number(v.puntos), nivel_minimo: v.nivel_minimo,
         categoria: v.categoria, proveedor: v.proveedor.toLowerCase(), descripcion: v.descripcion, activa: v.activa };
+      const imagen = await imagenParaGuardar(v.imagen);
+      if (imagen !== undefined) datos.imagen_path = imagen;
       await llamarAdmin('guardar_recompensa', { recompensa_id: r ? r.recompensa_id : null, datos });
       await recargar();
       return nueva ? 'Recompensa creada.' : 'Recompensa guardada.';

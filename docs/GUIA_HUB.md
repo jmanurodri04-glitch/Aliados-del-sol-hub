@@ -247,7 +247,7 @@ sequenceDiagram
   V->>H: Intenta entrar
   H-->>V: "Tu solicitud está en revisión"
   AD->>DB: Aprobar (POST /api/admin)
-  DB->>DB: estado = activo, libera puntos retenidos,<br/>otorga módulos pendientes, audita
+  DB->>DB: estado = activo, +10 de bienvenida, libera puntos retenidos,<br/>otorga módulos pendientes, audita
   Note over DB,F: Flujo A (cada 2 min)
   F->>DB: reclama aliados activos pendientes (no admins)
   F->>CL: crea o vincula el contacto con ID_aliado, etiquetas<br/>y Tipo "Aliados Estratégicos"
@@ -519,6 +519,7 @@ Supabase Auth envía los correos de la cuenta por **SMTP propio** con **Resend**
 
 | Qué pasa | Puntos | Se otorga… |
 |---|---|---|
+| Bienvenida: GEENERA aprueba la cuenta | +10 | Una sola vez por aliado (oct 2026; también se dio a los que ya estaban aprobados). Las cuentas de admin no la reciben |
 | Registro válido de un referido | +10 | Una vez por empresa |
 | Referido perfecto (10 campos + factura) | +20 | Una vez por empresa (comparte clave con imperfecto) |
 | Referido imperfecto | −5 | Idem |
@@ -766,7 +767,7 @@ flowchart LR
 | `puntos` | Valor nominal de la regla. |
 | `puntos_aplicados` | Lo que realmente movió el saldo (una pérdida con saldo bajo aplica menos). |
 | `motivo` | Regla aplicada (llave foránea a `reglas_puntos`). |
-| `vinculo`, `vinculo_id` | Qué lo originó: `empresas`, `eventos`, `modulos_completados`, `racha`, `canjes` o `ajuste_admin`, y qué fila. |
+| `vinculo`, `vinculo_id` | Qué lo originó: `empresas`, `eventos`, `modulos_completados`, `racha`, `canjes`, `ajuste_admin` o `aliados` (bienvenida), y qué fila. |
 | `clave_unica` | Evita duplicados (p. ej. `empresa:{id}:calificado`). |
 | `fecha` | Cuándo se otorgó (define semanas, meses y la ventana de 6 meses). |
 | `creado_por` | `sistema`, `webhook_clientify`, `canjes_api`, `canjes_qr` o `admin:{id}`. |
@@ -823,6 +824,7 @@ Mismas columnas que el libro mayor, más: `fecha_original` (cuándo ocurrió), `
 | `nivel_minimo` | Nivel necesario para canjearla. |
 | `proveedor` | Si tiene valor, solo ese proveedor puede canjearla. |
 | `activa` | Si se puede canjear hoy. |
+| `imagen_path` | Imagen que ve el aliado en la tarjeta (oct 2026): nombre del archivo en el bucket público `recompensas`. Vacío = sin imagen. |
 | `created_at`, `updated_at` | Fechas. |
 
 #### `canjes`
@@ -921,6 +923,7 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
   - `facturas`: PDF, JPG o PNG de hasta 10 MB.
   - `eventos`: PDF, imagen, Excel o CSV de hasta 10 MB.
   - El navegador sube con una URL firmada de un solo uso y solo el servidor lee.
+- **Bucket público** `recompensas` (oct 2026): imágenes del catálogo, JPG, PNG o WebP de hasta 2 MB. Cualquiera puede verlas (no tienen datos personales) y solo el panel sube, con una URL firmada de un solo uso que da `/api/admin`.
 - **Funciones principales:**
   - `handle_new_aliado`: registro.
   - `registrar_oportunidad`: Nueva oportunidad; `registrar_oportunidad_publica`: formulario público (las dos usan `interno.registrar_oportunidad_base`).
@@ -1020,6 +1023,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 
 **Puntos, calidad y niveles**
 - "Información disponible" se eliminó. Referido perfecto = +20.
+- **Bienvenida:** +10 Puntos Sol una sola vez, cuando GEENERA aprueba la cuenta (también se dieron a los aliados ya aprobados; no a los admins). Conviene mencionarlo en los Términos o en la política de beneficios.
 - Fuera del perfil (−15) se suma a no calificado (−10).
 - Piso en 0 y sin memoria. Los puntos de un aliado no activo se retienen.
 - La calidad usa siempre la fórmula ponderada y excluye las empresas en revisión. El *lead scoring* nunca se usa.
@@ -1038,7 +1042,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Las secciones sin datos reales muestran datos de demostración con la etiqueta "Demostración".
 - Academy: en la base solo se guarda el curso completado; el avance por lección vive en el navegador.
 - El panel es una página separada (`admin.html`). Los eventos los reporta el aliado y los valida un admin.
-- El catálogo de recompensas se administra desde el panel. El proveedor puede consultar el nivel y el saldo por código, sin datos personales. Un admin puede anular un canje: se devuelve el saldo, no los puntos de nivel.
+- El catálogo de recompensas se administra desde el panel, **con una imagen opcional por recompensa** (oct 2026): JPG, PNG o WebP de máximo 2 MB, idealmente de 1200×600 y con lo importante en el centro, porque la tarjeta recorta los bordes. El panel avisa si es más pequeña, pero la acepta; al cambiarla o quitarla se borra la anterior. El proveedor puede consultar el nivel y el saldo por código, sin datos personales. Un admin puede anular un canje: se devuelve el saldo, no los puntos de nivel.
 - **Canje con QR (fase 11):** QR dinámico de 5 minutos y un solo uso, renovado cada 60 s, con código corto de respaldo. Escanean operadores invitados por un admin y ligados a un proveedor (no son aliados); los admins también. La recompensa la elige el operador; una por escaneo; el aliado no aprueba en su celular, porque mostrar el QR es su consentimiento. El operador ve el nombre corto del aliado, su código, nivel y saldo, nunca su correo ni su celular. Un operador se elimina solo si no ha registrado canjes.
 - El Hub recarga los puntos solo al volver a la pestaña o a la app (y cada 2 minutos con la página abierta).
 
@@ -1062,8 +1066,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 | Ya verificado | Cómo | Qué **no** cubre |
 |---|---|---|
-| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 628 pruebas pgTAP en 17 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
-| Funciones `/api` | 109 pruebas de `npm test`: 86 con Supabase, Clientify y el captcha simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
+| Reglas de la base (puntos, niveles, racha, módulos, eventos, canjes, permisos) | 652 pruebas pgTAP en 18 suites, ejecutadas en `aliados-dev` | Que las pantallas y Clientify las usen bien en la práctica |
+| Funciones `/api` | 120 pruebas de `npm test`: 97 con Supabase, Clientify y el captcha simulados y 23 de integración que corren contra la base local | Llamadas reales a Clientify y a Storage |
 | Pantallas del Hub y del panel (incluido el formulario público, el captcha del registro y los logins, y el Hub a 390 px de ancho, oct 2026) | Pruebas en navegador con Supabase y el captcha simulados | Datos reales, correos reales, tiempos reales de los cron |
 | Registro, confirmación de correo y acceso de admin | La cuenta real de la primera admin en el Preview | El resto de los flujos |
 | Estructura de Clientify (Status, fases, campos) | Diagnóstico contra la API real (fase 6) | El recorrido completo de un referido |
@@ -1260,7 +1264,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 5 | Política de beneficios (se incluirá en los Términos). | Pendiente. |
 | 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (etapa 2, pasos 4 y 9). |
 | 7 | Secciones del Hub con datos de demostración. | Con sesión ya no se muestran los próximos desembolsos ni la distribución por ejecutivo (no hay datos para ellos). La serie por mes de COP cotizados y kWp ya usa datos reales (oct 2026). Solo las comisiones siguen con la etiqueta "Demostración". |
-| 8 | Imágenes y logos de las recompensas reales. | El catálogo aún no guarda imágenes. |
+| 8 | ~~Imágenes de las recompensas.~~ | Resuelto (oct 2026): cada recompensa puede llevar una imagen desde el panel. Falta cargar las de las recompensas reales. |
 | 9 | ~~El Hub es más ancho que la pantalla del celular.~~ | Resuelto (oct 2026): bajo 860 px el menú lateral es un panel que se abre con «☰ Menú» y nada se sale de la pantalla. |
 | 10 | Aviso por correo de «tu cuenta fue aprobada». | Decidido: una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A, al aprobarlo). Falta crearla; mientras tanto, avisar a mano. Se relaciona con el punto 3. |
 | 11 | Logos de los correos. | Los logos ahora tienen **fondo blanco** (el transparente salía con fondo negro en algunos lectores). WordPress los convierte a WebP al subirlos, así que las plantillas usan las direcciones `.webp`. Pendiente: confirmar que los WebP publicados ya tienen fondo blanco y, si se quiere que también se vean en Outlook de escritorio (no muestra WebP), publicar el PNG sin convertir. |

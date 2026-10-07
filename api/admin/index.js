@@ -9,8 +9,11 @@
 // Fase 11: `invitar_operador` (quien escanea el QR de canje; devuelve un enlace para crear la contraseña, que el
 // panel copia para enviarlo por WhatsApp o correo), `estado_operador` (desactivar o reactivar) y `eliminar_operador`
 // (solo si no registró canjes; borra también su cuenta de acceso si no es aliado).
+// Imagen de las recompensas (oct 2026): `subir_imagen_recompensa` da una URL firmada de un solo uso en el bucket público
+// `recompensas` y `guardar_recompensa` acepta `imagen_path`; si la imagen cambió, se borra la anterior del bucket.
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
+import { randomUUID } from 'node:crypto';
 import { adminDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -43,7 +46,7 @@ const uuid = (v, campo) => {
 };
 const texto = (v) => String(v || '').slice(0, 1000);
 // Campos de una recompensa que acepta el panel; el resto del cuerpo se ignora.
-const CAMPOS_RECOMPENSA = ['codigo', 'nombre', 'descripcion', 'categoria', 'puntos', 'nivel_minimo', 'proveedor', 'activa'];
+const CAMPOS_RECOMPENSA = ['codigo', 'nombre', 'descripcion', 'categoria', 'puntos', 'nivel_minimo', 'proveedor', 'activa', 'imagen_path'];
 const recompensa = (c) => {
   const d = c.datos && typeof c.datos === 'object' ? c.datos : {};
   return Object.fromEntries(CAMPOS_RECOMPENSA.filter((k) => d[k] !== undefined).map((k) => [k, d[k]]));
@@ -119,6 +122,33 @@ async function eliminarOperador(supabase, cuerpo, adminId) {
   return { operador_id: data.operador_id, correo: data.correo, cuenta_borrada };
 }
 
+// Imagen de una recompensa: JPG, PNG o WebP de máximo 2 MB (el bucket también lo impone). El nombre lo pone el
+// servidor (<uuid>.<ext>); la imagen solo queda en la recompensa cuando el panel la guarda con `guardar_recompensa`.
+export const TIPOS_IMAGEN = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+export const MAX_IMAGEN = 2 * 1024 * 1024;
+async function subirImagenRecompensa(supabase, cuerpo) {
+  const ext = TIPOS_IMAGEN[String(cuerpo.tipo || '').toLowerCase()];
+  if (!ext) throw new ErrorHttp(422, 'La imagen debe ser JPG, PNG o WebP.');
+  const tamano = Number(cuerpo.tamano);
+  if (!Number.isFinite(tamano) || tamano <= 0 || tamano > MAX_IMAGEN) throw new ErrorHttp(422, 'La imagen debe pesar máximo 2 MB.');
+  const ruta = `${randomUUID()}.${ext}`;
+  const { data, error } = await supabase.storage.from('recompensas').createSignedUploadUrl(ruta);
+  if (error || !data) throw new ErrorHttp(500, 'No pudimos preparar la subida de la imagen. Intenta de nuevo.');
+  return { ruta, token: data.token };
+}
+
+// Guarda la recompensa y, si su imagen cambió, borra la anterior del bucket (mejor esfuerzo: un archivo huérfano no
+// afecta al Hub).
+async function guardarRecompensa(supabase, cuerpo, adminId) {
+  const [funcion, parametros] = ACCIONES.guardar_recompensa;
+  const { data, error } = await supabase.rpc(funcion, parametros(cuerpo, adminId));
+  if (error) throw errorDeAdmin(error.message) || new Error(funcion + ' falló');
+  if (data && data.imagen_anterior) {
+    try { await supabase.storage.from('recompensas').remove([data.imagen_anterior]); } catch { /* queda huérfana */ }
+  }
+  return data;
+}
+
 // URL firmada de corta duración para el registro de asistentes de un evento.
 async function archivoEvento(supabase, cuerpo) {
   const eventoId = uuid(cuerpo.evento_id, 'el evento');
@@ -145,6 +175,8 @@ export default async function handler(req, res, supabase = null) {
     if (cuerpo.accion === 'archivo_evento') return res.status(200).json(await archivoEvento(supabase, cuerpo));
     if (cuerpo.accion === 'invitar_operador') return res.status(200).json(await invitarOperador(supabase, cuerpo, admin.id, req));
     if (cuerpo.accion === 'eliminar_operador') return res.status(200).json(await eliminarOperador(supabase, cuerpo, admin.id));
+    if (cuerpo.accion === 'subir_imagen_recompensa') return res.status(200).json(await subirImagenRecompensa(supabase, cuerpo));
+    if (cuerpo.accion === 'guardar_recompensa') return res.status(200).json(await guardarRecompensa(supabase, cuerpo, admin.id));
 
     const accion = ACCIONES[cuerpo.accion];
     if (!accion) throw new ErrorHttp(400, 'Acción desconocida.');

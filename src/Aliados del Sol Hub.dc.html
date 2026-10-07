@@ -1507,23 +1507,25 @@
             <div style="display:flex;flex-direction:column;gap:14px;padding:24px 26px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
               <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
                 <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">Cartera</span><b style="font-size:19px;font-weight:700;letter-spacing:-.02em">Mis referidos</b></span>
-                <span style="font-size:12.5px;color:var(--mut3,#7C7873)">Cada oportunidad muestra quién la gestiona en GEENERA.</span>
+                <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ true }}"><span style="font-size:12.5px;color:var(--mut3,#7C7873)">Cada oportunidad muestra quién la gestiona en GEENERA.</span></sc-if>
               </div>
               <div style="overflow-x:auto">
-                <div style="min-width:860px;display:flex;flex-direction:column">
-                  <div style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,1.6fr);gap:12px;padding:0 6px 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut5,#5A5651)">
-                    <span>Empresa</span><span>Ciudad</span><span>Fecha</span><span>Estado</span><span>Ejecutivo GEENERA</span><span>Propuesta</span><span>Potencia</span><span>Siguiente hito</span>
+                <div style="min-width:{{ refMinW }};display:flex;flex-direction:column">
+                  <div style="display:grid;grid-template-columns:{{ refCols }};gap:12px;padding:0 6px 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut5,#5A5651)">
+                    <span>Empresa</span><span>Ciudad</span><span>Fecha</span><span>Estado</span><sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ true }}"><span>Ejecutivo GEENERA</span></sc-if><span>Propuesta</span><span>Potencia</span><span>Siguiente hito</span>
                   </div>
                   <sc-for list="{{ referidoRows }}" as="r" hint-placeholder-count="5">
-                    <div data-reveal="1" style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,1.6fr);gap:12px;align-items:center;padding:12px 6px;border-top:1px solid var(--w-06,rgba(255,255,255,.06));font-size:13.5px;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) {{ r.delay }},transform 820ms cubic-bezier(.22,.61,.36,1) {{ r.delay }}">
+                    <div data-reveal="1" style="display:grid;grid-template-columns:{{ refCols }};gap:12px;align-items:center;padding:12px 6px;border-top:1px solid var(--w-06,rgba(255,255,255,.06));font-size:13.5px;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) {{ r.delay }},transform 820ms cubic-bezier(.22,.61,.36,1) {{ r.delay }}">
                       <b style="font-weight:600;color:var(--fg,#F2F0EC);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.empresa }}</b>
                       <span style="color:var(--mut,#9A968F)">{{ r.ciudad }}</span>
                       <span style="color:var(--mut,#9A968F)">{{ r.fecha }}</span>
                       <span style="display:inline-flex;align-items:center;gap:6px;justify-self:start;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:600;background:{{ r.stBg }};color:{{ r.stColor }}"><span style="font-size:8px">{{ r.stGlyph }}</span>{{ r.etapa }}</span>
+                      <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ true }}">
                       <span style="display:flex;align-items:center;gap:8px;min-width:0">
                         <span style="width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--w-08,rgba(255,255,255,.08));font-size:10.5px;font-weight:700;color:var(--t2,#C9C5BE)">{{ r.ownerInitials }}</span>
                         <span style="display:flex;flex-direction:column;line-height:1.25;min-width:0"><span style="font-weight:600;color:var(--fg2,#E4E1DB);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.owner }}</span><span style="font-size:11.5px;color:var(--mut3,#7C7873);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.ownerCargo }}</span></span>
                       </span>
+                      </sc-if>
                       <span style="color:var(--t2,#C9C5BE)">{{ r.valor }}</span>
                       <span style="color:var(--t2,#C9C5BE)">{{ r.kwp }}</span>
                       <span style="color:var(--mut,#9A968F);line-height:1.35">{{ r.next }}</span>
@@ -4836,6 +4838,9 @@ class Component extends DCLogic {
       isGestion, isAliadoHome: route === 'inicio' && !isGestion, isGestionHome: route === 'inicio' && isGestion,
       canSeeCommission: perms.seeCommission, canSeeForecast: perms.seeDisbursementForecast, canSeeValue: perms.seeProposalValue,
       showCustomize: s.customize, toggleCustomize: () => this.setState({ customize: !s.customize }),
+      /* Con sesión no hay ejecutivo GEENERA por oportunidad (el Hub no lo guarda): la tabla va sin esa columna. */
+      refCols: real ? 'minmax(0,1.7fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,1.6fr)' : 'minmax(0,1.7fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,1.6fr)',
+      refMinW: real ? '720px' : '860px',
       kpis, pipelineRows, periodTabs, seriesTabs, seriesBars, seriesTitle, seriesTotalLabel,
       seriesNota: !!real, serieNotaOpen: !!s.serieNota, serieNotaFlecha: s.serieNota ? '▴' : '▾', toggleSerieNota: () => this.setState({ serieNota: !s.serieNota }), forecastBuckets, disbRows, referidoRows, distRegional, distExec, widgets, customizer,
       disbNote: DISB_NOTE, commissionDisclaimer: COMMISSION_CONFIG.disclaimer,

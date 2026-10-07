@@ -992,7 +992,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Captcha «No soy un robot» en el registro, en los tres logins (Hub, panel y canjes) y en «¿Olvidaste tu contraseña?», con la protección CAPTCHA de Supabase Auth y el mismo widget de Turnstile del formulario público.
 - En el celular (menos de 860 px) el menú del Hub es un panel que se abre con «☰ Menú».
 - Los aliados Financieros no ven «Financiación Solar» en ninguna parte del Hub (ni en Herramientas ni en la Academy).
-- Con sesión no se muestran secciones sin datos reales: «Próximos desembolsos» y «Distribución por ejecutivo GEENERA». La distribución por regional sí se muestra.
+- Con sesión no se muestran secciones sin datos reales: «Próximos desembolsos», «Distribución por ejecutivo GEENERA» y la columna «Ejecutivo GEENERA» de «Mis referidos». La distribución por regional sí se muestra.
 - Los logos de los correos van en PNG con fondo blanco.
 - La serie «COP cotizados y kWp por mes» usa datos reales: cada empresa cuenta una vez, su valor cotizado en el mes en que llegó a la presentación de oferta y su potencia en el mes en que llegó a contrato (fechas que registra el Hub, porque Clientify no da la fecha de cambio de fase). Las empresas que ya habían pasado esas fases antes del Hub aparecen en el mes en que el Hub las registró; una nota desplegable en el panel lo explica.
 - La calidad de referidos se muestra desde la primera empresa evaluada, igual que la usa el nivel; «Calidad en construcción» solo si aún no hay ninguna.

@@ -1,7 +1,7 @@
 -- Tests de las vistas del dashboard (CLAUDE.md §4.12, §9): cada aliado ve solo lo suyo y nunca su id.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(26);
 
 create function pg_temp.aliado(id uuid, email text, tipo text, rol text default 'aliado')
 returns void language plpgsql as $$
@@ -45,6 +45,9 @@ select public.aplicar_avance_clientify('e3000000-0000-0000-0000-000000000001',
   '{"calificado": "si", "perfecto": "no", "oportunidad_tecnica": "si", "integridad_informacion": "si"}'::jsonb);
 select public.aplicar_avance_clientify('e3000000-0000-0000-0000-000000000002', '{}'::jsonb, '{"calificado": "no"}'::jsonb);
 select public.completar_modulo('a3000000-0000-0000-0000-000000000001', 'c11');
+-- Gamma (de B) llega a la oferta y al contrato: fechas de la serie mensual (oct 2026).
+select public.aplicar_avance_clientify('e3000000-0000-0000-0000-000000000003', '{}'::jsonb,
+  '{"calificado": "si", "oportunidad_tecnica": "si", "propuesta_comercial": "si", "negocio_cerrado": "si"}'::jsonb);
 
 -- Estructura y privilegios -------------------------------------------------------------------------------
 
@@ -98,6 +101,8 @@ select is((select count(*) from public.v_mis_referidos), 2::bigint, 'A ve sus 2 
 select is((select etapa from public.v_mis_referidos where empresa = 'Alfa S.A.S.'), 'dtp', 'calificada con evaluación técnica → dtp');
 select is((select etapa from public.v_mis_referidos where empresa = 'Beta Ltda.'), 'noviable', 'no calificada → noviable');
 select is((select puntos from public.v_mis_referidos where empresa = 'Alfa S.A.S.'), 10 - 5 + 30 + 30, 'puntos netos por empresa');
+select row_eq($$select fecha_propuesta, fecha_cierre from public.v_mis_referidos where empresa = 'Alfa S.A.S.'$$,
+  row(null::timestamptz, null::timestamptz), 'sin oferta ni contrato, las fechas de la serie quedan vacías');
 
 select is((select count(*) from public.v_mis_modulos), 11::bigint, 'A ve el catálogo activo de la Academy');
 select row_eq($$select recompensa_estado, puntos_al_completar from public.v_mis_modulos where codigo = 'c11'$$,
@@ -108,6 +113,9 @@ select is((select count(*) from public.v_mis_modulos where recompensa_estado is 
 
 select pg_temp.como('b3000000-0000-0000-0000-000000000001');
 select is((select array_agg(empresa) from public.v_mis_referidos), array['Gamma'], 'B solo ve su referido');
+select row_eq($$select fecha_propuesta = (select min(fecha) from public.movimientos_puntos where motivo = 'propuesta_comercial' and vinculo_id = 'e3000000-0000-0000-0000-000000000003'),
+                       fecha_cierre is not null from public.v_mis_referidos$$,
+  row(true, true), 'la serie mensual tiene la fecha en que el referido llegó a la oferta y al contrato');
 
 select pg_temp.como('c3000000-0000-0000-0000-000000000001');
 select is((select count(*) from public.v_mis_referidos) + (select count(*) from public.v_mis_movimientos), 0::bigint,

@@ -994,6 +994,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Los aliados Financieros no ven «Financiación Solar» en ninguna parte del Hub (ni en Herramientas ni en la Academy).
 - Con sesión no se muestran secciones sin datos reales: «Próximos desembolsos» y «Distribución por ejecutivo GEENERA». La distribución por regional sí se muestra.
 - Los logos de los correos van en PNG con fondo blanco.
+- La serie «COP cotizados y kWp por mes» usa datos reales: cada empresa cuenta una vez, su valor cotizado en el mes en que llegó a la presentación de oferta y su potencia en el mes en que llegó a contrato (fechas que registra el Hub, porque Clientify no da la fecha de cambio de fase). Las empresas que ya habían pasado esas fases antes del Hub aparecen en el mes en que el Hub las registró; una nota desplegable en el panel lo explica.
 - La calidad de referidos se muestra desde la primera empresa evaluada, igual que la usa el nivel; «Calidad en construcción» solo si aún no hay ninguna.
 
 **Correo de las cuentas**
@@ -1258,7 +1259,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 4 | Nueva versión de la Política de Tratamiento de Datos (transferencia internacional, finalidades y canal de reclamos). | Pendiente de redacción legal. |
 | 5 | Política de beneficios (se incluirá en los Términos). | Pendiente. |
 | 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (etapa 2, pasos 4 y 9). |
-| 7 | Secciones del Hub con datos de demostración. | Con sesión ya no se muestran los próximos desembolsos ni la distribución por ejecutivo (no hay datos para ellos). La serie por mes de COP cotizados y kWp (importante para los bancos) se construirá con datos reales (en propuesta); las comisiones siguen con la etiqueta "Demostración". |
+| 7 | Secciones del Hub con datos de demostración. | Con sesión ya no se muestran los próximos desembolsos ni la distribución por ejecutivo (no hay datos para ellos). La serie por mes de COP cotizados y kWp ya usa datos reales (oct 2026). Solo las comisiones siguen con la etiqueta "Demostración". |
 | 8 | Imágenes y logos de las recompensas reales. | El catálogo aún no guarda imágenes. |
 | 9 | ~~El Hub es más ancho que la pantalla del celular.~~ | Resuelto (oct 2026): bajo 860 px el menú lateral es un panel que se abre con «☰ Menú» y nada se sale de la pantalla. |
 | 10 | Aviso por correo de «tu cuenta fue aprobada». | Decidido: una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A, al aprobarlo). Falta crearla; mientras tanto, avisar a mano. Se relaciona con el punto 3. |

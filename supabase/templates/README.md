@@ -34,6 +34,15 @@ correo. **Límite conocido:** Outlook de escritorio para Windows no muestra WebP
 conversión del plugin para estos dos archivos o subirlos por el administrador de archivos del hosting) y cambiar
 la extensión en las cuatro plantillas.
 
+**`?v=2` al final de cada dirección:** los lectores de correo del celular (y el proxy de imágenes de Gmail)
+guardan la imagen por su dirección. Como los WebP nuevos quedaron con el mismo nombre que los transparentes, el
+celular seguía mostrando la copia vieja. Cambiar el número obliga a descargar la nueva; si se vuelve a reemplazar
+un logo con el mismo nombre, hay que subir el número (`?v=3`) en las cuatro plantillas.
+
+**Resolución:** el celular tiene pantallas de 3× o más, así que conviene que el archivo tenga al menos 4 veces el
+tamaño en que se muestra. El de Aliados del Sol ya está a 4× (323×224, generado de `assets/logo-aliados.png`); el de
+GEENERA sigue a 2× (252×104) porque el repositorio no tiene una versión más grande del logo completo.
+
 **Cómo comprobar:** abrir las dos direcciones en el navegador. Deben verse con fondo blanco. Si se ven con fondo
 transparente (cuadros grises o negro), el sitio conservó los archivos anteriores: hay que borrarlos de la
 Biblioteca de medios y volver a subir los de `img/`.

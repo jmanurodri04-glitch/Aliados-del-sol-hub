@@ -16,18 +16,27 @@ ni enlaces mágicos por correo (la invitación de operadores de la fase 11 es un
 
 ## Logos
 
-El encabezado lleva el logo de Aliados del Sol (izquierda) y el de GEENERA (derecha). Los archivos están en
-`img/` a doble resolución (se muestran a 81×56 y 126×52 px), en **PNG con fondo blanco sólido** (sin
-transparencia), y deben estar publicados en una dirección pública y permanente, porque el correo los descarga
-al abrirse: los Preview de Vercel están protegidos y no sirven. Se publican en el sitio de GEENERA:
-`https://geenera.com/wp-content/uploads/logo-aliados-del-sol.png` y
-`https://geenera.com/wp-content/uploads/logo-geenera.png`.
+El encabezado lleva el logo de Aliados del Sol (izquierda) y el de GEENERA (derecha). Los archivos fuente están
+en `img/` a doble resolución (se muestran a 81×56 y 126×52 px) en **PNG con fondo blanco sólido** (sin
+transparencia). Deben estar publicados en una dirección pública y permanente, porque el correo los descarga al
+abrirse (los Preview de Vercel están protegidos y no sirven). Las plantillas usan las direcciones del sitio de
+GEENERA:
 
-**Por qué PNG con fondo blanco** (oct 2026): la primera versión usaba WebP con fondo transparente. Varios lectores
-de correo pintan la transparencia de negro (las letras oscuras del logo casi no se leían) y Outlook de escritorio
-para Windows no muestra WebP. Un PNG sin transparencia se ve igual en todos, sobre la tarjeta blanca del correo.
-**Primero se suben los PNG a geenera.com y después se pegan las plantillas**; si no, el correo mostraría el texto
-alternativo ("Aliados del Sol" y "GEENERA"), que también es lo que se ve si el lector bloquea las imágenes.
+- `https://geenera.com/wp-content/uploads/logo-aliados-del-sol.webp`
+- `https://geenera.com/wp-content/uploads/logo-geenera.webp`
+
+**Por qué WebP y no PNG** (oct 2026): al subir los PNG por la Biblioteca de medios, WordPress los convierte a WebP
+(lo hace el sitio, no el Hub), así que la dirección pública queda en `.webp`. Lo importante es que el archivo
+publicado **no tenga transparencia**: la primera versión era transparente y varios lectores de correo pintaban
+el fondo de negro (las letras oscuras del logo casi no se leían). Con fondo blanco se ve bien sobre la tarjeta del
+correo. **Límite conocido:** Outlook de escritorio para Windows no muestra WebP y muestra el texto alternativo
+("Aliados del Sol" y "GEENERA"); para cubrirlo habría que publicar el PNG sin convertir (desactivar la
+conversión del plugin para estos dos archivos o subirlos por el administrador de archivos del hosting) y cambiar
+la extensión en las cuatro plantillas.
+
+**Cómo comprobar:** abrir las dos direcciones en el navegador. Deben verse con fondo blanco. Si se ven con fondo
+transparente (cuadros grises o negro), el sitio conservó los archivos anteriores: hay que borrarlos de la
+Biblioteca de medios y volver a subir los de `img/`.
 
 ## Cómo se pega
 

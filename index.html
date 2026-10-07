@@ -1553,6 +1553,7 @@
                   </div>
                 </sc-for>
               </div>
+              <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:14px;padding:22px 24px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
                 <span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">Distribución por ejecutivo GEENERA</span>
                 <sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Demostración</span></sc-if>
@@ -1564,6 +1565,7 @@
                   </div>
                 </sc-for>
               </div>
+              </sc-if>
             </div>
           </sc-if>
           <sc-if value="{{ w.isCalidad }}" hint-placeholder-val="{{ false }}">
@@ -3351,7 +3353,7 @@ const DASHBOARD_WIDGET_CONFIG = [
   { id: 'series', label: 'COP cotizados y kWp por mes', roles: ['ejecutivo_banco', 'directivo_banco'], def: true },
   { id: 'forecast', label: 'Próximos desembolsos · 30/60/90', roles: ['ejecutivo_banco', 'directivo_banco'], def: true },
   { id: 'referidos', label: 'Mis referidos', roles: ['ejecutivo_banco', 'directivo_banco', 'gremio'], def: true },
-  { id: 'distribucion', label: 'Distribución por regional y ejecutivo', roles: ['directivo_banco', 'gremio'], def: true },
+  { id: 'distribucion', label: 'Distribución por regional', roles: ['directivo_banco', 'gremio'], def: true },
   { id: 'calidad', label: 'Calidad de referidos', roles: ['ejecutivo_banco', 'directivo_banco', 'gremio'], def: true },
   { id: 'academy', label: 'Academy', roles: ['ejecutivo_banco', 'directivo_banco', 'gremio'], def: false },
   { id: 'beneficios', label: 'Beneficios', roles: ['ejecutivo_banco', 'gremio'], def: false }
@@ -3519,6 +3521,7 @@ const SERIES_DEMO = {
   kwp: [90, 130, 120, 160, 205, 190, 260, 345, 380, 470, 590, 710],
   weeks: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'], copW: [260, 410, 320, 430], kwpW: [130, 205, 160, 215]
 };
+const RUTA_FINANCIACION = 'r4'; /* ruta «Financiación Solar» de la Academy: no se muestra a los aliados Financieros */
 const ACADEMY_CONFIG = {
   name: 'Aliados del Sol Academy',
   routes: [
@@ -4174,6 +4177,9 @@ class Component extends DCLogic {
   }
   /* Datos reales del aliado de la sesión (ads:dashboard); null en la vista de demostración. */
   real() { const s = this.state; return s.sesion && s.datos && s.datos.aliado ? s.datos : null; }
+  /* Los aliados Financieros no ven «Financiación Solar» en ninguna parte del Hub (decisión del equipo, oct 2026). */
+  sinFinanciacion() { return HUB.indexOf(this.state.route) >= 0 && this.role().orgType === 'banco'; }
+  rutasAcademy() { return this.sinFinanciacion() ? ACADEMY_CONFIG.routes.filter(r => r.id !== RUTA_FINANCIACION) : ACADEMY_CONFIG.routes; }
   recibirDashboard(d) {
     /* El avance lección por lección vive en el navegador (decisión del equipo); en la base solo el curso completado. */
     let acaProg = {};
@@ -4215,7 +4221,7 @@ class Component extends DCLogic {
   }
   mm(v) { return '$ ' + this.n(v) + ' MM'; }
 
-  go(route) { this.setState({ route, newOpen: false, levelUp: false, menuOpen: false, appMenu: false, customize: false, acaRoute: route === 'academy' ? this.state.acaRoute : null, acaCourse: route === 'academy' ? this.state.acaCourse : null }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
+  go(route) { if (route === 'financiacion' && this.sinFinanciacion()) route = 'herramientas'; this.setState({ route, newOpen: false, levelUp: false, menuOpen: false, appMenu: false, customize: false, acaRoute: route === 'academy' ? this.state.acaRoute : null, acaCourse: route === 'academy' ? this.state.acaCourse : null }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
   ping(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
 
   /* Puntos de nivel (ventana móvil) y saldo disponible son conceptos distintos
@@ -4696,7 +4702,8 @@ class Component extends DCLogic {
     /* Agremiaciones: distribución por la ciudad de la empresa referida (decisión del equipo). */
     const distRegional = countBy(b => b.regional);
     const distExec = countIn(real ? BANK_OPPS : scoped, b => GEENERA_TEAM[b.owner].name);
-    const roleWidgets = DASHBOARD_WIDGET_CONFIG.filter(w => w.roles.indexOf(roleCfg.id) >= 0 && !(w.id === 'forecast' && !perms.seeDisbursementForecast) && !(w.id === 'beneficios' && !perms.seeBenefits));
+    /* Con sesión no se muestran secciones sin datos reales: Clientify no da fechas de desembolso (decisión del equipo, oct 2026). */
+    const roleWidgets = DASHBOARD_WIDGET_CONFIG.filter(w => w.roles.indexOf(roleCfg.id) >= 0 && !(w.id === 'forecast' && (!perms.seeDisbursementForecast || real)) && !(w.id === 'beneficios' && !perms.seeBenefits));
     const onIds = this.widgetsOn();
     const widgets = onIds.filter(id => roleWidgets.some(w => w.id === id)).map(id => ({ id, isKpis: id === 'kpis', isPipeline: id === 'pipeline', isSeries: id === 'series', isForecast: id === 'forecast', isReferidos: id === 'referidos', isDistribucion: id === 'distribucion', isCalidad: id === 'calidad', isAcademy: id === 'academy', isBeneficios: id === 'beneficios' }));
     const customizer = roleWidgets.map(w => { const on = onIds.indexOf(w.id) >= 0; return { label: w.label, on, mark: on ? '✓' : '', boxBg: on ? 'var(--y,#FFCA05)' : 'transparent', boxBorder: on ? 'var(--y,#FFCA05)' : 'var(--w-20,rgba(255,255,255,.2))', toggle: () => this.toggleWidget(w.id), up: () => this.moveWidget(w.id, -1), down: () => this.moveWidget(w.id, 1) }; });
@@ -4709,7 +4716,7 @@ class Component extends DCLogic {
     const modDone = (cid) => !!(real && modMap[cid] && modMap[cid].recompensa_estado);
     const progOf = (cid) => {
       if (real) {
-        if (modDone(cid)) { let n = 0; ACADEMY_CONFIG.routes.forEach(r => r.courses.forEach(co => { if (co.id === cid) n = co.lessons.length; })); return n; }
+        if (modDone(cid)) { let n = 0; this.rutasAcademy().forEach(r => r.courses.forEach(co => { if (co.id === cid) n = co.lessons.length; })); return n; }
         return (s.acaProg && s.acaProg[cid]) || 0;
       }
       return (s.acaProg && s.acaProg[cid] != null) ? s.acaProg[cid] : (ACADEMY_CONFIG.progressDemo[cid] || 0);
@@ -4719,7 +4726,7 @@ class Component extends DCLogic {
     const courseInfo = (co) => { const done = Math.min(co.lessons.length, progOf(co.id)); return { done, total: co.lessons.length, pct: Math.round(done / co.lessons.length * 100), complete: done >= co.lessons.length }; };
     const certName = (id) => (ACADEMY_CONFIG.certifications.find(c => c.id === id) || {}).name || '';
     const routePts = (r) => r.courses.reduce((acc, co) => acc + ptsOf(co), 0);
-    const acaRoutes = ACADEMY_CONFIG.routes.map((r, i) => {
+    const acaRoutes = this.rutasAcademy().map((r, i) => {
       let done = 0, total = 0; r.courses.forEach(co => { const ci = courseInfo(co); done += ci.done; total += ci.total; });
       const pct = total ? Math.round(done / total * 100) : 0;
       const mins = r.courses.reduce((a, co) => a + co.minutes, 0);
@@ -4732,15 +4739,15 @@ class Component extends DCLogic {
         open: () => this.setState({ acaRoute: r.id, acaCourse: null, acaLesson: 0, quizPick: -1, acaView: 'course', lessonDone: null }), pointsLabel: r.courses.some(co => ptsOf(co) > 0) ? 'Suma Puntos Sol' : 'Sin puntos', pub: r.pub };
     });
     let contCourse = null, contRoute = null;
-    ACADEMY_CONFIG.routes.forEach(r => r.courses.forEach(co => { const ci = courseInfo(co); if (!contCourse && ci.done > 0 && !ci.complete) { contCourse = co; contRoute = r; } }));
-    if (!contCourse) ACADEMY_CONFIG.routes.forEach(r => r.courses.forEach(co => { if (!contCourse && !courseInfo(co).complete) { contCourse = co; contRoute = r; } }));
+    this.rutasAcademy().forEach(r => r.courses.forEach(co => { const ci = courseInfo(co); if (!contCourse && ci.done > 0 && !ci.complete) { contCourse = co; contRoute = r; } }));
+    if (!contCourse) this.rutasAcademy().forEach(r => r.courses.forEach(co => { if (!contCourse && !courseInfo(co).complete) { contCourse = co; contRoute = r; } }));
     const contCI = contCourse ? courseInfo(contCourse) : { done: 0, total: 1, pct: 0 };
     const contNext = contCourse ? contCourse.lessons[Math.min(contCI.done, contCourse.lessons.length - 1)] : null;
     const contMins = contCourse ? Math.max(2, Math.round(contCourse.minutes * (1 - contCI.pct / 100))) : 0;
     const openCourse = (r, co) => () => this.setState({ acaRoute: r.id, acaCourse: co.id, acaLesson: Math.min(courseInfo(co).done, co.lessons.length - 1), quizPick: -1, acaView: 'course', lessonDone: null });
     const continueLearning = contCourse ? { has: true, route: contRoute.name, course: contCourse.name, progress: contCI.done + ' de ' + contCI.total + ' lecciones', pctW: contCI.pct + '%', mins: contMins + ' min restantes', next: contNext ? contNext.t : '', go: openCourse(contRoute, contCourse) } : { has: false };
-    const doneCourses = []; ACADEMY_CONFIG.routes.forEach(r => r.courses.forEach(co => { if (courseInfo(co).complete) doneCourses.push(co.name); }));
-    const totalCourses = ACADEMY_CONFIG.routes.reduce((a, r) => a + r.courses.length, 0);
+    const doneCourses = []; this.rutasAcademy().forEach(r => r.courses.forEach(co => { if (courseInfo(co).complete) doneCourses.push(co.name); }));
+    const totalCourses = this.rutasAcademy().reduce((a, r) => a + r.courses.length, 0);
     const recCourse = ACADEMY_CONFIG.routes[0].courses[1];
     const qualityRec = { quality: c.qualityReady ? c.quality + '%' : QUALITY_CONFIG.pendingLabel, course: recCourse.name, mins: recCourse.minutes + ' min', why: 'Aprende qué información aumenta la calidad de una oportunidad.', go: openCourse(ACADEMY_CONFIG.routes[0], recCourse) };
     const dg = ACADEMY_CONFIG.diagnostic;
@@ -4997,7 +5004,7 @@ class Component extends DCLogic {
       isInicio: route === 'inicio', isOportunidades: route === 'oportunidades', isDetalle: route === 'detalle',
       isBeneficios: route === 'beneficios', isHerramientas: route === 'herramientas', isAcademy: route === 'academy',
       isPerfil: route === 'perfil', isComisiones: route === 'comisiones', isMobile: route === 'mobile',
-      isFinanciacion: route === 'financiacion', isPuntos: route === 'puntos',
+      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isPuntos: route === 'puntos',
       goFinanciacion: () => this.go('financiacion'), goPuntos: () => this.go('puntos'),
       userName, firstName: userName.split(' ')[0], greeting,
       todayLabel: real ? (() => { const d = enBogota(new Date()); return DIAS_SEMANA[d.getUTCDay()] + ', ' + d.getUTCDate() + ' de ' + MESES_LARGOS[d.getUTCMonth()]; })() : 'Viernes, 28 de agosto',
@@ -5071,7 +5078,7 @@ class Component extends DCLogic {
         { name: 'Casos y proyectos', desc: 'Explora proyectos ejecutados por GEENERA y encuentra referencias para diferentes tipos de empresas.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Explorar proyectos', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'geenera.com/proyectos · se abre en una pestaña nueva', iconBg: 'rgba(249,165,26,.14)', iconColor: 'var(--o,#F9A51A)', iconShape: '3px', act: () => window.open(EXTERNAL_LINKS.proyectos, '_blank', 'noopener') },
         { name: 'Financiación Solar', desc: 'Conoce los aliados financieros que pueden acompañar la inversión en tu proyecto solar. No es un comparador: las condiciones las define cada entidad.', state: 'Informativo', stBg: 'rgba(249,165,26,.16)', stColor: 'var(--o,#F9A51A)', cta: 'Ver aliados financieros', ctaBg: 'var(--w-06,rgba(255,255,255,.06))', ctaColor: 'var(--fg,#F2F0EC)', meta: '5 entidades aliadas', iconBg: 'rgba(243,121,32,.14)', iconColor: '#F37920', iconShape: '2px 10px 2px 10px', act: () => this.go('financiacion') },
         { name: 'Recursos comerciales', desc: 'Presentaciones, brochures, guiones y piezas listas para compartir con una empresa o por WhatsApp.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Ver biblioteca', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: '18 piezas actualizadas', iconBg: 'var(--w-08,rgba(255,255,255,.08))', iconColor: 'var(--t2,#C9C5BE)', iconShape: '50% 50% 50% 2px', act: () => this.ping('Abriendo la biblioteca de recursos.') }
-      ]),
+      ].filter(t => t.name !== 'Financiación Solar' || !this.sinFinanciacion())),
       resources: [
         { name: 'Presentación institucional GEENERA 2026', desc: 'Quiénes somos, casos y cifras de respaldo', type: 'Presentación', size: '8,4 MB' },
         { name: 'Brochure Programa Industrias', desc: 'Para enviar a un gerente antes de la primera reunión', type: 'PDF', size: '2,1 MB' },

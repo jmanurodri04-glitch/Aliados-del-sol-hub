@@ -17,12 +17,17 @@ ni enlaces mágicos por correo (la invitación de operadores de la fase 11 es un
 ## Logos
 
 El encabezado lleva el logo de Aliados del Sol (izquierda) y el de GEENERA (derecha). Los archivos están en
-`img/` a doble resolución (se muestran a 81×56 y 126×52 px) y deben estar publicados en una dirección pública
-y permanente, porque el correo los descarga al abrirse: los Preview de Vercel están protegidos y no sirven.
-Están publicados en el sitio de GEENERA: `https://geenera.com/wp-content/uploads/logo-aliados-del-sol.webp` y
-`https://geenera.com/wp-content/uploads/logo-geenera.webp`. Outlook de escritorio para Windows no muestra WebP
-(muestra el texto alternativo); si se publican también en PNG, basta cambiar la extensión en las cuatro plantillas. Si el lector bloquea las imágenes, se ve el texto alternativo
-("Aliados del Sol" y "GEENERA").
+`img/` a doble resolución (se muestran a 81×56 y 126×52 px), en **PNG con fondo blanco sólido** (sin
+transparencia), y deben estar publicados en una dirección pública y permanente, porque el correo los descarga
+al abrirse: los Preview de Vercel están protegidos y no sirven. Se publican en el sitio de GEENERA:
+`https://geenera.com/wp-content/uploads/logo-aliados-del-sol.png` y
+`https://geenera.com/wp-content/uploads/logo-geenera.png`.
+
+**Por qué PNG con fondo blanco** (oct 2026): la primera versión usaba WebP con fondo transparente. Varios lectores
+de correo pintan la transparencia de negro (las letras oscuras del logo casi no se leían) y Outlook de escritorio
+para Windows no muestra WebP. Un PNG sin transparencia se ve igual en todos, sobre la tarjeta blanca del correo.
+**Primero se suben los PNG a geenera.com y después se pegan las plantillas**; si no, el correo mostraría el texto
+alternativo ("Aliados del Sol" y "GEENERA"), que también es lo que se ve si el lector bloquea las imágenes.
 
 ## Cómo se pega
 

@@ -991,6 +991,9 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - «¿Olvidaste tu contraseña?» en el Hub (y enlazado desde el panel y la página de canje). Al guardar la contraseña nueva se entra directo.
 - Captcha «No soy un robot» en el registro, en los tres logins (Hub, panel y canjes) y en «¿Olvidaste tu contraseña?», con la protección CAPTCHA de Supabase Auth y el mismo widget de Turnstile del formulario público.
 - En el celular (menos de 860 px) el menú del Hub es un panel que se abre con «☰ Menú».
+- Los aliados Financieros no ven «Financiación Solar» en ninguna parte del Hub (ni en Herramientas ni en la Academy).
+- Con sesión no se muestran secciones sin datos reales: «Próximos desembolsos» y «Distribución por ejecutivo GEENERA». La distribución por regional sí se muestra.
+- Los logos de los correos van en PNG con fondo blanco.
 - La calidad de referidos se muestra desde la primera empresa evaluada, igual que la usa el nivel; «Calidad en construcción» solo si aún no hay ninguna.
 
 **Correo de las cuentas**
@@ -1255,11 +1258,11 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 4 | Nueva versión de la Política de Tratamiento de Datos (transferencia internacional, finalidades y canal de reclamos). | Pendiente de redacción legal. |
 | 5 | Política de beneficios (se incluirá en los Términos). | Pendiente. |
 | 6 | Webhook de oportunidades en Producción y rotación de los secretos compartidos en chat. | Pendiente (etapa 2, pasos 4 y 9). |
-| 7 | Secciones del Hub con datos de demostración (series por mes, pronóstico de desembolsos, comisiones). | Se mantienen con la etiqueta "Demostración" hasta tener datos reales. |
+| 7 | Secciones del Hub con datos de demostración. | Con sesión ya no se muestran los próximos desembolsos ni la distribución por ejecutivo (no hay datos para ellos). La serie por mes de COP cotizados y kWp (importante para los bancos) se construirá con datos reales (en propuesta); las comisiones siguen con la etiqueta "Demostración". |
 | 8 | Imágenes y logos de las recompensas reales. | El catálogo aún no guarda imágenes. |
 | 9 | ~~El Hub es más ancho que la pantalla del celular.~~ | Resuelto (oct 2026): bajo 860 px el menú lateral es un panel que se abre con «☰ Menú» y nada se sale de la pantalla. |
 | 10 | Aviso por correo de «tu cuenta fue aprobada». | Decidido: una automatización de Clientify o n8n cuando se crea el contacto del aliado (flujo A, al aprobarlo). Falta crearla; mientras tanto, avisar a mano. Se relaciona con el punto 3. |
-| 11 | Logos de los correos en PNG. | Hoy están en WebP en `geenera.com`, y Outlook de escritorio para Windows no muestra WebP (muestra el texto). Subir los PNG de `supabase/templates/img/` y cambiar la extensión en las plantillas. |
+| 11 | Logos de los correos en PNG. | Las plantillas ya usan PNG con **fondo blanco** (el WebP transparente salía con fondo negro en algunos lectores y Outlook no mostraba WebP). Falta subir los dos PNG de `supabase/templates/img/` a `geenera.com/wp-content/uploads/` y, **después**, volver a pegar las cuatro plantillas en el panel de Supabase. |
 | 12 | Endurecer el correo de `geenera.com` (área de TI). | Microsoft 365 no tiene activada la firma DKIM propia y el DMARC de `geenera.com` está en `p=none`. No afecta al Hub; conviene revisarlo con calma. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`. |
 | 13 | Claves del captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña. | Pasos en §10.2, paso 4: widget real para el dominio oficial (Production) y claves de prueba de Cloudflare en Preview; después, encender la protección CAPTCHA en cada proyecto de Supabase con la clave secreta del mismo widget. Sin ellas el formulario público no funciona en Production. **Estado:** `aliados-dev` listo (5 oct 2026); `aliados-prod` se configura solo al desplegar. |
 | 14 | `main` (Production) tiene el formulario público sin lógica. | Lo que se envía ahí hoy no se guarda. Decisión del equipo: se deja así porque el lanzamiento es esta semana; se corrige al publicar `correcciones-hub`. |

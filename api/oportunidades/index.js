@@ -15,6 +15,7 @@ import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { crearClienteClientify } from '../../lib/clientify/cliente.js';
 import { procesarEmpresas } from '../../lib/clientify/cola.js';
 import { enviarCorreoAhora } from '../../lib/correo/cola.js';
+import { enviarAvisoAhora } from '../../lib/n8n/avisos.js';
 import { aliadoDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
 import { registrarPublico } from '../../lib/referido-publico.js';
 
@@ -58,9 +59,14 @@ async function sincronizarAhora(supabase, empresaId, entorno) {
 }
 
 // Clientify y el correo en paralelo (ninguno hace fallar el registro). El resultado del correo no se devuelve.
+// El aviso a n8n de un imperfecto (§7.4) va después de Clientify, porque n8n busca el lead allí; si el referido es
+// perfecto o aún no llegó a Clientify, la cola no devuelve nada y lo envía el cron.
 async function despuesDeRegistrar(supabase, empresaId, entorno, fetchImpl) {
   const [clientify] = await Promise.all([
-    sincronizarAhora(supabase, empresaId, entorno),
+    sincronizarAhora(supabase, empresaId, entorno).then(async (r) => {
+      if (r === 'ok') await enviarAvisoAhora(supabase, empresaId, entorno, fetchImpl || fetch);
+      return r;
+    }),
     enviarCorreoAhora(supabase, empresaId, entorno, fetchImpl || fetch)
   ]);
   return clientify;

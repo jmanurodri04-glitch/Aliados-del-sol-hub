@@ -11,11 +11,13 @@
 // (solo si no registró canjes; borra también su cuenta de acceso si no es aliado).
 // Imagen de las recompensas (oct 2026): `subir_imagen_recompensa` da una URL firmada de un solo uso en el bucket público
 // `recompensas` y `guardar_recompensa` acepta `imagen_path`; si la imagen cambió, se borra la anterior del bucket.
+// MEDDPICC (§7.3): `otorgar_meddpicc` y `reintentar_correo`. Aviso a n8n de los imperfectos (§7.4): `reintentar_aviso_n8n`.
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { randomUUID } from 'node:crypto';
 import { adminDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
 import { procesarCorreos } from '../../lib/correo/cola.js';
+import { procesarAvisos } from '../../lib/n8n/avisos.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CODIGO = /^[A-Za-z0-9]{6,20}$/;
@@ -165,6 +167,19 @@ async function reintentarCorreo(supabase, cuerpo, adminId, entorno, fetchImpl) {
   return { empresa_id: empresaId, enviado: r.ok === 1, error: fallo ? fallo.error : null };
 }
 
+// Igual para el aviso a n8n de un referido imperfecto (§7.4).
+async function reintentarAvisoN8n(supabase, cuerpo, adminId, entorno, fetchImpl) {
+  const empresaId = uuid(cuerpo.empresa_id, 'el referido');
+  const { error } = await supabase.rpc('admin_reintentar_aviso_n8n', { p_admin: adminId, p_empresa: empresaId });
+  if (error) throw errorDeAdmin(error.message) || new Error('admin_reintentar_aviso_n8n falló');
+  let r = { ok: 0, detalle: [] };
+  try {
+    r = await procesarAvisos({ supabase, entorno: entorno.VERCEL_ENV || 'development', env: entorno, fetchImpl, empresaId, limite: 1 });
+  } catch { /* queda en la cola */ }
+  const fallo = (r.detalle || []).find((d) => d.error);
+  return { empresa_id: empresaId, enviado: r.ok === 1, error: fallo ? fallo.error : null };
+}
+
 // URL firmada de corta duración para el registro de asistentes de un evento.
 async function archivoEvento(supabase, cuerpo) {
   const eventoId = uuid(cuerpo.evento_id, 'el evento');
@@ -194,6 +209,9 @@ export default async function handler(req, res, supabase = null, inyectado = {})
     if (cuerpo.accion === 'subir_imagen_recompensa') return res.status(200).json(await subirImagenRecompensa(supabase, cuerpo));
     if (cuerpo.accion === 'reintentar_correo') {
       return res.status(200).json(await reintentarCorreo(supabase, cuerpo, admin.id, inyectado.entorno || process.env, inyectado.fetch || fetch));
+    }
+    if (cuerpo.accion === 'reintentar_aviso_n8n') {
+      return res.status(200).json(await reintentarAvisoN8n(supabase, cuerpo, admin.id, inyectado.entorno || process.env, inyectado.fetch || fetch));
     }
     if (cuerpo.accion === 'guardar_recompensa') return res.status(200).json(await guardarRecompensa(supabase, cuerpo, admin.id));
 

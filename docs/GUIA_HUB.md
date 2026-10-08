@@ -2,9 +2,9 @@
 
 > **Para qué sirve este documento.** Reúne en un solo lugar cómo funciona el Hub, por qué se construyó así, las decisiones del equipo, el modelo de datos y los pasos para ponerlo en producción. Si se pierde una conversación con Claude, este archivo y `CLAUDE.md` bastan para retomar el trabajo.
 >
-> **Fecha de corte:** 5 de octubre de 2026. **Estado:** fases 1 a 11 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). La fase 11 (canje con código QR, §5.6) además pasó la prueba real con celulares Android e iPhone. El correo propio de las cuentas (§5.9) está configurado y probado en `aliados-dev`. Las correcciones previas a las pruebas de aceptación (rama `correcciones-hub`: Tipo «Aliados Estratégicos» en Clientify, formulario público propio, celular único, Hub ajustado al celular y captcha en registro y logins) están hechas y probadas en el Preview. La prueba de aceptación con Clientify real ya verificó los flujos A, B y C (referidos, calificación, fases de la oportunidad, penalizaciones y conflictos); los casos que faltan están marcados en §10.1. Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados.
+> **Fecha de corte:** 8 de octubre de 2026. **Estado:** fases 1 a 11 construidas, con pruebas automáticas en el entorno de pruebas (`aliados-dev`). La fase 11 (canje con código QR, §5.6) además pasó la prueba real con celulares Android e iPhone. El correo propio de las cuentas (§5.9) está configurado y probado en `aliados-dev`. Las correcciones previas a las pruebas de aceptación (rama `correcciones-hub`: Tipo «Aliados Estratégicos» en Clientify, formulario público propio, celular único, Hub ajustado al celular y captcha en registro y logins) están hechas y probadas en el Preview. Después se sumaron, también probados en `aliados-dev` y el Preview: bienvenida (+10), MEDDPICC y su correo de confirmación, órbitas KILO a EXA, imagen de las recompensas, avisos a n8n, la Academy administrable (con +10 la masterclass, +15 por certificación y tope de 40 al mes) y Microsoft Clarity. La prueba de aceptación con Clientify real ya verificó los flujos A, B y C (referidos, calificación, fases de la oportunidad, penalizaciones y conflictos); los casos que faltan están marcados en §10.1. Producción (`aliados-prod`) aún no tiene el esquema ni recibe aliados: los pasos están en `docs/PASO_A_PRODUCCION.md` (y su PDF).
 >
-> **Documentos relacionados:** `CLAUDE.md` (contexto técnico permanente, más detallado en reglas e implementación), `docs/HANDOFF.md` y `docs/DESIGN_SYSTEM.md` (diseño del Hub).
+> **Documentos relacionados:** `docs/PASO_A_PRODUCCION.md` (lista ordenada para publicar en producción), `CLAUDE.md` (contexto técnico permanente, más detallado en reglas e implementación), `docs/HANDOFF.md` y `docs/DESIGN_SYSTEM.md` (diseño del Hub).
 
 ---
 
@@ -1048,7 +1048,7 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 
 **Principios:**
 
-- **RLS en las 23 tablas.** Un aliado solo puede **leer** sus propias filas. Las escrituras las hacen solo el servidor (clave secreta) o funciones controladas.
+- **RLS en las 28 tablas.** Un aliado solo puede **leer** sus propias filas. Las escrituras las hacen solo el servidor (clave secreta) o funciones controladas.
 - **Nunca se muestra el `id` interno.** Hacia afuera (Clientify, proveedores, pantalla) solo sale el `codigo_aliado`.
 - **Todo endpoint verifica la sesión y exige `estado = 'activo'`.** Las acciones de admin se verifican dos veces: en el endpoint y otra vez en la base.
 - **Límites anti-abuso:** 20 referidos por hora, 5 eventos por día y 30 canjes por hora por aliado. El formulario público además pide captcha y acepta 20 intentos por hora por conexión. El registro, el login y «¿Olvidaste tu contraseña?» también piden captcha (lo verifica Supabase Auth).
@@ -1264,6 +1264,8 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 
 ### 10.2 Etapa 2 — Preparar producción
 
+> La versión para seguir paso a paso, con casillas y el estado de cada variable, es `docs/PASO_A_PRODUCCION.md` (y su PDF).
+
 Los pasos están en orden. Cada uno dice **qué hacer** y **por qué**.
 
 **Paso 1 — Decidir los planes (§4).**
@@ -1271,14 +1273,14 @@ Pasar Vercel a Pro. Crear una organización de Supabase en Pro para `aliados-pro
 *Por qué:* Vercel Hobby no permite uso comercial, y Supabase Free pausa el proyecto con poca actividad y no ofrece copias de seguridad descargables.
 
 **Paso 2 — Crear el esquema en `aliados-prod`.**
-Aplicar en orden las migraciones de `supabase/migrations/` (hoy 27). Lo recomendado es la Supabase CLI desde un computador del equipo:
+Aplicar en orden las migraciones de `supabase/migrations/` (hoy 39; la lista completa con la consulta de comprobación está en `docs/PASO_A_PRODUCCION.md`, §3). Lo recomendado es la Supabase CLI desde un computador del equipo:
 1. `npx supabase login`
 2. `npx supabase link --project-ref pysyxycrybayhrescplc`
 3. `npx supabase db push`
 
 Luego verificar:
 - que las extensiones `pg_cron`, `pg_net` y Vault estén activas;
-- que se vean las 23 tablas y los 7 cron jobs;
+- que se vean las 28 tablas (todas con RLS), los 7 cron jobs, los 4 buckets y la Academy cargada (99 minicursos, 5 certificaciones y 15 herramientas);
 - que el *Security Advisor* no muestre alertas nuevas.
 
 *Por qué:* las migraciones son la receta exacta ya probada en dev. Claude no toca `prod` directamente, por decisión del equipo.
@@ -1310,7 +1312,7 @@ El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resen
 - `CANJES_API_KEYS` cuando exista el proveedor;
 - `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget real de Cloudflare Turnstile (ver «Captcha» abajo). **Sin ellas el formulario público no funciona en Production.**
 - `N8N_IMPERFECTOS_URL`, `N8N_IMPERFECTOS_TOKEN`, `N8N_PERFECTOS_URL` y `N8N_PERFECTOS_TOKEN`: la *Production URL* del webhook de cada flujo de n8n y su token (§5.2); marcarlas *Sensitive*. En Preview, las de flujos de prueba.
-- `CLARITY_PROJECT_ID`: el id del proyecto de Microsoft Clarity (*Settings → Setup*, el texto tras `clarity.ms/tag/` del script de instalación manual), **solo en Production**. Después de desplegar, en Clarity *Settings → Setup* debe aparecer el sitio como instalado (puede tardar hasta 2 horas en mostrar datos).
+- `CLARITY_PROJECT_ID` (**ya guardada**, 8 oct 2026): el id del proyecto de Microsoft Clarity (*Settings → Setup*, el texto tras `clarity.ms/tag/` del script de instalación manual), **solo en Production**. Después de desplegar, en Clarity *Settings → Setup* debe aparecer el sitio como instalado (puede tardar hasta 2 horas en mostrar datos).
 - `RESEND_API_KEY`: en Resend → *API Keys* → *Create API Key*, permiso **Sending access** y dominio `notificaciones.geenera.com`; marcarla *Sensitive* en Vercel. Una key para Preview y otra para Production. Sin ella no sale el correo de confirmación de los referidos (queda en «Correos no enviados»).
 
 **Captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña, paso a paso:**
@@ -1408,7 +1410,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 16 | ~~Un referido ya cerrado al que solo le cambian el contacto no se volvía a revisar.~~ | Resuelto (6 oct 2026): además de la revisión horaria de los referidos en curso, una vez al día (2 a. m., hora de Bogotá) se revisan también los cerrados, así una etiqueta de «fraude» o un retroceso de Status puesto después del cierre se detecta en máximo un día (§5.3). |
 | 17 | Key de Resend para el correo de confirmación de los referidos (MEDDPICC). | Pendiente: crear en Resend una key con permiso solo de envío para Preview y otra para Production, y guardarlas en Vercel como `RESEND_API_KEY` (§10.2, paso 4). Mientras no exista, los correos quedan en «Correos no enviados» del panel. Mencionar el MEDDPICC y la bienvenida en los Términos o en la política de beneficios. |
 | 18 | Aviso a n8n de los referidos perfectos e imperfectos. | Flujo de imperfectos listo en n8n y sus variables en Vercel Production (oct 2026). Pendiente: lo mismo para el flujo de perfectos (`N8N_PERFECTOS_URL`, `N8N_PERFECTOS_TOKEN`; pasos en §5.2) y, si se quiere probar en Preview, flujos de prueba con sus variables. Mientras falten, esos avisos quedan en «Avisos a n8n no enviados». La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n (encargado del tratamiento). |
-| 20 | Microsoft Clarity. | Implementado (oct 2026, §8): proyecto creado, acceso compartido con marketing y enmascarado en *Strict*. Pendiente: guardar `CLARITY_PROJECT_ID` en Vercel Production (§10.2, paso 4) y, al desplegar, confirmar en Clarity que el sitio aparece instalado. Mencionar en la Política de Tratamiento de Datos la analítica con Microsoft Clarity (cookies, datos en EE. UU., sin datos personales). |
+| 20 | Microsoft Clarity. | Implementado (oct 2026, §8): proyecto creado, acceso compartido con marketing y enmascarado en *Strict*. `CLARITY_PROJECT_ID` ya está en Vercel Production (8 oct 2026). Pendiente: al desplegar, confirmar en Clarity que el sitio aparece instalado. Mencionar en la Política de Tratamiento de Datos la analítica con Microsoft Clarity (cookies, datos en EE. UU., sin datos personales). |
 | 19 | Catálogo de la Academy en producción. | Al desplegar, aplicar en orden las migraciones `academy_catalogo`, `academy_contenido` (es grande: se pega en el *SQL Editor*) y `academy_puntos`. Sin la segunda, la Academy se ve vacía. Pendiente: definir las masterclasses en vivo (se ocultaron) y si las rutas por tipo de aliado también se vuelven editables. |
 
 ---

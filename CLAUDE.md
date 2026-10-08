@@ -4,6 +4,7 @@
 > Idioma del proyecto: español (UI, nombres de tablas y columnas en `snake_case` español).
 > Zona horaria de negocio: **America/Bogota** (semanas lunes–domingo, meses calendario).
 > Guía para personas (funcionamiento, decisiones, tablas, planes y puesta en marcha): `docs/GUIA_HUB.md` y su PDF `docs/Guia_integral_Aliados_del_Sol_Hub.pdf`. Actualízala cuando cambie algo de lo que describe.
+> Lista para publicar en producción (rama `despliegue-prod`): `docs/PASO_A_PRODUCCION.md` y su PDF `docs/Paso_a_produccion_Aliados_del_Sol_Hub.pdf`. Actualízala si cambian migraciones, variables o configuración.
 
 ---
 
@@ -1021,5 +1022,5 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 23. **Key de Resend para el correo de confirmación (§7.3):** crear en Resend una key con permiso solo de envío para Preview y otra para Production y guardarlas como `RESEND_API_KEY` en Vercel. Sin ella, los correos quedan en «Correos no enviados». Mencionar el MEDDPICC y la bienvenida en los Términos o en la política de beneficios.
 24. **Aviso a n8n (§7.4):** flujo de imperfectos listo en n8n y sus variables en Vercel (solo Production, oct 2026). Falta lo mismo para el flujo de perfectos (`N8N_PERFECTOS_URL`, `N8N_PERFECTOS_TOKEN`) y, si se quiere probar en Preview, flujos de prueba con sus variables. La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n.
 25. **Academy en producción (§4.9):** aplicar `academy_catalogo`, pegar `academy_contenido` en el *SQL Editor* de `aliados-prod` y después aplicar `academy_puntos` (la masterclass pasa a +10 solo si el catálogo ya está cargado), al desplegar. Pendiente de decidir: masterclasses en vivo y si las rutas por tipo de aliado también se editan desde el panel.
-26. **Microsoft Clarity (§10):** guardar `CLARITY_PROJECT_ID` en Vercel Production y confirmar en Clarity que el sitio aparece instalado tras desplegar. La Política de Tratamiento de Datos debe mencionar la analítica con Clarity (cookies, Microsoft, EE. UU., sin datos personales).
+26. **Microsoft Clarity (§10):** `CLARITY_PROJECT_ID` ya está en Vercel Production (8 oct 2026); falta confirmar en Clarity que el sitio aparece instalado tras desplegar. La Política de Tratamiento de Datos debe mencionar la analítica con Clarity (cookies, Microsoft, EE. UU., sin datos personales).
 19. **Correo de `geenera.com` (área de TI):** Microsoft 365 no tiene la firma DKIM propia activada y el DMARC está en `p=none`. No afecta al Hub. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`.

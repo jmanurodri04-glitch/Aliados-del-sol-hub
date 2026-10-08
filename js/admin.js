@@ -254,17 +254,18 @@ async function cargarCorreos(hay) {
     </tr>`).join('')}</tbody></table>`;
 }
 
-// Avisos a n8n de los referidos imperfectos (§7.4) que no se pudieron enviar o que esperan a que el referido llegue a
-// Clientify.
+// Avisos a n8n de los referidos (§7.4; perfectos e imperfectos, cada uno a su flujo) que no se pudieron enviar o que
+// esperan a que el referido llegue a Clientify.
 async function cargarAvisosN8n(hay) {
   const caja = $('avisos-n8n-fallidos');
   if (!hay) { caja.hidden = true; caja.innerHTML = ''; return; }
   const filas = await leer(supabase.from('v_admin_avisos_n8n').select('*').order('created_at', { ascending: false }).limit(200));
   caja.hidden = !filas.length;
   caja.innerHTML = `<h2 style="margin:0 0 4px;font-size:17px">Avisos a n8n no enviados</h2>
-    <p class="nota" style="margin:0 0 10px">Referidos imperfectos que n8n no recibió (el flujo de conversaciones y chatbots). Se reintentan solos (15 min, 30, 1 h… hasta 8 veces); «Reintentar» lo envía enseguida. Si dice «Esperando que el referido llegue a Clientify», revisa primero ese referido en Clientify.</p>
-    <table><thead><tr><th>Referido</th><th>Registrado</th><th>Motivo</th><th>Intentos</th><th></th></tr></thead><tbody>${filas.map((c) => `<tr>
+    <p class="nota" style="margin:0 0 10px">Referidos que su flujo de n8n no recibió (perfectos e imperfectos van a flujos distintos). Se reintentan solos (15 min, 30, 1 h… hasta 8 veces); «Reintentar» lo envía enseguida. Si dice «Esperando que el referido llegue a Clientify», revisa primero ese referido en Clientify.</p>
+    <table><thead><tr><th>Referido</th><th>Flujo</th><th>Registrado</th><th>Motivo</th><th>Intentos</th><th></th></tr></thead><tbody>${filas.map((c) => `<tr>
       <td><b>${esc(c.empresa)}</b><span class="sub">${esc(c.nombre_completo)} · <span class="codigo">${esc(c.codigo_aliado)}</span></span></td>
+      <td>${c.tipo === 'perfecto' ? 'Perfecto' : 'Imperfecto'}</td>
       <td>${fecha(c.created_at)}</td>
       <td>${esc(c.error || 'Esperando el envío')}</td>
       <td>${numero(c.intentos)}<span class="sub">${c.proximo_at ? 'próximo: ' + fecha(c.proximo_at) : (c.estado === 'error' ? 'detenido: reintenta a mano' : '')}</span></td>

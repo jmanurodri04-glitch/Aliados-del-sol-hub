@@ -11,7 +11,7 @@
 // (solo si no registró canjes; borra también su cuenta de acceso si no es aliado).
 // Imagen de las recompensas (oct 2026): `subir_imagen_recompensa` da una URL firmada de un solo uso en el bucket público
 // `recompensas` y `guardar_recompensa` acepta `imagen_path`; si la imagen cambió, se borra la anterior del bucket.
-// MEDDPICC (§7.3): `otorgar_meddpicc` y `reintentar_correo`. Aviso a n8n de los imperfectos (§7.4): `reintentar_aviso_n8n`.
+// MEDDPICC (§7.3): `otorgar_meddpicc` y `reintentar_correo`. Aviso a n8n de los referidos (§7.4): `reintentar_aviso_n8n`.
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { randomUUID } from 'node:crypto';
@@ -167,7 +167,7 @@ async function reintentarCorreo(supabase, cuerpo, adminId, entorno, fetchImpl) {
   return { empresa_id: empresaId, enviado: r.ok === 1, error: fallo ? fallo.error : null };
 }
 
-// Igual para el aviso a n8n de un referido imperfecto (§7.4).
+// Igual para el aviso a n8n de un referido (§7.4).
 async function reintentarAvisoN8n(supabase, cuerpo, adminId, entorno, fetchImpl) {
   const empresaId = uuid(cuerpo.empresa_id, 'el referido');
   const { error } = await supabase.rpc('admin_reintentar_aviso_n8n', { p_admin: adminId, p_empresa: empresaId });

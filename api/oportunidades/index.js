@@ -59,8 +59,8 @@ async function sincronizarAhora(supabase, empresaId, entorno) {
 }
 
 // Clientify y el correo en paralelo (ninguno hace fallar el registro). El resultado del correo no se devuelve.
-// El aviso a n8n de un imperfecto (§7.4) va después de Clientify, porque n8n busca el lead allí; si el referido es
-// perfecto o aún no llegó a Clientify, la cola no devuelve nada y lo envía el cron.
+// El aviso a n8n (§7.4; perfectos e imperfectos, cada uno a su webhook) va después de Clientify, porque n8n busca el
+// lead allí; si el referido aún no llegó a Clientify, la cola no devuelve nada y lo envía el cron.
 async function despuesDeRegistrar(supabase, empresaId, entorno, fetchImpl) {
   const [clientify] = await Promise.all([
     sincronizarAhora(supabase, empresaId, entorno).then(async (r) => {

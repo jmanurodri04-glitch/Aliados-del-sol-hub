@@ -1,8 +1,8 @@
--- Tests del aviso a n8n de los referidos imperfectos (CLAUDE.md §7.4): solo imperfectos nuevos del Hub, se envían cuando
--- el referido ya está en Clientify, reintentos, panel y permisos.
+-- Tests del aviso a n8n de los referidos nuevos del Hub (CLAUDE.md §7.4): perfectos e imperfectos, cada uno con su tipo
+-- (su propio webhook); se envían cuando el referido ya está en Clientify; reintentos, panel y permisos.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(20);
 
 create function pg_temp.aliado(id uuid, email text, celular text)
 returns void language sql as $$
@@ -30,9 +30,10 @@ select pg_temp.empresa('ee000000-0000-0000-0000-000000000002', 'ae000000-0000-00
 select pg_temp.empresa('ee000000-0000-0000-0000-000000000003', 'ae000000-0000-0000-0000-000000000001', 'clientify_form', false, 'tres@cliente-n8n.test');
 select pg_temp.empresa('ee000000-0000-0000-0000-000000000004', 'ae000000-0000-0000-0000-000000000001', 'hub', false, 'cuatro@cliente-n8n.test');
 
-select is((select array_agg(empresa_id order by empresa_id) from public.avisos_n8n where empresa_id::text like 'ee000000%'),
-  array['ee000000-0000-0000-0000-000000000001', 'ee000000-0000-0000-0000-000000000004']::uuid[],
-  'solo los imperfectos nuevos del Hub entran a la cola (ni perfectos ni leads del antiguo formulario)');
+select is((select array_agg(empresa_id::text || ':' || tipo order by empresa_id) from public.avisos_n8n where empresa_id::text like 'ee000000%'),
+  array['ee000000-0000-0000-0000-000000000001:imperfecto', 'ee000000-0000-0000-0000-000000000002:perfecto',
+        'ee000000-0000-0000-0000-000000000004:imperfecto'],
+  'los referidos nuevos del Hub entran a la cola con su tipo (no los leads del antiguo formulario)');
 select ok(not has_function_privilege('authenticated', 'public.avisos_n8n_reclamar(integer, uuid)', 'execute')
       and not has_function_privilege('authenticated', 'public.admin_reintentar_aviso_n8n(uuid, uuid)', 'execute')
       and not has_table_privilege('authenticated', 'public.avisos_n8n', 'update')
@@ -47,8 +48,12 @@ create temp table lote as select * from public.avisos_n8n_reclamar(10, 'ee000000
 select row_eq($$select clientify_contact_id, ciudad, cargo, tiene_factura, nombre_contacto, telefono, correo, codigo_aliado is not null from lote$$,
   row('c-n8n-1'::text, 'Bucaramanga'::text, null::text, false, 'Laura Gómez'::text, '+573105551234'::text, 'uno@cliente-n8n.test'::text, true),
   'con el ID de Clientify se reclama, con los datos que necesita el chatbot');
+select is((select tipo from lote), 'imperfecto', 'el reclamo dice a qué webhook va (imperfecto)');
 select is((select count(*)::integer from public.avisos_n8n_reclamar(10, 'ee000000-0000-0000-0000-000000000001')), 0,
   'un aviso reclamado queda prestado y no se toma dos veces');
+update public.empresas set clientify_contact_id = 'c-n8n-2' where id = 'ee000000-0000-0000-0000-000000000002';
+select is((select tipo from public.avisos_n8n_reclamar(10, 'ee000000-0000-0000-0000-000000000002')), 'perfecto',
+  'y un perfecto va al webhook de perfectos');
 
 select public.avisos_n8n_resultado('ee000000-0000-0000-0000-000000000001', null);
 select row_eq($$select estado, enviado_at is not null from public.avisos_n8n where empresa_id = 'ee000000-0000-0000-0000-000000000001'$$,

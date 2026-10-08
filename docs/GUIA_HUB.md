@@ -334,9 +334,9 @@ Cada referido **nuevo** del Hub (Nueva oportunidad o formulario público) le env
 - **Si el correo no sale:** se reintenta solo (15 min, 30, 1 h… hasta 8 veces). En el **Resumen del panel** aparecen la tarjeta «Correos no enviados» y la lista con el motivo (por ejemplo, «Resend: se alcanzó el límite diario de envíos») y el botón **Reintentar**. Así, si Resend llega a su límite, el equipo lo ve sin entrar a Resend (decisión del equipo).
 - **Límites de Resend (plan gratuito):** 100 correos al día y 3.000 al mes, compartidos con los correos de las cuentas (§5.9). Si se acercan, conviene el plan de pago.
 
-#### Aviso a n8n de los referidos imperfectos (oct 2026)
+#### Aviso a n8n de los referidos perfectos e imperfectos (oct 2026)
 
-n8n cobra una ejecución por **cada** llamada a su webhook, aunque el flujo la descarte. Antes el webhook de contactos de Clientify llamaba a n8n con cada cambio de cualquier contacto y n8n revisaba si tenía la etiqueta «Referido imperfecto»: casi todas esas ejecuciones se gastaban en nada. Ahora **el Hub filtra** y solo llama a n8n por los referidos **imperfectos nuevos** del Hub (Nueva oportunidad y formulario público). Los perfectos nunca llegan a n8n (decisión del equipo).
+n8n cobra una ejecución por **cada** llamada a su webhook, aunque el flujo la descarte. Antes el webhook de contactos de Clientify llamaba a n8n con cada cambio de cualquier contacto y n8n revisaba si tenía la etiqueta «Referido imperfecto» o «Referido perfecto»: casi todas esas ejecuciones se gastaban en nada. Ahora **el Hub filtra**: por cada referido **nuevo** del Hub (Nueva oportunidad y formulario público) llama **una vez** al flujo que le corresponde. Los imperfectos van a un webhook y los perfectos a otro, cada uno con su token, así ningún flujo recibe referidos que no son suyos (decisión del equipo).
 
 ```mermaid
 sequenceDiagram
@@ -345,7 +345,7 @@ sequenceDiagram
   participant N as n8n
   H->>C: Flujo B: crea el contacto con «Referido imperfecto»
   C-->>H: ID del contacto
-  H->>N: POST al webhook (solo imperfectos), con x-hub-token
+  H->>N: POST al webhook de su tipo (perfecto o imperfecto), con x-hub-token
   N-->>H: 200 (responde enseguida)
   N->>N: espera unos segundos
   N->>C: busca el lead por clientify_contact_id
@@ -363,10 +363,10 @@ sequenceDiagram
     "faltantes": ["Subsector", "Cargo", "Factura"] }
   ```
 
-  `faltantes` dice qué le faltó para ser perfecto (Subsector, Ciudad, Cargo o Factura); `canal` es `sesion` (Nueva oportunidad) o `publico` (formulario público); `entorno` es `production` o `preview`.
-- **Seguridad:** el Hub envía el encabezado `x-hub-token` con el valor de `N8N_IMPERFECTOS_TOKEN`; en n8n el webhook usa *Header Auth* con ese mismo valor, así nadie más puede dispararlo.
+  En un perfecto, `evento` es `referido_perfecto` y `faltantes` viene vacío. En un imperfecto, `faltantes` dice qué le faltó para ser perfecto (Subsector, Ciudad, Cargo o Factura); `canal` es `sesion` (Nueva oportunidad) o `publico` (formulario público); `entorno` es `production` o `preview`.
+- **Dónde va cada uno y seguridad:** imperfectos → `N8N_IMPERFECTOS_URL` con el token `N8N_IMPERFECTOS_TOKEN`; perfectos → `N8N_PERFECTOS_URL` con `N8N_PERFECTOS_TOKEN`. El token viaja en el encabezado `x-hub-token` y en n8n cada webhook usa *Header Auth* con ese mismo valor, así nadie más puede dispararlo. Si falta la variable de un tipo, sus avisos esperan en el panel; nunca se mandan al flujo del otro tipo.
 - **Un aviso por referido:** si n8n responde con error o no responde en 10 s, se reintenta solo (15 min, 30, 1 h… hasta 8 veces). Un aviso que n8n recibió no se vuelve a enviar; aun así conviene que el flujo de n8n descarte un `referido_id` repetido.
-- **En el panel:** en el Resumen aparecen la tarjeta «Avisos a n8n no enviados» y la lista con el motivo (por ejemplo «n8n 404: el webhook no existe o el flujo no está activo») y el botón **Reintentar**. «Esperando que el referido llegue a Clientify» significa que el problema está en el flujo B, no en n8n.
+- **En el panel:** en el Resumen aparecen la tarjeta «Avisos a n8n no enviados» y la lista con el flujo (Perfecto o Imperfecto), el motivo (por ejemplo «n8n 404: el webhook no existe o el flujo no está activo») y el botón **Reintentar**. «Esperando que el referido llegue a Clientify» significa que el problema está en el flujo B, no en n8n.
 - **En Preview** solo llegan a Clientify los referidos con `+prueba` en el correo, así que solo esos generan aviso.
 
 **La factura en Clientify (decisión del equipo, oct 2026):** la API de Clientify no permite subir archivos, así que el Hub deja en la descripción de la empresa un **enlace privado de descarga** que vale 180 días. Cualquiera que tenga el enlace puede abrir la factura, que trae datos personales del contacto. Por eso el equipo comercial **no debe copiarlo, reenviarlo ni pegarlo en otros lugares**: lo abre, descarga la factura y la guarda según la política de tratamiento de datos. La factura original sigue privada en el Hub.
@@ -529,7 +529,7 @@ flowchart LR
 
 | Tarea | Dónde | Frecuencia (hora Bogotá) | Qué hace |
 |---|---|---|---|
-| `sincronizar-clientify-aliados` | Supabase `pg_cron` → `/api/cron/clientify` | Cada 2 min | Procesa las colas: aliados aprobados (flujo A), oportunidades (flujo B), eventos de Clientify (flujo C), correos de confirmación y avisos a n8n de los imperfectos. |
+| `sincronizar-clientify-aliados` | Supabase `pg_cron` → `/api/cron/clientify` | Cada 2 min | Procesa las colas: aliados aprobados (flujo A), oportunidades (flujo B), eventos de Clientify (flujo C), correos de confirmación y avisos a n8n de los referidos. |
 | `conciliar-clientify` | Supabase `pg_cron` → `/api/cron/clientify-conciliacion` | Cada hora, minuto 7 | Escanea oportunidades y contactos en curso para cubrir webhooks perdidos. |
 | Conciliación de respaldo | Vercel Cron (`vercel.json`) | Diario 02:00 | Lo mismo, como respaldo si `pg_cron` falla. |
 | `recalcular-puntos-diario` | Supabase `pg_cron` | Diario 00:15 | Recalcula saldos y niveles (los puntos de nivel vencen a los 6 meses). |
@@ -973,11 +973,12 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 | `error` | Motivo del último fallo, sin datos personales (lo muestra el panel). |
 | `enviado_at`, `created_at`, `updated_at` | Fechas. |
 
-#### `avisos_n8n` — aviso a n8n de cada referido imperfecto (oct 2026)
+#### `avisos_n8n` — aviso a n8n de cada referido (oct 2026)
 
 | Columna | Qué representa |
 |---|---|
-| `empresa_id` | Referido (una fila por referido **imperfecto** nuevo del Hub; la crea un trigger al registrarlo). |
+| `empresa_id` | Referido (una fila por referido nuevo del Hub; la crea un trigger al registrarlo). |
+| `tipo` | `perfecto` o `imperfecto`: a qué flujo (webhook) de n8n va. |
 | `estado` | `pendiente`, `enviado` o `error`. Un aviso enviado nunca se vuelve a enviar. Solo se envía cuando la empresa tiene `clientify_contact_id`. |
 | `intentos`, `proximo_at` | Reintentos (15 min, 30, 1 h… máximo 6 h); tras 8 intentos se detiene hasta «Reintentar». |
 | `error` | Motivo del último fallo, sin datos personales (lo muestra el panel). |
@@ -1045,6 +1046,8 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 | `RESEND_API_KEY` | Key de Resend **solo con permiso de envío** para el correo «Confirmación de empresa referida» (oct 2026). Es otra key, distinta de la contraseña SMTP de Supabase, que sigue solo en Supabase. Sin ella los correos quedan en «Correos no enviados». | **Nunca.** |
 | `N8N_IMPERFECTOS_URL` | *Production URL* del webhook de n8n que recibe los referidos imperfectos (§5.2). Una por entorno (en Preview, la de un flujo de pruebas). Sin ella los avisos quedan en «Avisos a n8n no enviados». | **Nunca.** |
 | `N8N_IMPERFECTOS_TOKEN` | Valor del encabezado `x-hub-token` (el mismo del *Header Auth* del webhook en n8n). Texto aleatorio largo, distinto por entorno. | **Nunca.** |
+| `N8N_PERFECTOS_URL` | *Production URL* del webhook de n8n que recibe los referidos perfectos (§5.2). Sin ella los avisos de perfectos quedan en «Avisos a n8n no enviados». | **Nunca.** |
+| `N8N_PERFECTOS_TOKEN` | Token del webhook de perfectos (otro distinto al de imperfectos). | **Nunca.** |
 | `TURNSTILE_SECRET_KEY` | Clave secreta del captcha del formulario público. Sin ella, en Production ese formulario no funciona. La misma clave se pega en el panel de Supabase (*Attack Protection*) para el registro y el login; allí no es una variable de Vercel. | **Nunca.** |
 
 **Funciones de `/api` (12):**
@@ -1109,7 +1112,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - "Información disponible" se eliminó. Referido perfecto = +20.
 - **Niveles KILO, MEGA, GIGA, TERA, PETA y EXA** (oct 2026): 480 puntos por nivel, la misma calidad mínima de antes y, desde GIGA, al menos un referido en «Presentación de oferta» o después (sin vencimiento). Nadie queda sin nivel. El canje y el QR siguen igual.
 - **MEDDPICC:** +20 una vez por referido, lo otorga un admin desde el panel cuando revisa la información; aplica a perfectos o imperfectos con ciudad, sin plazo. Cada referido nuevo recibe el correo «Confirmación de empresa referida» por Resend desde el Hub (no desde Clientify, porque el contacto que se crea es el de la empresa y no el del aliado). El MEDDPICC va al buzón de la regional según la ciudad del referido; si no se reconoce, a c.lizarazo. El panel muestra los correos no enviados con su motivo.
-- **Aviso a n8n de los imperfectos:** el Hub llama al webhook de n8n solo por los referidos imperfectos nuevos y cuando ya están en Clientify, con un token en el encabezado; n8n ya no revisa cada cambio de contacto de Clientify (cada llamada le cuesta una ejecución). Los perfectos no llegan a n8n. El panel muestra los avisos no enviados con su motivo.
+- **Aviso a n8n de los referidos:** el Hub llama a n8n una vez por cada referido nuevo, cuando ya está en Clientify y con un token en el encabezado: los imperfectos a un webhook y los perfectos a otro. n8n ya no revisa cada cambio de contacto de Clientify (cada llamada le cuesta una ejecución). El panel muestra los avisos no enviados con su flujo y su motivo.
 - **Bienvenida:** +10 Puntos Sol una sola vez, cuando GEENERA aprueba la cuenta (también se dieron a los aliados ya aprobados; no a los admins). Conviene mencionarlo en los Términos o en la política de beneficios.
 - Fuera del perfil (−15) se suma a no calificado (−10).
 - Piso en 0 y sin memoria. Los puntos de un aliado no activo se retienen.
@@ -1213,7 +1216,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 22 | Abrir el Hub en un celular (o con la ventana angosta) y navegar por todas las pantallas | No se desplaza hacia los lados; «☰ Menú» abre el menú y se cierra al elegir una opción o tocar fuera | ✅ Verificado |
 | 23 | Referir una empresa perfecta en Bucaramanga, otra imperfecta en Medellín y otra imperfecta sin ciudad (con `RESEND_API_KEY` en Preview) | Llega «[PRUEBA] Confirmación de empresa referida» a cada una; las dos primeras traen el MEDDPICC y al responder van a h.zambrano y a c.lizarazo; la tercera solo confirma. En el panel, «MEDDPICC +20» suma una vez y la segunda vez lo rechaza | Pendiente |
 | 24 | Con `RESEND_API_KEY` vacía o inválida en Preview, referir una empresa | El referido se registra igual; en el Resumen aparece «Correos no enviados» con el motivo; al corregir la key, «Reintentar» lo envía | Pendiente |
-| 25 | Con `N8N_IMPERFECTOS_URL` y `N8N_IMPERFECTOS_TOKEN` del flujo de pruebas en Preview, referir una empresa imperfecta y otra perfecta (correos `+prueba`) | n8n recibe **una** llamada, solo por la imperfecta, con `faltantes` y el `clientify_contact_id`; encuentra el lead en Clientify. Con el token mal, «Avisos a n8n no enviados» muestra «el token no coincide» y, al corregirlo, «Reintentar» lo envía | Pendiente |
+| 25 | Con las variables de los dos flujos (imperfectos y perfectos) configuradas, referir una empresa imperfecta y otra perfecta (en Preview, correos `+prueba`) | Cada flujo recibe **una** llamada, solo por la suya: el de imperfectos con `faltantes`, el de perfectos con `referido_perfecto`; los dos encuentran el lead en Clientify por `clientify_contact_id`. Con el token mal, «Avisos a n8n no enviados» muestra «el token no coincide» y, al corregirlo, «Reintentar» lo envía | Pendiente |
 
 **Quién hace qué:** el equipo ejecuta los casos como usuario (Hub, panel y Clientify). Claude verifica en `aliados-dev` que la base quedó como se esperaba, puede forzar la conciliación para no esperar una hora, y corrige cualquier error en una rama con su prueba.
 
@@ -1269,7 +1272,7 @@ El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resen
 - `CLIENTIFY_WEBHOOK_SECRET` y `CRON_SECRET` **nuevos**, distintos de los de pruebas;
 - `CANJES_API_KEYS` cuando exista el proveedor;
 - `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget real de Cloudflare Turnstile (ver «Captcha» abajo). **Sin ellas el formulario público no funciona en Production.**
-- `N8N_IMPERFECTOS_URL` y `N8N_IMPERFECTOS_TOKEN`: la *Production URL* del webhook de n8n del flujo de imperfectos y su token (§5.2); marcarlas *Sensitive*. En Preview, las de un flujo de pruebas.
+- `N8N_IMPERFECTOS_URL`, `N8N_IMPERFECTOS_TOKEN`, `N8N_PERFECTOS_URL` y `N8N_PERFECTOS_TOKEN`: la *Production URL* del webhook de cada flujo de n8n y su token (§5.2); marcarlas *Sensitive*. En Preview, las de flujos de prueba.
 - `RESEND_API_KEY`: en Resend → *API Keys* → *Create API Key*, permiso **Sending access** y dominio `notificaciones.geenera.com`; marcarla *Sensitive* en Vercel. Una key para Preview y otra para Production. Sin ella no sale el correo de confirmación de los referidos (queda en «Correos no enviados»).
 
 **Captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña, paso a paso:**
@@ -1366,7 +1369,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 15 | ~~Flujo C sin probar con un referido real.~~ | Resuelto (5 oct 2026): calificación, fases, información falsa, no calificado y conflicto verificados con Clientify real. Faltan el lead creado directo en Clientify (caso 8) y resolver un conflicto desde el panel (caso 7). |
 | 16 | ~~Un referido ya cerrado al que solo le cambian el contacto no se volvía a revisar.~~ | Resuelto (6 oct 2026): además de la revisión horaria de los referidos en curso, una vez al día (2 a. m., hora de Bogotá) se revisan también los cerrados, así una etiqueta de «fraude» o un retroceso de Status puesto después del cierre se detecta en máximo un día (§5.3). |
 | 17 | Key de Resend para el correo de confirmación de los referidos (MEDDPICC). | Pendiente: crear en Resend una key con permiso solo de envío para Preview y otra para Production, y guardarlas en Vercel como `RESEND_API_KEY` (§10.2, paso 4). Mientras no exista, los correos quedan en «Correos no enviados» del panel. Mencionar el MEDDPICC y la bienvenida en los Términos o en la política de beneficios. |
-| 18 | Aviso a n8n de los referidos imperfectos. | Pendiente: en n8n, cambiar el disparador del flujo de imperfectos por el webhook del Hub (pasos en §5.2) y guardar `N8N_IMPERFECTOS_URL` y `N8N_IMPERFECTOS_TOKEN` en Vercel (Preview con un flujo de pruebas; Production al desplegar). Mientras no estén, los avisos quedan en «Avisos a n8n no enviados». La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n (encargado del tratamiento). |
+| 18 | Aviso a n8n de los referidos perfectos e imperfectos. | Flujo de imperfectos listo en n8n y sus variables en Vercel Production (oct 2026). Pendiente: lo mismo para el flujo de perfectos (`N8N_PERFECTOS_URL`, `N8N_PERFECTOS_TOKEN`; pasos en §5.2) y, si se quiere probar en Preview, flujos de prueba con sus variables. Mientras falten, esos avisos quedan en «Avisos a n8n no enviados». La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n (encargado del tratamiento). |
 
 ---
 

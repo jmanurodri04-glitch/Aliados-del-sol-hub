@@ -1,8 +1,8 @@
-// Tests del aviso a n8n de los referidos imperfectos (CLAUDE.md §7.4).
+// Tests del aviso a n8n de los referidos del Hub, perfectos e imperfectos (CLAUDE.md §7.4).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { construirAviso, enviarAviso, motivoN8n, procesarAvisos, enviarAvisoAhora } from '../../lib/n8n/avisos.js';
+import { construirAviso, enviarAviso, motivoN8n, procesarAvisos, enviarAvisoAhora, variablesDe } from '../../lib/n8n/avisos.js';
 import admin from '../../api/admin/index.js';
 
 const fila = (extra = {}) => ({
@@ -11,7 +11,8 @@ const fila = (extra = {}) => ({
   canal: 'sesion', registrado_at: '2026-10-08T15:00:00Z', clientify_contact_id: '12345', codigo_aliado: 'EMLG23456789', intentos: 0,
   ...extra
 });
-const ENV = { N8N_IMPERFECTOS_URL: 'https://n8n.test/webhook/imperfectos', N8N_IMPERFECTOS_TOKEN: 'secreto-largo' };
+const ENV = { N8N_IMPERFECTOS_URL: 'https://n8n.test/webhook/imperfectos', N8N_IMPERFECTOS_TOKEN: 'secreto-largo',
+  N8N_PERFECTOS_URL: 'https://n8n.test/webhook/perfectos', N8N_PERFECTOS_TOKEN: 'otro-secreto' };
 
 test('aviso: datos que necesita el chatbot y lo que le falta al referido', () => {
   assert.deepEqual(construirAviso(fila(), { entorno: 'production' }), {
@@ -31,6 +32,15 @@ test('aviso: datos que necesita el chatbot y lo que le falta al referido', () =>
   assert.deepEqual(completo.faltantes, ['Ciudad']);
   assert.equal(completo.entorno, 'development');
   assert.ok(!('aliado_id' in completo) && !('nombre' in completo.aliado), 'no lleva el id interno ni el nombre del aliado');
+});
+
+test('aviso perfecto: mismo cuerpo, evento referido_perfecto y sin faltantes', () => {
+  const a = construirAviso(fila({ tipo: 'perfecto', subsector: 'Textil', cargo: 'Gerente', tiene_factura: true }), { entorno: 'production' });
+  assert.equal(a.evento, 'referido_perfecto');
+  assert.deepEqual(a.faltantes, []);
+  assert.equal(construirAviso(fila({ tipo: 'imperfecto' })).evento, 'referido_imperfecto');
+  assert.equal(construirAviso(fila({ tipo: undefined })).evento, 'referido_imperfecto', 'sin tipo, como antes: imperfecto');
+  assert.deepEqual(variablesDe('perfecto'), { url: 'N8N_PERFECTOS_URL', token: 'N8N_PERFECTOS_TOKEN' });
 });
 
 test('envío: POST JSON al webhook con el token en x-hub-token', async () => {
@@ -73,6 +83,25 @@ test('cola: envía cada aviso y registra el resultado; un fallo guarda el motivo
   assert.deepEqual(resultados[0].args, { p_empresa: 'e0000000-0000-0000-0000-000000000001', p_error: null });
   assert.match(resultados[1].args.p_error, /n8n 500/);
   assert.ok(!JSON.stringify(r).includes('laura@cliente.test') && !JSON.stringify(r).includes('+5731'), 'el resumen no lleva datos del contacto');
+});
+
+test('cola: cada tipo va a su propio webhook con su token', async () => {
+  const sb = supabaseCola([fila({ tipo: 'perfecto' }), fila({ empresa_id: 'e0000000-0000-0000-0000-000000000002', tipo: 'imperfecto' })]);
+  const pedidos = [];
+  await procesarAvisos({ supabase: sb, entorno: 'production', env: ENV,
+    fetchImpl: async (url, op) => { pedidos.push({ url, token: op.headers['x-hub-token'], evento: JSON.parse(op.body).evento }); return { ok: true, status: 200 }; } });
+  assert.deepEqual(pedidos, [
+    { url: ENV.N8N_PERFECTOS_URL, token: 'otro-secreto', evento: 'referido_perfecto' },
+    { url: ENV.N8N_IMPERFECTOS_URL, token: 'secreto-largo', evento: 'referido_imperfecto' }
+  ]);
+
+  const sb2 = supabaseCola([fila({ tipo: 'perfecto' })]);
+  await procesarAvisos({ supabase: sb2, env: { N8N_IMPERFECTOS_URL: 'x', N8N_IMPERFECTOS_TOKEN: 'y' }, fetchImpl: async () => ({ ok: true, status: 200 }) });
+  assert.match(sb2.llamadas.find((l) => l.nombre === 'avisos_n8n_resultado').args.p_error, /N8N_PERFECTOS_URL/,
+    'sin la URL de perfectos, el perfecto queda en el panel con el motivo (no va al webhook de imperfectos)');
+  const sb3 = supabaseCola([fila({ tipo: 'perfecto' })]);
+  await procesarAvisos({ supabase: sb3, env: ENV, fetchImpl: async () => ({ ok: false, status: 403 }) });
+  assert.match(sb3.llamadas.find((l) => l.nombre === 'avisos_n8n_resultado').args.p_error, /N8N_PERFECTOS_TOKEN/);
 });
 
 test('cola: sin la URL no llama a n8n y deja el motivo; el envío inmediato nunca falla', async () => {

@@ -17,6 +17,10 @@
 //   ads:qr-estado {codigo}              ads:qr-estado-resultado { ok, estado?, recompensa?, puntos?, puntos_disponibles?, sinConexion? }
 //   ads:recuperar {email}               ads:recuperar-resultado { ok, mensaje? }
 //   ads:clave-nueva {password}          ads:clave-nueva-resultado { ok: false, mensaje, vencido? }  (si sale bien: ads:login-resultado con claveNueva)
+//                                       ads:academy-catalogo  (window.ADS_ACADEMY_CATALOGO; lo arma academy-data.js)
+//
+// Academy (CLAUDE.md §4.9): el catálogo sale de public.academy_catalogo(), con o sin sesión. Se carga al abrir la página y
+// cada vez que cambia la sesión, porque una cuenta activa recibe el contenido completo de los cursos «solo aliados».
 //
 // Recuperar contraseña: el correo "Restablece tu contraseña" (supabase/templates/recuperacion.html) trae
 // #recuperacion=<token_hash>. El código solo se usa (verifyOtp) cuando la persona guarda la contraseña nueva, así
@@ -92,6 +96,25 @@ let dashboardActual = null; // último dashboard cargado; se reenvía si la pág
 
 function emitir(nombre, detalle) {
   window.dispatchEvent(new CustomEvent(nombre, { detail: detalle }));
+  if (nombre === 'ads:sesion') cargarAcademy(!!(detalle && detalle.activa));
+}
+
+// Catálogo de la Academy. Se vuelve a pedir solo si cambió el tipo de sesión (sin sesión ↔ aliado activo).
+let academyCargada = null;
+async function cargarAcademy(activa) {
+  if (academyCargada === activa) return;
+  academyCargada = activa;
+  try {
+    const supabase = await obtenerCliente();
+    const { data, error } = await supabase.rpc('academy_catalogo');
+    if (error || !data) throw error || new Error('sin catálogo');
+    if (academyCargada !== activa) return; // llegó otra sesión mientras tanto
+    window.ADS_ACADEMY_BASE_URL = supabaseUrl;
+    window.ADS_ACADEMY_CATALOGO = data;
+    emitir('ads:academy-catalogo', {});
+  } catch (e) {
+    academyCargada = null; // se reintenta con el siguiente cambio de sesión
+  }
 }
 
 function avisar(aviso) {
@@ -99,6 +122,7 @@ function avisar(aviso) {
   emitir('ads:aviso', aviso);
 }
 
+let supabaseUrl = '';
 function obtenerCliente() {
   if (!clientePromesa) {
     clientePromesa = fetch('/api/config', { headers: { accept: 'application/json' } })
@@ -106,6 +130,7 @@ function obtenerCliente() {
         if (!r.ok) throw new Error('config ' + r.status);
         return r.json();
       })
+      .then((c) => { supabaseUrl = c.supabaseUrl; return c; })
       .then((c) => createClient(c.supabaseUrl, c.supabasePublishableKey, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       }))

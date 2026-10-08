@@ -841,15 +841,39 @@ Mismas columnas que el libro mayor, más: `fecha_original` (cuándo ocurrió), `
 
 ### 7.6 Academy, eventos y canjes
 
-#### `modulos` — catálogo de cursos
+#### Cómo funciona la Academy (oct 2026)
+
+La Academy es una serie de **minicursos** (minicurso = módulo), agrupados en 7 escuelas (Relaciones & Ventas, IA & Automatización, Negocios, Finanzas, Energía, Marca y Aliados del Sol). Todos siguen los mismos **6 pasos**: 1. Contexto, 2. Aprende (microlecciones), 3. Aplica (ejercicio), 4. Descarga (una herramienta), 5. Comprueba (quiz) y 6. Activa (una acción para la semana). Además tiene **ADS Tools** (herramientas descargables) y **Certificaciones** (grupos de minicursos: al tocar una, el aliado ve los minicursos que debe hacer, en orden).
+
+- **Puntos Sol:** al terminar el paso 6 se registra el minicurso: **+5 Puntos Sol**, máximo 20 al mes; lo que pase del tope se otorga el mes siguiente (regla de siempre, §6.1). La masterclass no da puntos.
+- **XP de la Academy** (no son Puntos Sol y no afectan el nivel KILO…EXA): Flash 10, Microcurso 30, Curso 75, Masterclass 100 y +300 por certificación obtenida. Se calculan con los cursos que la base tiene como completados, así son iguales en cualquier dispositivo. Niveles de XP: Explorador, Aprendiz, Practicante, Profesional, Experto y Referente.
+- **Sin sesión** (sitio público) se ven completos los contenidos gratis; de los demás solo el temario. Una cuenta activa ve todo.
+- El avance dentro de cada curso (en qué paso va) y las notas del ejercicio se guardan en el navegador de cada aliado; en la base solo queda el curso completado.
+- Las masterclasses en vivo no se muestran por ahora (decisión del equipo): su reserva no estaba conectada a nada.
+- **Desde el panel** (pestaña Academy) se crean y editan minicursos con sus 6 pasos, certificaciones (con la lista ordenada de sus minicursos) y herramientas (con un archivo PDF, Excel, Word o PowerPoint de máx. 10 MB). Un curso no se borra: se oculta. Cada cambio queda en la Auditoría.
+- Las escuelas, las rutas por tipo de aliado (Asesor Empresarial 360, Conector de Negocios, Community & Business Leader) y la tabla de XP están en el código del Hub (`academy-data.js`).
+
+#### `modulos` — catálogo de minicursos
 
 | Columna | Qué representa |
 |---|---|
 | `id` | Llave. |
-| `codigo` | ID del curso en la Academy del Hub (`c11`, `c12`…). |
-| `nombre`, `orden`, `activo` | Nombre, orden de aparición y si está disponible. |
-| `puntos` | Valor del módulo (0–20; 0 = sin puntos). |
+| `codigo` | Código del curso (el título en minúsculas con guiones, p. ej. `capex-vs-opex`). No cambia. Los de la Academy anterior (`c11`, `c12`…) quedaron ocultos. |
+| `nombre`, `orden`, `activo` | Título, orden de aparición y si se ve en la Academy. |
+| `puntos` | Puntos Sol del minicurso (5, o 0 = sin puntos). |
+| `escuela`, `formato`, `minutos`, `nivel` | Escuela, formato (Flash, Microcurso, Curso, Masterclass), duración y nivel (Principiante, Intermedio, Avanzado). |
+| `aliados`, `acceso` | Para qué tipos de aliado es y si es gratis o solo para aliados. |
+| `destacado`, `nuevo`, `popular`, `rapido`, `ruta` | Etiquetas del catálogo y nivel de la escuela Energía (e1–e4). |
+| `descripcion`, `herramienta` | Descripción corta y la herramienta del paso «Descarga». |
 | `created_at`, `updated_at` | Fechas. |
+
+#### `modulos_contenido`, `academy_certificaciones` y `academy_herramientas`
+
+| Tabla | Qué guarda |
+|---|---|
+| `modulos_contenido` | El contenido de los 6 pasos de cada minicurso (lo que aprenderás, contexto, microlecciones, ejercicio y pasos, quiz y acción). Solo lo leen el catálogo y los admins. |
+| `academy_certificaciones` | Código, nombre, descripción, escuela, sigla del sello, la **lista ordenada de minicursos** y si se ve. |
+| `academy_herramientas` | Código, nombre, categoría, ícono, descripción, acceso y, si se subió desde el panel, el archivo (bucket público `academy`). Sin archivo, su material viene incorporado en el Hub. |
 
 #### `modulos_completados`
 
@@ -1131,6 +1155,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - Financieros y Agremiaciones también ven sus puntos y su nivel. Agremiaciones agrupan por la ciudad de la empresa referida.
 - Las secciones sin datos reales muestran datos de demostración con la etiqueta "Demostración".
 - Academy: en la base solo se guarda el curso completado; el avance por lección vive en el navegador.
+- **Academy administrable** (oct 2026): minicursos, certificaciones y herramientas se crean y editan desde el panel; +5 Puntos Sol por minicurso (máximo 20 al mes, sin cambios); los XP son solo de la Academy; las masterclasses en vivo no se muestran por ahora. Financieros siguen sin ver «Financiación Solar».
 - El panel es una página separada (`admin.html`). Los eventos los reporta el aliado y los valida un admin.
 - El catálogo de recompensas se administra desde el panel, **con una imagen opcional por recompensa** (oct 2026): JPG, PNG o WebP de máximo 2 MB, idealmente de 1200×600 y con lo importante en el centro, porque la tarjeta recorta los bordes. El panel avisa si es más pequeña, pero la acepta; al cambiarla o quitarla se borra la anterior. El proveedor puede consultar el nivel y el saldo por código, sin datos personales. Un admin puede anular un canje: se devuelve el saldo, no los puntos de nivel.
 - **Canje con QR (fase 11):** QR dinámico de 5 minutos y un solo uso, renovado cada 60 s, con código corto de respaldo. Escanean operadores invitados por un admin y ligados a un proveedor (no son aliados); los admins también. La recompensa la elige el operador; una por escaneo; el aliado no aprueba en su celular, porque mostrar el QR es su consentimiento. El operador ve el nombre corto del aliado, su código, nivel y saldo, nunca su correo ni su celular. Un operador se elimina solo si no ha registrado canjes.
@@ -1200,6 +1225,7 @@ El camino tiene **tres etapas, en orden**. No se pasa a la siguiente sin cerrar 
 | 7c | Poner un contacto en «0. lead no calificado» y los demás «0.» en otros contactos | Solo «0. lead no calificado» resta −10 (y −15 más si el referido era perfecto); los demás «0.» no cambian nada | ✅ Verificado tras calibrar los códigos (§9) |
 | 8 | Crear directamente en Clientify un contacto `+prueba` con el `ID_aliado` de prueba y crearle una oportunidad (camino del antiguo formulario de Clientify) | La empresa aparece en el Hub del aliado con +10 | Pendiente |
 | 9 | Completar cursos de la Academy hasta pasar 20 puntos en el mes | Solo 20 puntos otorgados; el resto queda "pendiente" | Pendiente |
+| 26 | En la pestaña Academy del panel, crear un minicurso, una certificación con él y una herramienta con archivo | Aparecen en la Academy del Hub al recargar; al completar el minicurso suma +5 y sus XP; la certificación lleva a sus minicursos; la herramienta descarga el archivo | Pendiente |
 | 10 | Reportar un evento que cumple y otro que no; validar y rechazar | +100 solo al que cumple; el aliado ve el motivo del rechazo | Pendiente |
 | 11 | Crear recompensas en el panel y canjear con la key de prueba (Claude da el comando) | Descuenta saldo, no nivel; una referencia repetida no descuenta dos veces; la anulación devuelve el saldo | Parcial: catálogo, canje y anulación verificados con QR; falta el canje con la key de la API |
 | 11b | Invitar un operador desde el panel, abrir el enlace en el celular, crear su contraseña y canjear el QR de un aliado (también con el código corto); probar una recompensa de nivel mayor y otra sin saldo; mostrar una captura de pantalla vieja del QR | El aliado ve «¡Canje registrado!» y su nuevo saldo; las que no le alcanzan aparecen bloqueadas; la captura vieja responde «QR reemplazado» o «vencido» | ✅ Verificado con celulares Android e iPhone (1 oct) |
@@ -1370,6 +1396,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 16 | ~~Un referido ya cerrado al que solo le cambian el contacto no se volvía a revisar.~~ | Resuelto (6 oct 2026): además de la revisión horaria de los referidos en curso, una vez al día (2 a. m., hora de Bogotá) se revisan también los cerrados, así una etiqueta de «fraude» o un retroceso de Status puesto después del cierre se detecta en máximo un día (§5.3). |
 | 17 | Key de Resend para el correo de confirmación de los referidos (MEDDPICC). | Pendiente: crear en Resend una key con permiso solo de envío para Preview y otra para Production, y guardarlas en Vercel como `RESEND_API_KEY` (§10.2, paso 4). Mientras no exista, los correos quedan en «Correos no enviados» del panel. Mencionar el MEDDPICC y la bienvenida en los Términos o en la política de beneficios. |
 | 18 | Aviso a n8n de los referidos perfectos e imperfectos. | Flujo de imperfectos listo en n8n y sus variables en Vercel Production (oct 2026). Pendiente: lo mismo para el flujo de perfectos (`N8N_PERFECTOS_URL`, `N8N_PERFECTOS_TOKEN`; pasos en §5.2) y, si se quiere probar en Preview, flujos de prueba con sus variables. Mientras falten, esos avisos quedan en «Avisos a n8n no enviados». La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n (encargado del tratamiento). |
+| 19 | Catálogo de la Academy en producción. | Al desplegar, aplicar en orden las migraciones `academy_catalogo` y `academy_contenido` (esta última es grande: se pega en el *SQL Editor*). Sin la segunda, la Academy se ve vacía. Pendiente: definir las masterclasses en vivo (se ocultaron) y si las rutas por tipo de aliado también se vuelven editables. |
 
 ---
 

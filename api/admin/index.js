@@ -12,6 +12,8 @@
 // Imagen de las recompensas (oct 2026): `subir_imagen_recompensa` da una URL firmada de un solo uso en el bucket público
 // `recompensas` y `guardar_recompensa` acepta `imagen_path`; si la imagen cambió, se borra la anterior del bucket.
 // MEDDPICC (§7.3): `otorgar_meddpicc` y `reintentar_correo`. Aviso a n8n de los referidos (§7.4): `reintentar_aviso_n8n`.
+// Academy (§4.9): `guardar_curso`, `guardar_certificacion`, `guardar_herramienta` y `subir_archivo_herramienta` (URL firmada
+// de un solo uso en el bucket público `academy`; si el archivo de una herramienta cambió, se borra el anterior).
 
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { randomUUID } from 'node:crypto';
@@ -26,6 +28,7 @@ const CODIGO = /^[A-Za-z0-9]{6,20}$/;
 const ERRORES = {
   no_autorizado: 403, no_permitido: 403, aliado_inexistente: 404, evento_inexistente: 404, conflicto_inexistente: 404,
   canje_inexistente: 404, recompensa_inexistente: 404, operador_inexistente: 404, empresa_inexistente: 404, estado_invalido: 409, dato_invalido: 422,
+  curso_inexistente: 404, certificacion_inexistente: 404, herramienta_inexistente: 404,
   evento_incompleto: 422
 };
 
@@ -54,6 +57,12 @@ const recompensa = (c) => {
   const d = c.datos && typeof c.datos === 'object' ? c.datos : {};
   return Object.fromEntries(CAMPOS_RECOMPENSA.filter((k) => d[k] !== undefined).map((k) => [k, d[k]]));
 };
+// Datos de un curso, certificación o herramienta de la Academy: la base valida cada campo (admin_guardar_*).
+const objeto = (v) => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new ErrorHttp(400, 'Faltan los datos.');
+  if (JSON.stringify(v).length > 200000) throw new ErrorHttp(413, 'El contenido es demasiado largo.');
+  return v;
+};
 const entero = (v) => {
   const n = Number(v);
   if (!Number.isInteger(n)) throw new ErrorHttp(422, 'Los puntos deben ser un número entero.');
@@ -81,6 +90,8 @@ const ACCIONES = {
   guardar_recompensa: ['admin_guardar_recompensa', (c, a) => ({
     p_admin: a, p_recompensa: c.recompensa_id ? uuid(c.recompensa_id, 'la recompensa') : null, p_datos: recompensa(c)
   })],
+  guardar_curso: ['admin_guardar_curso', (c, a) => ({ p_admin: a, p_datos: objeto(c.datos) })],
+  guardar_certificacion: ['admin_guardar_certificacion', (c, a) => ({ p_admin: a, p_datos: objeto(c.datos) })],
   otorgar_meddpicc: ['admin_otorgar_meddpicc', (c, a) => ({ p_admin: a, p_empresa: uuid(c.empresa_id, 'el referido'), p_nota: texto(c.nota) || null })],
   estado_operador: ['admin_estado_operador', (c, a) => ({
     p_admin: a, p_operador: uuid(c.operador_id, 'el operador'), p_activo: c.activo === true, p_motivo: texto(c.motivo) || null
@@ -139,6 +150,34 @@ async function subirImagenRecompensa(supabase, cuerpo) {
   const { data, error } = await supabase.storage.from('recompensas').createSignedUploadUrl(ruta);
   if (error || !data) throw new ErrorHttp(500, 'No pudimos preparar la subida de la imagen. Intenta de nuevo.');
   return { ruta, token: data.token };
+}
+
+// Archivo de una herramienta de la Academy (PDF, Excel, Word o PowerPoint, máx. 10 MB). El nombre lo pone el servidor.
+export const TIPOS_ARCHIVO = {
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx'
+};
+export const MAX_ARCHIVO = 10 * 1024 * 1024;
+async function subirArchivoHerramienta(supabase, cuerpo) {
+  const ext = TIPOS_ARCHIVO[String(cuerpo.tipo || '').toLowerCase()];
+  if (!ext) throw new ErrorHttp(422, 'El archivo debe ser PDF, Excel (.xlsx), Word (.docx) o PowerPoint (.pptx).');
+  const tamano = Number(cuerpo.tamano);
+  if (!Number.isFinite(tamano) || tamano <= 0 || tamano > MAX_ARCHIVO) throw new ErrorHttp(422, 'El archivo debe pesar máximo 10 MB.');
+  const ruta = `herramientas/${randomUUID()}.${ext}`;
+  const { data, error } = await supabase.storage.from('academy').createSignedUploadUrl(ruta);
+  if (error || !data) throw new ErrorHttp(500, 'No pudimos preparar la subida del archivo. Intenta de nuevo.');
+  return { ruta, token: data.token };
+}
+
+async function guardarHerramienta(supabase, cuerpo, adminId) {
+  const { data, error } = await supabase.rpc('admin_guardar_herramienta', { p_admin: adminId, p_datos: objeto(cuerpo.datos) });
+  if (error) throw errorDeAdmin(error.message) || new Error('admin_guardar_herramienta falló');
+  if (data && data.archivo_anterior) {
+    try { await supabase.storage.from('academy').remove([data.archivo_anterior]); } catch { /* queda huérfano */ }
+  }
+  return data;
 }
 
 // Guarda la recompensa y, si su imagen cambió, borra la anterior del bucket (mejor esfuerzo: un archivo huérfano no
@@ -206,6 +245,8 @@ export default async function handler(req, res, supabase = null, inyectado = {})
     if (cuerpo.accion === 'archivo_evento') return res.status(200).json(await archivoEvento(supabase, cuerpo));
     if (cuerpo.accion === 'invitar_operador') return res.status(200).json(await invitarOperador(supabase, cuerpo, admin.id, req));
     if (cuerpo.accion === 'eliminar_operador') return res.status(200).json(await eliminarOperador(supabase, cuerpo, admin.id));
+    if (cuerpo.accion === 'subir_archivo_herramienta') return res.status(200).json(await subirArchivoHerramienta(supabase, cuerpo));
+    if (cuerpo.accion === 'guardar_herramienta') return res.status(200).json(await guardarHerramienta(supabase, cuerpo, admin.id));
     if (cuerpo.accion === 'subir_imagen_recompensa') return res.status(200).json(await subirImagenRecompensa(supabase, cuerpo));
     if (cuerpo.accion === 'reintentar_correo') {
       return res.status(200).json(await reintentarCorreo(supabase, cuerpo, admin.id, inyectado.entorno || process.env, inyectado.fetch || fetch));

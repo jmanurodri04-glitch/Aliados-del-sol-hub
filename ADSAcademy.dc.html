@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+<script src="./academy-data.js"></script>
+<script src="./academy-tools.js"></script>
+<style>
+  @keyframes adsShimmer { 0% { background-position:-480px 0 } 100% { background-position:480px 0 } }
+  @keyframes adsRise { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:none } }
+  @keyframes adsPop { 0% { opacity:0; transform:scale(.92) } 100% { opacity:1; transform:none } }
+  @keyframes adsFloat { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-4px) } }
+  .ads-rail::-webkit-scrollbar { display:none }
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="position:relative;background:var(--bg,#07070A);font-family:'Titillium Web',system-ui,sans-serif;color:var(--fg,#F2F0EC);-webkit-font-smoothing:antialiased">
+
+  <nav style="position:relative;z-index:20;display:flex;align-items:center;gap:clamp(14px,2.4vw,28px);padding:14px 0 0;border-bottom:1px solid var(--w-07,rgba(255,255,255,.07));overflow-x:auto;scrollbar-width:none">
+    <button onClick="{{ goHome }}" style="display:flex;align-items:baseline;gap:8px;flex:none;padding:0 0 12px;border:none;background:transparent;cursor:pointer;color:var(--fg,#F2F0EC)">
+      <b style="font-size:15px;font-weight:700;letter-spacing:.14em">ADS</b><span style="font-size:15px;font-weight:300;letter-spacing:.14em;color:var(--mut,#9A968F)">ACADEMY</span>
+    </button>
+    <span style="flex:none;width:1px;height:16px;margin-bottom:12px;background:var(--w-10,rgba(255,255,255,.1))"></span>
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+      <button onClick="{{ t.go }}" style="position:relative;flex:none;padding:0 0 12px;border:none;background:transparent;color:{{ t.color }};font-size:14px;font-weight:600;cursor:pointer;transition:color 160ms ease" style-hover="color:var(--fg,#F2F0EC)">{{ t.label }}<span style="position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:2px;background:{{ t.bar }};transition:background 200ms ease"></span></button>
+    </sc-for>
+    <span style="flex:1"></span>
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{ goProfile }}" style="display:flex;align-items:center;gap:8px;flex:none;margin-bottom:10px;padding:5px 12px 5px 6px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:99px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap">
+        <span style="display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--y,#FFCA05) {{ xpDeg }},var(--w-10,rgba(255,255,255,.1)) 0)"><span style="display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--bg,#07070A);font-size:9px;font-weight:700">{{ xpLevelN }}</span></span>
+        {{ xpLabel }}
+      </button>
+    </sc-if>
+  </nav>
+
+  <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:22px;padding:40px 0">
+      <div style="height:220px;border-radius:20px;background:linear-gradient(90deg,var(--w-03,rgba(255,255,255,.03)) 0,var(--w-07,rgba(255,255,255,.07)) 40%,var(--w-03,rgba(255,255,255,.03)) 80%);background-size:960px 100%;animation:adsShimmer 1.4s linear infinite"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
+        <sc-for list="{{ skel }}" as="k" hint-placeholder-count="4">
+          <div style="height:250px;border-radius:16px;background:linear-gradient(90deg,var(--w-03,rgba(255,255,255,.03)) 0,var(--w-07,rgba(255,255,255,.07)) 40%,var(--w-03,rgba(255,255,255,.03)) 80%);background-size:960px 100%;animation:adsShimmer 1.4s linear infinite"></div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="ADS Academy · Inicio" style="display:flex;flex-direction:column;gap:clamp(48px,7vh,80px);padding:clamp(32px,5vh,56px) 0 clamp(56px,8vh,96px)">
+
+    <section style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:clamp(24px,4vw,56px);align-items:center;padding:clamp(28px,4vw,52px);border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:24px;background:radial-gradient(90% 120% at 100% 0%,rgba(255,202,5,.07),transparent 55%),var(--w-015,rgba(255,255,255,.015));overflow:hidden;animation:adsRise 520ms cubic-bezier(.22,.61,.36,1) both">
+      <span style="position:absolute;inset:0;background-image:linear-gradient(var(--w-03,rgba(255,255,255,.03)) 1px,transparent 1px),linear-gradient(90deg,var(--w-03,rgba(255,255,255,.03)) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(70% 90% at 80% 20%,#000,transparent);mask-image:radial-gradient(70% 90% at 80% 20%,#000,transparent);pointer-events:none"></span>
+      <div style="position:relative;display:flex;flex-direction:column;gap:18px;min-width:0">
+        <span style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b style="font-size:12px;font-weight:700;letter-spacing:.28em;color:var(--y,#FFCA05)">ADS ACADEMY</b><span style="font-size:12px;letter-spacing:.16em;color:var(--mut3,#7C7873)">Aprende. Conecta. Crece.</span></span>
+        <h1 style="margin:0;font-size:clamp(34px,5vw,60px);line-height:1.02;font-weight:700;letter-spacing:-.04em;text-wrap:balance">Conocimiento para hacer mejores negocios.</h1>
+        <p style="margin:0;max-width:52ch;font-size:clamp(15px,1.3vw,17.5px);line-height:1.55;color:var(--mut,#9A968F);text-wrap:pretty">Aprende habilidades prácticas, descubre nuevas herramientas y fortalece tu capacidad para generar oportunidades.</p>
+        <div style="position:relative;max-width:560px">
+          <label style="display:flex;align-items:center;gap:12px;height:58px;padding:0 18px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:14px;background:var(--bg2,#0A0A0D);box-shadow:0 20px 50px -30px rgba(0,0,0,.7);transition:border-color 160ms ease" style-focus="border-color:rgba(255,202,5,.5)">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="flex:none;color:var(--mut3,#7C7873)"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14M21 21l-4.3-4.3"></path></svg>
+            <input value="{{ q }}" onChange="{{ onQ }}" onKeyDown="{{ onQKey }}" placeholder="Buscar cursos, herramientas o temas…" aria-label="Buscar en ADS Academy" style="flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;color:var(--fg,#F2F0EC);font-size:16px">
+            <span style="flex:none;padding:3px 8px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:6px;font-size:11px;color:var(--mut4,#6B6762)">Enter</span>
+          </label>
+          <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:0;right:0;top:66px;z-index:10;display:flex;flex-direction:column;padding:8px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:14px;background:var(--b-98,rgba(10,10,13,.98));box-shadow:0 30px 70px -30px rgba(0,0,0,.8);animation:adsRise 200ms ease both">
+              <sc-for list="{{ results }}" as="r" hint-placeholder-count="4">
+                <button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:none;border-radius:10px;background:transparent;color:var(--fg,#F2F0EC);text-align:left;cursor:pointer" style-hover="background:var(--w-05,rgba(255,255,255,.05))">
+                  <span style="display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:9px;background:var(--w-04,rgba(255,255,255,.04))"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="{{ r.tone }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></span>
+                  <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><b style="font-size:14px;font-weight:600;line-height:1.3">{{ r.title }}</b><span style="font-size:12px;color:var(--mut3,#7C7873)">{{ r.sub }}</span></span>
+                </button>
+              </sc-for>
+              <button onClick="{{ seeAll }}" style="margin-top:4px;padding:10px 12px;border:none;border-top:1px solid var(--w-07,rgba(255,255,255,.07));background:transparent;color:var(--y,#FFCA05);font-size:13px;font-weight:600;text-align:left;cursor:pointer">Ver {{ resultsCount }} en el catálogo →</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:0;right:0;top:66px;z-index:10;display:flex;flex-direction:column;gap:4px;padding:18px 20px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:14px;background:var(--b-98,rgba(10,10,13,.98))">
+              <b style="font-size:14.5px;font-weight:600">Aún no tenemos contenido sobre ese tema.</b>
+              <span style="font-size:13px;color:var(--mut,#9A968F)">Prueba con “IA”, “networking”, “ROI” o “factura de energía”.</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button onClick="{{ goExplore }}" style="padding:13px 22px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15px;font-weight:700;cursor:pointer;transition:transform 160ms ease" style-hover="transform:translateY(-1px)">Explorar Academia</button>
+          <button onClick="{{ goContinue }}" style="padding:12px 20px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:11px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:14.5px;font-weight:600;cursor:pointer;white-space:nowrap">{{ contLabel }}</button>
+        </div>
+      </div>
+      <div style="position:relative;display:flex;flex-direction:column;gap:16px;justify-self:stretch;max-width:420px;width:100%;margin-left:auto;padding:24px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:var(--b-72,rgba(7,7,10,.72));backdrop-filter:blur(8px)">
+        <div style="display:flex;align-items:center;gap:18px">
+          <span style="display:grid;place-items:center;flex:none;width:86px;height:86px;border-radius:50%;background:conic-gradient(#FFCA05,#F37920 {{ xpDeg }},var(--w-08,rgba(255,255,255,.08)) 0);transition:background 600ms ease"><span style="display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:var(--bg,#07070A)"><span style="display:flex;flex-direction:column;align-items:center;line-height:1"><b style="font-size:26px;font-weight:700">{{ xpLevelN }}</b><span style="font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut3,#7C7873)">Nivel</span></span></span></span>
+          <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">XP Academia</span>
+            <b style="font-size:24px;font-weight:700;letter-spacing:-.02em">{{ xpLabel }}</b>
+            <span style="font-size:13px;color:var(--mut,#9A968F)">{{ xpLevelName }} · {{ xpNext }}</span>
+          </span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:14px;border-top:1px solid var(--w-07,rgba(255,255,255,.07))">
+          <span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:20px;font-weight:700">{{ doneCount }}</b><span style="font-size:12px;color:var(--mut3,#7C7873)">cursos completados</span></span>
+          <span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:20px;font-weight:700">{{ pathPct }}</b><span style="font-size:12px;color:var(--mut3,#7C7873)">de tu ruta</span></span>
+        </div>
+        <span style="font-size:12px;line-height:1.45;color:var(--mut4,#6B6762)">El XP reconoce tu aprendizaje. Es independiente de tus Puntos Sol.</span>
+        <sc-if value="{{ guest }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ goLogin }}" style="padding:11px 16px;border:1px solid rgba(255,202,5,.35);border-radius:10px;background:rgba(255,202,5,.06);color:var(--y,#FFCA05);font-size:13.5px;font-weight:600;cursor:pointer">Inicia sesión para guardar tu progreso</button>
+        </sc-if>
+      </div>
+    </section>
+
+    <sc-if value="{{ guest }}" hint-placeholder-val="{{ false }}">
+    <section style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px 28px;padding:clamp(18px,2.4vw,26px) clamp(18px,2.6vw,30px);border:1px solid rgba(255,202,5,.22);border-radius:20px;background:linear-gradient(120deg,rgba(255,202,5,.07),transparent 65%)">
+      <span style="display:flex;flex-direction:column;gap:6px;flex:1 1 340px;min-width:0">
+        <span style="font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--y,#FFCA05)">Versión abierta</span>
+        <b style="font-size:clamp(18px,2vw,22px);font-weight:700;letter-spacing:-.02em;line-height:1.25">Explora {{ freeCount }} contenidos gratuitos. Los aliados registrados acceden a {{ totalCount }}.</b>
+        <span style="font-size:14px;line-height:1.5;color:var(--mut,#9A968F)">Lo esencial de cada escuela está abierto. Rutas completas, herramientas y certificaciones son exclusivas para aliados.</span>
+      </span>
+      <span style="display:flex;gap:10px;flex-wrap:wrap">
+        <button onClick="{{ goJoin }}" style="padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;cursor:pointer">Hazte aliado</button>
+        <button onClick="{{ goLogin }}" style="padding:11px 18px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:11px;background:transparent;color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer">Iniciar sesión</button>
+      </span>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ hasCont }}" hint-placeholder-val="{{ true }}">
+    <section style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Continúa aprendiendo</h2>
+      <button onClick="{{ cont.open }}" style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr) auto;gap:clamp(16px,2.6vw,32px);align-items:center;padding:14px clamp(14px,2vw,22px) 14px 14px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:var(--w-02,rgba(255,255,255,.02));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;transition:border-color 200ms ease,transform 220ms ease" style-hover="border-color:rgba(255,202,5,.35);transform:translateY(-2px)">
+        <span style="position:relative;display:block;height:124px;border-radius:14px;background:radial-gradient(120% 100% at 100% 0%,{{ cont.glow }},transparent 60%),var(--bg2,#0A0A0D);overflow:hidden">
+          <span style="position:absolute;inset:0;background-image:linear-gradient(var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px),linear-gradient(90deg,var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px);background-size:20px 20px"></span>
+          <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="{{ cont.tone }}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:18px;bottom:16px"><path d="{{ cont.icon }}"></path></svg>
+        </span>
+        <span style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <span style="font-size:12px;font-weight:600;letter-spacing:.08em;color:{{ cont.tone }}">{{ cont.school }}</span>
+          <b style="font-size:clamp(18px,2vw,22px);font-weight:700;letter-spacing:-.02em;line-height:1.2">{{ cont.title }}</b>
+          <span style="display:flex;align-items:center;gap:12px;max-width:420px"><span style="flex:1;height:4px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ cont.pctW }};border-radius:99px;background:linear-gradient(90deg,#FFCA05,#F37920)"></span></span><b style="font-size:13px;color:var(--y,#FFCA05)">{{ cont.pct }}</b></span>
+          <span style="font-size:13px;color:var(--mut,#9A968F)">{{ cont.stepsLabel }} · Siguiente: <b style="font-weight:600;color:var(--t2,#C9C5BE)">{{ cont.next }}</b></span>
+        </span>
+        <span style="padding:11px 20px;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;white-space:nowrap">Continuar →</span>
+      </button>
+    </section>
+    </sc-if>
+
+    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:clamp(20px,3vw,40px);align-items:start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Tu ruta</h2>
+        <b style="font-size:clamp(26px,3vw,36px);font-weight:700;letter-spacing:-.03em;line-height:1.08">{{ pathName }}</b>
+        <p style="margin:0;font-size:15.5px;line-height:1.55;color:var(--mut,#9A968F);max-width:44ch">{{ pathDesc }}</p>
+        <div style="display:flex;align-items:center;gap:12px;max-width:360px"><span style="flex:1;height:4px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ pathPctW }};border-radius:99px;background:linear-gradient(90deg,#FFCA05,#F37920);transition:width 500ms ease"></span></span><span style="font-size:13px;color:var(--mut,#9A968F);white-space:nowrap">{{ pathMeta }}</span></div>
+        <span style="font-size:13px;color:var(--mut3,#7C7873)">{{ pathMin }} en total · Certificación: <b style="font-weight:600;color:var(--t2,#C9C5BE)">{{ pathCert }}</b></span>
+        <div style="display:flex;flex-direction:column;gap:8px;padding-top:10px">
+          <span style="font-size:12px;color:var(--mut4,#6B6762)">Explora la ruta de otros aliados</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;padding:4px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:99px;align-self:flex-start">
+            <sc-for list="{{ allyOpts }}" as="a" hint-placeholder-count="3">
+              <button onClick="{{ a.go }}" style="padding:6px 12px;border:none;border-radius:99px;background:{{ a.bg }};color:{{ a.color }};font-size:12.5px;font-weight:600;cursor:pointer;transition:background 200ms ease,color 200ms ease">{{ a.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ pathItems }}" as="p" hint-placeholder-count="6">
+          <button onClick="{{ p.open }}" style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border:1px solid {{ p.border }};border-radius:14px;background:{{ p.bg }};color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;transition:border-color 180ms ease,transform 200ms ease" style-hover="border-color:rgba(255,202,5,.35);transform:translateX(3px)">
+            <span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1.5px solid {{ p.dotBorder }};background:{{ p.dotBg }};color:{{ p.dotColor }};font-size:11.5px;font-weight:700">{{ p.mark }}</span>
+            <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:15px;font-weight:600;line-height:1.3">{{ p.title }}</b><span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ p.school }} · {{ p.meta }}</span></span>
+            <span style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--y,#FFCA05)">{{ p.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <span style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Recomendado para ti</h2><b style="font-size:clamp(22px,2.4vw,28px);font-weight:700;letter-spacing:-.025em">Elegido para {{ allyName }}</b></span>
+        <span style="display:flex;gap:8px">
+          <button onClick="{{ recL }}" aria-label="Anterior" style="width:40px;height:40px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:50%;background:transparent;color:var(--fg,#F2F0EC);font-size:16px;cursor:pointer" style-hover="background:var(--w-05,rgba(255,255,255,.05))">←</button>
+          <button onClick="{{ recR }}" aria-label="Siguiente" style="width:40px;height:40px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:50%;background:transparent;color:var(--fg,#F2F0EC);font-size:16px;cursor:pointer" style-hover="background:var(--w-05,rgba(255,255,255,.05))">→</button>
+        </span>
+      </div>
+      <div class="ads-rail" ref="{{ railRec }}" style="display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:4px 2px 10px">
+        <sc-for list="{{ rec }}" as="c" hint-placeholder-count="4">
+          <button onClick="{{ c.open }}" style="flex:0 0 clamp(260px,24vw,300px);scroll-snap-align:start;display:flex;flex-direction:column;padding:0;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:18px;background:var(--w-02,rgba(255,255,255,.02));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;overflow:hidden;transition:transform 240ms cubic-bezier(.22,.61,.36,1),border-color 200ms ease" style-hover="transform:translateY(-4px);border-color:{{ c.ring }}">
+            <span style="position:relative;display:block;height:132px;background:radial-gradient(120% 100% at 100% 0%,{{ c.glow }},transparent 62%),var(--bg2,#0A0A0D);border-bottom:1px solid var(--w-06,rgba(255,255,255,.06))">
+              <span style="position:absolute;inset:0;background-image:linear-gradient(var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px),linear-gradient(90deg,var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px);background-size:22px 22px;-webkit-mask-image:linear-gradient(200deg,#000 20%,transparent 80%);mask-image:linear-gradient(200deg,#000 20%,transparent 80%)"></span>
+              <span style="position:absolute;left:14px;top:14px;display:flex;gap:6px"><span style="padding:3px 9px;border-radius:99px;background:var(--b-72,rgba(7,7,10,.72));border:1px solid var(--w-10,rgba(255,255,255,.1));font-size:11px;font-weight:600;color:var(--t2,#C9C5BE)">{{ c.fmt }}</span><sc-if value="{{ c.isNew }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 9px;border-radius:99px;background:rgba(255,202,5,.14);font-size:11px;font-weight:700;color:var(--y,#FFCA05)">Nuevo</span></sc-if><sc-if value="{{ c.locked }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:var(--b-72,rgba(7,7,10,.72));border:1px solid rgba(255,202,5,.35);font-size:11px;font-weight:700;color:var(--y,#FFCA05)"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>Aliados</span></sc-if><sc-if value="{{ c.freeTag }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 9px;border-radius:99px;background:rgba(127,211,166,.12);border:1px solid rgba(127,211,166,.3);font-size:11px;font-weight:700;color:var(--g2,#7FD3A6)">Gratis</span></sc-if></span>
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="{{ c.tone }}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:18px;bottom:16px"><path d="{{ c.icon }}"></path></svg>
+            </span>
+            <span style="display:flex;flex-direction:column;gap:8px;flex:1;padding:16px 18px 18px">
+              <span style="font-size:11.5px;font-weight:600;letter-spacing:.06em;color:{{ c.tone }}">{{ c.school }}</span>
+              <b style="font-size:16.5px;font-weight:600;line-height:1.28;letter-spacing:-.01em;text-wrap:pretty">{{ c.title }}</b>
+              <span style="font-size:13px;line-height:1.45;color:var(--mut,#9A968F);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ c.desc }}</span>
+              <span style="display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:8px;font-size:12.5px;color:var(--mut3,#7C7873)"><span>{{ c.dur }}</span><span>·</span><span>{{ c.level }}</span><span style="margin-left:auto;font-weight:700;color:var(--y,#FFCA05)">{{ c.xp }}</span></span>
+              <sc-if value="{{ c.hasProg }}" hint-placeholder-val="{{ false }}"><span style="display:block;height:3px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ c.pctW }};background:linear-gradient(90deg,#FFCA05,#F37920)"></span></span></sc-if>
+              <span style="display:flex;align-items:center;justify-content:center;padding:10px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;font-size:13.5px;font-weight:600">{{ c.cta }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <span style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Aprende en 5 minutos</h2><b style="font-size:clamp(22px,2.4vw,28px);font-weight:700;letter-spacing:-.025em">Una idea útil entre reunión y reunión.</b></span>
+        <span style="display:flex;gap:8px">
+          <button onClick="{{ quickL }}" aria-label="Anterior" style="width:40px;height:40px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:50%;background:transparent;color:var(--fg,#F2F0EC);font-size:16px;cursor:pointer" style-hover="background:var(--w-05,rgba(255,255,255,.05))">←</button>
+          <button onClick="{{ quickR }}" aria-label="Siguiente" style="width:40px;height:40px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:50%;background:transparent;color:var(--fg,#F2F0EC);font-size:16px;cursor:pointer" style-hover="background:var(--w-05,rgba(255,255,255,.05))">→</button>
+        </span>
+      </div>
+      <div class="ads-rail" ref="{{ railQuick }}" style="display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:4px 2px 10px">
+        <sc-for list="{{ quick }}" as="c" hint-placeholder-count="5">
+          <button onClick="{{ c.open }}" style="flex:0 0 200px;scroll-snap-align:start;display:flex;flex-direction:column;gap:12px;min-height:168px;padding:16px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:linear-gradient(180deg,{{ c.soft }},transparent 70%),var(--w-015,rgba(255,255,255,.015));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;transition:transform 220ms cubic-bezier(.22,.61,.36,1),border-color 200ms ease" style-hover="transform:translateY(-3px) rotate(-.4deg);border-color:{{ c.ring }}">
+            <span style="display:flex;align-items:center;justify-content:space-between"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="{{ c.tone }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg><span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--t2,#C9C5BE)"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M12 7v5l3 2"></path></svg>{{ c.dur }}</span></span>
+            <b style="font-size:14.5px;font-weight:600;line-height:1.3;text-wrap:pretty">{{ c.title }}</b>
+            <span style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;font-size:11.5px"><span style="display:flex;align-items:center;gap:6px;color:var(--mut3,#7C7873)">{{ c.school }}<sc-if value="{{ c.locked }}" hint-placeholder-val="{{ false }}"><span style="display:flex;color:var(--y,#FFCA05)" title="Exclusivo para aliados"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg></span></sc-if></span><sc-if value="{{ c.done }}" hint-placeholder-val="{{ false }}"><span style="color:var(--y,#FFCA05);font-weight:700">✓</span></sc-if><sc-if value="{{ c.notStarted }}" hint-placeholder-val="{{ true }}"><span style="color:var(--y,#FFCA05);font-weight:700">{{ c.xp }}</span></sc-if></span>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:clamp(24px,4vw,48px);padding:clamp(26px,4vw,48px);border:1px solid rgba(255,202,5,.18);border-radius:24px;background:radial-gradient(70% 90% at 0% 0%,rgba(255,202,5,.09),transparent 60%),var(--w-015,rgba(255,255,255,.015));overflow:hidden">
+      <div style="display:flex;flex-direction:column;gap:16px;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <span style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:rgba(255,202,5,.12);animation:adsFloat 4s ease-in-out infinite"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FFCA05" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0zM20 3v4M22 5h-4"></path></svg></span><h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--y,#FFCA05)">IA &amp; Automatización</h2></span>
+          <b style="font-size:clamp(28px,3.4vw,42px);font-weight:700;letter-spacing:-.035em;line-height:1.05;text-wrap:balance">Trabaja mejor con inteligencia artificial.</b>
+          <p style="margin:0;font-size:15.5px;line-height:1.55;color:var(--mut,#9A968F);max-width:44ch">Ocho contenidos para pasar de curiosidad a práctica: prompting, reuniones, análisis, asistentes y automatizaciones, con uso responsable.</p>
+        </div>
+        <button onClick="{{ goAi }}" style="align-self:flex-start;padding:13px 22px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15px;font-weight:700;cursor:pointer;transition:transform 160ms ease" style-hover="transform:translateY(-1px)">Explorar IA &amp; Automatización</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        <sc-for list="{{ ai }}" as="c" hint-placeholder-count="8">
+          <button onClick="{{ c.open }}" style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:14px;background:var(--b-50,rgba(7,7,10,.5));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;transition:border-color 180ms ease,background 180ms ease" style-hover="border-color:rgba(255,202,5,.4);background:rgba(255,202,5,.05)">
+            <b style="font-size:14.5px;font-weight:600;line-height:1.3">{{ c.title }}</b>
+            <span style="display:flex;gap:8px;font-size:12px;color:var(--mut3,#7C7873)"><span>{{ c.fmt }}</span><span>·</span><span>{{ c.dur }}</span><sc-if value="{{ c.locked }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:4px;margin-left:auto;color:var(--y,#FFCA05);font-weight:700"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>Aliados</span></sc-if><sc-if value="{{ c.freeTag }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;color:var(--g2,#7FD3A6);font-weight:700">Gratis</span></sc-if><sc-if value="{{ c.done }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;color:var(--y,#FFCA05);font-weight:700">✓</span></sc-if></span>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <section ref="{{ schoolsRef }}" style="display:flex;flex-direction:column;gap:18px">
+      <span style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Explora las escuelas</h2><b style="font-size:clamp(22px,2.4vw,28px);font-weight:700;letter-spacing:-.025em">Siete escuelas. Un mismo objetivo: hacer mejores negocios.</b></span>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px">
+        <sc-for list="{{ schools }}" as="sc" hint-placeholder-count="7">
+          <button onClick="{{ sc.open }}" style="position:relative;display:flex;flex-direction:column;gap:14px;min-height:230px;padding:22px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:18px;background:var(--w-015,rgba(255,255,255,.015));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;overflow:hidden;transition:border-color 220ms ease,transform 240ms cubic-bezier(.22,.61,.36,1)" style-hover="border-color:{{ sc.ring }};transform:translateY(-3px)">
+            <span style="position:absolute;right:-50px;top:-50px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,{{ sc.glow }},transparent 70%)"></span>
+            <span style="position:absolute;right:18px;top:18px;width:74px;height:74px;border-radius:50%;border:1px dashed {{ sc.ring }}"></span>
+            <span style="position:absolute;right:36px;top:36px;width:38px;height:38px;border-radius:50%;border:1px solid {{ sc.ring }}"></span>
+            <span style="position:relative;display:flex;align-items:center;justify-content:space-between"><span style="display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--w-05,rgba(255,255,255,.05));border:1px solid var(--w-08,rgba(255,255,255,.08))"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="{{ sc.tone }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ sc.icon }}"></path></svg></span></span>
+            <span style="position:relative;font-size:11.5px;font-weight:700;letter-spacing:.16em;color:var(--mut4,#6B6762)">ESCUELA {{ sc.n }}</span>
+            <b style="position:relative;font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.15">{{ sc.name }}</b>
+            <span style="position:relative;font-size:13px;line-height:1.5;color:var(--mut,#9A968F)">{{ sc.desc }}</span>
+            <span style="position:relative;display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:6px;font-size:12.5px"><span style="color:var(--mut3,#7C7873)">{{ sc.count }}</span><span style="font-weight:600;color:var(--y,#FFCA05)">Explorar →</span></span>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:18px">
+      <span style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">ADS Tools</h2><b style="font-size:clamp(22px,2.4vw,28px);font-weight:700;letter-spacing:-.025em">Lo que aprendes, listo para usar.</b></span>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:1px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:18px;overflow:hidden;background:var(--w-07,rgba(255,255,255,.07))">
+        <sc-for list="{{ tools }}" as="t" hint-placeholder-count="8">
+          <div style="display:flex;flex-direction:column;gap:12px;padding:22px;background:var(--bg,#07070A);transition:background 200ms ease" style-hover="background:var(--bg2,#0A0A0D)">
+            <span style="display:flex;align-items:center;justify-content:space-between"><span style="display:grid;place-items:center;width:40px;height:40px;border-radius:11px;border:1px solid var(--w-10,rgba(255,255,255,.1))"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--y,#FFCA05)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.icon }}"></path></svg></span><span style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mut4,#6B6762)">{{ t.cat }}</span></span>
+            <b style="font-size:16px;font-weight:600;line-height:1.25">{{ t.name }}</b>
+            <span style="font-size:13px;line-height:1.5;color:var(--mut,#9A968F)">{{ t.desc }}</span>
+            <button onClick="{{ t.act }}" style="align-self:flex-start;margin-top:auto;padding:0;border:none;background:transparent;color:var(--y,#FFCA05);font-size:13.5px;font-weight:600;cursor:pointer">{{ t.cta }} →</button>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="ADS Academy · Catálogo" style="display:flex;flex-direction:column;gap:22px;padding:clamp(28px,4vh,44px) 0 clamp(56px,8vh,96px);animation:adsRise 360ms cubic-bezier(.22,.61,.36,1) both">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap">
+      <span style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Catálogo</span><h1 style="margin:0;font-size:clamp(28px,3.6vw,42px);font-weight:700;letter-spacing:-.035em;line-height:1.05">Todo ADS Academy, abierto para ti.</h1></span>
+      <label style="display:flex;align-items:center;gap:10px;width:min(100%,380px);height:46px;padding:0 14px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:12px;background:var(--bg2,#0A0A0D)">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="flex:none;color:var(--mut3,#7C7873)"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14M21 21l-4.3-4.3"></path></svg>
+        <input value="{{ q }}" onChange="{{ onQ }}" placeholder="Buscar cursos, herramientas o temas…" aria-label="Buscar en el catálogo" style="flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;color:var(--fg,#F2F0EC);font-size:15px">
+        <sc-if value="{{ hasQ }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearQ }}" aria-label="Borrar búsqueda" style="border:none;background:transparent;color:var(--mut,#9A968F);font-size:16px;cursor:pointer">×</button></sc-if>
+      </label>
+    </div>
+    <div class="ads-rail" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">
+      <sc-for list="{{ fmts }}" as="x" hint-placeholder-count="7">
+        <button onClick="{{ x.go }}" style="flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:9px 16px;border:1px solid {{ x.border }};border-radius:12px;background:{{ x.bg }};color:{{ x.color }};cursor:pointer;transition:all 180ms ease"><b style="font-size:13.5px;font-weight:600">{{ x.name }}</b><sc-if value="{{ x.hasRange }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:{{ x.sub }}">{{ x.range }}</span></sc-if></button>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select value="{{ f.school }}" onChange="{{ onSchool }}" aria-label="Escuela" style="height:38px;padding:0 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:10px;background:var(--bg2,#0A0A0D);color:var(--fg,#F2F0EC);font-size:13px"><sc-for list="{{ schoolOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+      <select value="{{ f.level }}" onChange="{{ onLevel }}" aria-label="Nivel" style="height:38px;padding:0 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:10px;background:var(--bg2,#0A0A0D);color:var(--fg,#F2F0EC);font-size:13px"><sc-for list="{{ levelOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+      <select value="{{ f.dur }}" onChange="{{ onDur }}" aria-label="Duración" style="height:38px;padding:0 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:10px;background:var(--bg2,#0A0A0D);color:var(--fg,#F2F0EC);font-size:13px"><sc-for list="{{ durOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+      <select value="{{ f.ally }}" onChange="{{ onAlly }}" aria-label="Tipo de aliado" style="height:38px;padding:0 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:10px;background:var(--bg2,#0A0A0D);color:var(--fg,#F2F0EC);font-size:13px"><sc-for list="{{ allyOpts2 }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+      <select value="{{ f.access }}" onChange="{{ onAccess }}" aria-label="Acceso" style="height:38px;padding:0 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:10px;background:var(--bg2,#0A0A0D);color:var(--fg,#F2F0EC);font-size:13px"><sc-for list="{{ accessOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+      <span style="flex:1"></span>
+      <span style="font-size:13px;color:var(--mut3,#7C7873)">{{ catCount }}</span>
+      <select value="{{ f.sort }}" onChange="{{ onSort }}" aria-label="Ordenar" style="height:38px;padding:0 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:10px;background:var(--bg2,#0A0A0D);color:var(--fg,#F2F0EC);font-size:13px"><sc-for list="{{ sortOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></select>
+    </div>
+
+    <sc-if value="{{ hasCert }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 18px;border:1px solid rgba(255,202,5,.28);border-radius:14px;background:rgba(255,202,5,.06)">
+      <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--y,#FFCA05)">Certificación</span><b style="font-size:16px;font-weight:700">{{ certName }}</b><span style="font-size:13px;color:var(--mut,#9A968F)">{{ certMeta }}</span></span>
+      <button onClick="{{ certClear }}" style="padding:8px 14px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:transparent;color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">Ver todo el catálogo</button>
+    </div>
+    </sc-if>
+    <sc-if value="{{ catIsCourses }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:14px">
+      <sc-for list="{{ catList }}" as="c" hint-placeholder-count="8">
+        <button onClick="{{ c.open }}" style="display:flex;flex-direction:column;padding:0;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:18px;background:var(--w-02,rgba(255,255,255,.02));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;overflow:hidden;animation:adsRise 420ms cubic-bezier(.22,.61,.36,1) {{ c.delay }} both;transition:transform 240ms cubic-bezier(.22,.61,.36,1),border-color 200ms ease" style-hover="transform:translateY(-4px);border-color:{{ c.ring }}">
+          <span style="position:relative;display:block;height:112px;background:radial-gradient(120% 100% at 100% 0%,{{ c.glow }},transparent 62%),var(--bg2,#0A0A0D);border-bottom:1px solid var(--w-06,rgba(255,255,255,.06))">
+            <span style="position:absolute;inset:0;background-image:linear-gradient(var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px),linear-gradient(90deg,var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px);background-size:22px 22px;-webkit-mask-image:linear-gradient(200deg,#000 20%,transparent 80%);mask-image:linear-gradient(200deg,#000 20%,transparent 80%)"></span>
+            <span style="position:absolute;left:14px;top:14px;display:flex;gap:6px"><span style="padding:3px 9px;border-radius:99px;background:var(--b-72,rgba(7,7,10,.72));border:1px solid var(--w-10,rgba(255,255,255,.1));font-size:11px;font-weight:600;color:var(--t2,#C9C5BE)">{{ c.fmt }}</span><sc-if value="{{ c.isNew }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 9px;border-radius:99px;background:rgba(255,202,5,.14);font-size:11px;font-weight:700;color:var(--y,#FFCA05)">Nuevo</span></sc-if><sc-if value="{{ c.locked }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:var(--b-72,rgba(7,7,10,.72));border:1px solid rgba(255,202,5,.35);font-size:11px;font-weight:700;color:var(--y,#FFCA05)"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>Aliados</span></sc-if><sc-if value="{{ c.freeTag }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 9px;border-radius:99px;background:rgba(127,211,166,.12);border:1px solid rgba(127,211,166,.3);font-size:11px;font-weight:700;color:var(--g2,#7FD3A6)">Gratis</span></sc-if><sc-if value="{{ c.done }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 9px;border-radius:99px;background:var(--y,#FFCA05);font-size:11px;font-weight:700;color:#1A1200">✓ Completado</span></sc-if></span>
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="{{ c.tone }}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:16px;bottom:14px"><path d="{{ c.icon }}"></path></svg>
+          </span>
+          <span style="display:flex;flex-direction:column;gap:7px;flex:1;padding:15px 17px 17px">
+            <span style="font-size:11.5px;font-weight:600;letter-spacing:.06em;color:{{ c.tone }}">{{ c.school }}</span>
+            <b style="font-size:15.5px;font-weight:600;line-height:1.3;text-wrap:pretty">{{ c.title }}</b>
+            <span style="display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:6px;font-size:12.5px;color:var(--mut3,#7C7873)"><span>{{ c.dur }}</span><span>·</span><span>{{ c.level }}</span><span style="margin-left:auto;font-weight:700;color:var(--y,#FFCA05)">{{ c.xp }}</span></span>
+            <sc-if value="{{ c.hasProg }}" hint-placeholder-val="{{ false }}"><span style="display:block;height:3px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ c.pctW }};background:linear-gradient(90deg,#FFCA05,#F37920)"></span></span></sc-if>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ catEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:64px 20px;border:1px dashed var(--w-12,rgba(255,255,255,.12));border-radius:20px;text-align:center">
+        <span style="display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--w-04,rgba(255,255,255,.04))"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--mut,#9A968F)" stroke-width="1.6" stroke-linecap="round"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14M21 21l-4.3-4.3M8.5 11h5"></path></svg></span>
+        <b style="font-size:18px;font-weight:600">Nada coincide con estos filtros.</b>
+        <span style="max-width:40ch;font-size:14px;line-height:1.5;color:var(--mut,#9A968F)">Prueba con otra duración o escuela. Cada mes agregamos contenidos nuevos.</span>
+        <button onClick="{{ clearFilters }}" style="margin-top:6px;padding:10px 18px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Limpiar filtros</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ catIsTools }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px">
+        <sc-for list="{{ tools }}" as="t" hint-placeholder-count="8">
+          <div style="display:flex;flex-direction:column;gap:12px;padding:22px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:18px;background:var(--w-015,rgba(255,255,255,.015))">
+            <span style="display:flex;align-items:center;justify-content:space-between"><span style="display:grid;place-items:center;width:40px;height:40px;border-radius:11px;border:1px solid var(--w-10,rgba(255,255,255,.1))"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--y,#FFCA05)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ t.icon }}"></path></svg></span><span style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mut4,#6B6762)">{{ t.cat }}</span></span>
+            <b style="font-size:16px;font-weight:600">{{ t.name }}</b>
+            <span style="font-size:13px;line-height:1.5;color:var(--mut,#9A968F)">{{ t.desc }}</span>
+            <button onClick="{{ t.act }}" style="align-self:flex-start;margin-top:auto;padding:9px 16px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">{{ t.cta }}</button>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ catIsCerts }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px">
+        <sc-for list="{{ certs }}" as="ce" hint-placeholder-count="5">
+          <div style="position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 22px 20px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:var(--w-015,rgba(255,255,255,.015));overflow:hidden;animation:adsRise 420ms ease {{ ce.delay }} both">
+            <span style="position:relative;display:grid;place-items:center;width:84px;height:84px;border-radius:50%;background:conic-gradient({{ ce.tone }} {{ ce.deg }},var(--w-08,rgba(255,255,255,.08)) 0);box-shadow:{{ ce.glow }}">
+              <span style="display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 30% 25%,var(--w-10,rgba(255,255,255,.1)),transparent 60%),var(--bg2,#0A0A0D);border:1px solid var(--w-10,rgba(255,255,255,.1))">
+                <span style="display:flex;flex-direction:column;align-items:center;gap:2px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="{{ ce.tone }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ce.icon }}"></path></svg><b style="font-size:12px;font-weight:700;letter-spacing:.12em">{{ ce.mark }}</b></span>
+              </span>
+            </span>
+            <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:{{ ce.stColor }}">{{ ce.state }}</span>
+            <b style="font-size:18px;font-weight:700;letter-spacing:-.02em;line-height:1.15">{{ ce.name }}</b>
+            <span style="font-size:13px;line-height:1.5;color:var(--mut,#9A968F)">{{ ce.desc }}</span>
+            <span style="display:flex;align-items:center;gap:10px;width:100%;margin-top:auto"><span style="flex:1;height:3px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ ce.pct }};background:linear-gradient(90deg,#FFCA05,#F37920)"></span></span><span style="font-size:12px;color:var(--mut3,#7C7873);white-space:nowrap">{{ ce.progress }}</span></span>
+            <button onClick="{{ ce.act }}" style="padding:8px 14px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:12.5px;font-weight:600;cursor:pointer">{{ ce.cta }}</button>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSchool }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="ADS Academy · Escuela" style="display:flex;flex-direction:column;gap:clamp(28px,4vh,44px);padding:clamp(24px,4vh,40px) 0 clamp(56px,8vh,96px);animation:adsRise 360ms cubic-bezier(.22,.61,.36,1) both">
+    <button onClick="{{ goCatalog }}" style="align-self:flex-start;padding:0;border:none;background:transparent;color:var(--mut,#9A968F);font-size:13.5px;font-weight:600;cursor:pointer">← Catálogo</button>
+    <section style="position:relative;display:flex;flex-direction:column;gap:16px;padding:clamp(26px,4vw,48px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:24px;background:radial-gradient(70% 120% at 100% 0%,{{ sGlow }},transparent 60%),var(--w-015,rgba(255,255,255,.015));overflow:hidden">
+      <span style="position:absolute;right:clamp(20px,5vw,60px);top:50%;width:180px;height:180px;margin-top:-90px;border-radius:50%;border:1px dashed var(--w-12,rgba(255,255,255,.12))"></span>
+      <span style="position:absolute;right:clamp(60px,calc(5vw + 40px),100px);top:50%;display:grid;place-items:center;width:100px;height:100px;margin-top:-50px;border-radius:28px;background:var(--b-72,rgba(7,7,10,.72));border:1px solid var(--w-10,rgba(255,255,255,.1))"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="{{ sTone }}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="{{ sIcon }}"></path></svg></span>
+      <span style="position:relative;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Escuela</span>
+      <h1 style="position:relative;margin:0;max-width:16ch;font-size:clamp(30px,4.4vw,52px);font-weight:700;letter-spacing:-.04em;line-height:1.02">{{ sName }}</h1>
+      <p style="position:relative;margin:0;max-width:52ch;font-size:16px;line-height:1.55;color:var(--mut,#9A968F)">{{ sDesc }}</p>
+      <span style="position:relative;display:flex;gap:16px;font-size:13px;color:var(--mut3,#7C7873)"><span>{{ sCount }}</span><span>·</span><span>{{ sMin }}</span></span>
+    </section>
+
+    <sc-if value="{{ sIsEnergy }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ sLevels }}" as="lv" hint-placeholder-count="4">
+          <div style="display:flex;flex-wrap:wrap;gap:18px;padding:22px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:20px;background:var(--w-015,rgba(255,255,255,.015))">
+            <span style="flex:1 1 220px;max-width:280px;display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--o,#F9A51A)">{{ lv.n }}</span>
+              <b style="font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.15">{{ lv.name }}</b>
+              <span style="font-size:13px;color:var(--mut3,#7C7873)">{{ lv.count }}</span>
+              <span style="display:flex;align-items:center;gap:10px;max-width:220px"><span style="flex:1;height:3px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ lv.pctW }};background:linear-gradient(90deg,#FFCA05,#F37920)"></span></span><span style="font-size:12px;color:var(--mut,#9A968F)">{{ lv.pct }}</span></span>
+            </span>
+            <div style="flex:999 1 400px;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;min-width:0">
+              <sc-for list="{{ lv.items }}" as="c" hint-placeholder-count="6">
+                <button onClick="{{ c.open }}" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:12px;background:var(--w-02,rgba(255,255,255,.02));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;transition:border-color 180ms ease" style-hover="border-color:rgba(243,121,32,.5)">
+                  <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><b style="font-size:13.5px;font-weight:600;line-height:1.3">{{ c.title }}</b><span style="font-size:11.5px;color:var(--mut3,#7C7873)">{{ c.fmt }} · {{ c.dur }}</span></span>
+                  <sc-if value="{{ c.done }}" hint-placeholder-val="{{ false }}"><span style="color:var(--y,#FFCA05);font-weight:700">✓</span></sc-if><sc-if value="{{ c.locked }}" hint-placeholder-val="{{ false }}"><span style="display:flex;color:var(--y,#FFCA05)" title="Exclusivo para aliados"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg></span></sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ sHasGroups }}" hint-placeholder-val="{{ true }}">
+      <sc-for list="{{ sGroups }}" as="g" hint-placeholder-count="2">
+        <section style="display:flex;flex-direction:column;gap:14px">
+          <span style="display:flex;align-items:baseline;gap:12px"><b style="font-size:20px;font-weight:700;letter-spacing:-.02em">{{ g.name }}</b><span style="font-size:13px;color:var(--mut3,#7C7873)">{{ g.range }}</span></span>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px">
+            <sc-for list="{{ g.items }}" as="c" hint-placeholder-count="4">
+              <button onClick="{{ c.open }}" style="display:flex;flex-direction:column;gap:10px;padding:18px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:linear-gradient(180deg,{{ c.soft }},transparent 60%),var(--w-015,rgba(255,255,255,.015));color:var(--fg,#F2F0EC);text-align:left;cursor:pointer;animation:adsRise 400ms ease {{ c.delay }} both;transition:transform 220ms ease,border-color 200ms ease" style-hover="transform:translateY(-3px);border-color:{{ c.ring }}">
+                <span style="display:flex;align-items:center;justify-content:space-between"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="{{ c.tone }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg><sc-if value="{{ c.done }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;color:var(--y,#FFCA05)">✓ Completado</span></sc-if><span style="display:flex;gap:6px;align-items:center"><sc-if value="{{ c.isNew }}" hint-placeholder-val="{{ false }}"><span style="padding:2px 8px;border-radius:99px;background:rgba(255,202,5,.14);font-size:10.5px;font-weight:700;color:var(--y,#FFCA05)">Nuevo</span></sc-if><sc-if value="{{ c.locked }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:var(--b-72,rgba(7,7,10,.72));border:1px solid rgba(255,202,5,.35);font-size:11px;font-weight:700;color:var(--y,#FFCA05)"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>Aliados</span></sc-if><sc-if value="{{ c.freeTag }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 9px;border-radius:99px;background:rgba(127,211,166,.12);border:1px solid rgba(127,211,166,.3);font-size:11px;font-weight:700;color:var(--g2,#7FD3A6)">Gratis</span></sc-if></span></span>
+                <b style="font-size:15.5px;font-weight:600;line-height:1.3">{{ c.title }}</b>
+                <span style="font-size:13px;line-height:1.45;color:var(--mut,#9A968F)">{{ c.desc }}</span>
+                <span style="display:flex;align-items:center;gap:8px;margin-top:auto;font-size:12.5px;color:var(--mut3,#7C7873)"><span>{{ c.dur }}</span><span>·</span><span>{{ c.level }}</span><span style="margin-left:auto;font-weight:700;color:var(--y,#FFCA05)">{{ c.xp }}</span></span>
+                <sc-if value="{{ c.hasProg }}" hint-placeholder-val="{{ false }}"><span style="display:block;height:3px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ c.pctW }};background:linear-gradient(90deg,#FFCA05,#F37920)"></span></span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </section>
+      </sc-for>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:12px;padding-top:24px;border-top:1px solid var(--w-07,rgba(255,255,255,.07))">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">Otras escuelas</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <sc-for list="{{ sOthers }}" as="o" hint-placeholder-count="6">
+          <button onClick="{{ o.go }}" style="display:flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:99px;background:transparent;color:var(--t2,#C9C5BE);font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--w-05,rgba(255,255,255,.05))"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="{{ o.tone }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ o.icon }}"></path></svg>{{ o.name }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isCourse }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="ADS Academy · Curso" style="display:flex;flex-direction:column;gap:clamp(26px,4vh,40px);padding:clamp(22px,3.5vh,36px) 0 clamp(56px,8vh,96px);animation:adsRise 360ms cubic-bezier(.22,.61,.36,1) both">
+    <nav aria-label="Ruta de navegación" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px">
+      <sc-for list="{{ crumbs }}" as="b" hint-placeholder-count="4">
+        <button onClick="{{ b.go }}" style="padding:0;border:none;background:transparent;color:{{ b.color }};font-size:13px;font-weight:600;cursor:pointer;text-align:left" style-hover="color:var(--fg,#F2F0EC)">{{ b.label }}</button>
+        <sc-if value="{{ b.sep }}" hint-placeholder-val="{{ true }}"><span style="color:var(--mut5,#5A5651)">›</span></sc-if>
+      </sc-for>
+    </nav>
+
+    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:clamp(22px,4vw,48px);align-items:center">
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <span style="font-size:12px;font-weight:600;letter-spacing:.1em;color:{{ c.tone }}">{{ c.school }} · {{ c.fmt }}</span>
+        <h1 style="margin:0;font-size:clamp(28px,4vw,48px);font-weight:700;letter-spacing:-.035em;line-height:1.05;text-wrap:balance">{{ c.title }}</h1>
+        <p style="margin:0;max-width:56ch;font-size:16px;line-height:1.6;color:var(--mut,#9A968F);text-wrap:pretty">{{ c.desc }}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="padding:6px 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:99px;font-size:12.5px;color:var(--t2,#C9C5BE)">{{ c.level }}</span>
+          <span style="padding:6px 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:99px;font-size:12.5px;color:var(--t2,#C9C5BE)">{{ c.dur }}</span>
+          <span style="padding:6px 12px;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:99px;font-size:12.5px;color:var(--t2,#C9C5BE)">{{ c.lessons }}</span>
+          <span style="padding:6px 12px;border:1px solid rgba(255,202,5,.3);border-radius:99px;background:rgba(255,202,5,.06);font-size:12.5px;font-weight:700;color:var(--y,#FFCA05)">{{ c.xp }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:4px">
+          <button onClick="{{ startCourse }}" style="padding:13px 24px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15px;font-weight:700;cursor:pointer;transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ c.cta }}</button>
+          <span style="display:flex;align-items:center;gap:10px;min-width:180px"><span style="width:140px;height:4px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ c.pctW }};background:linear-gradient(90deg,#FFCA05,#F37920);transition:width 500ms ease"></span></span><span style="font-size:13px;color:var(--mut,#9A968F)">{{ c.pct }} completado</span></span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:clamp(20px,2.6vw,28px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:radial-gradient(90% 120% at 100% 0%,{{ c.glow }},transparent 60%),var(--w-015,rgba(255,255,255,.015))">
+        <span style="font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">Lo que aprenderás</span>
+        <sc-for list="{{ learn }}" as="l" hint-placeholder-count="4">
+          <span style="display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;font-size:14.5px;line-height:1.45;color:var(--t2,#C9C5BE)"><span style="display:grid;place-items:center;width:20px;height:20px;margin-top:1px;border-radius:50%;background:rgba(255,202,5,.14);color:var(--y,#FFCA05);font-size:11px;font-weight:700">✓</span>{{ l.t }}</span>
+        </sc-for>
+        <span style="padding-top:10px;border-top:1px solid var(--w-07,rgba(255,255,255,.07));font-size:12.5px;color:var(--mut3,#7C7873)">Por {{ c.author }}</span>
+      </div>
+    </section>
+
+    <sc-if value="{{ cLocked }}" hint-placeholder-val="{{ false }}">
+    <section ref="{{ lockRef }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:clamp(18px,3vw,32px);padding:clamp(22px,3vw,34px);border:1px solid rgba(255,202,5,.28);border-radius:22px;background:radial-gradient(80% 120% at 100% 0%,rgba(255,202,5,.1),transparent 60%),var(--w-015,rgba(255,255,255,.015))">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <span style="display:grid;place-items:center;width:46px;height:46px;border-radius:13px;background:rgba(255,202,5,.12);border:1px solid rgba(255,202,5,.3);color:var(--y,#FFCA05)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg></span>
+        <b style="font-size:clamp(22px,2.6vw,30px);font-weight:700;letter-spacing:-.025em;line-height:1.12">Contenido exclusivo para aliados registrados.</b>
+        <p style="margin:0;max-width:48ch;font-size:15px;line-height:1.6;color:var(--mut,#9A968F)">Crea tu cuenta de aliado o inicia sesión para tomar este curso completo, guardar tu progreso y sumar XP.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ lockPerks }}" as="pk" hint-placeholder-count="4">
+            <span style="display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:start;font-size:14px;line-height:1.45;color:var(--t2,#C9C5BE)"><span style="display:grid;place-items:center;width:18px;height:18px;margin-top:1px;border-radius:50%;background:rgba(255,202,5,.14);color:var(--y,#FFCA05);font-size:10px;font-weight:700">✓</span>{{ pk.t }}</span>
+          </sc-for>
+        </div>
+        <span style="display:flex;gap:10px;flex-wrap:wrap;padding-top:6px">
+          <button onClick="{{ goJoin }}" style="padding:12px 22px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14.5px;font-weight:700;cursor:pointer">Hazte aliado</button>
+          <button onClick="{{ goLogin }}" style="padding:11px 18px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:11px;background:transparent;color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer">Ya soy aliado · Iniciar sesión</button>
+        </span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <span style="font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">Temario</span>
+        <sc-for list="{{ syllabus }}" as="sy" hint-placeholder-count="4">
+          <span style="display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:12px;background:var(--bg2,#0A0A0D)"><span style="font-size:12px;font-weight:700;color:var(--mut4,#6B6762)">{{ sy.n }}</span><span style="font-size:14.5px;font-weight:600;line-height:1.35">{{ sy.t }}</span><span style="display:flex;color:var(--mut4,#6B6762)"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"></path></svg></span></span>
+        </sc-for>
+        <span style="font-size:12.5px;color:var(--mut3,#7C7873)">Incluye microlecciones en profundidad, ejercicio guiado, material descargable, quiz y acción de la semana.</span>
+      </div>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ cOpen }}" hint-placeholder-val="{{ true }}">
+    <section ref="{{ panelRef }}" style="display:flex;flex-direction:column;gap:16px">
+      <span style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Contenido del curso</h2><span style="font-size:13px;color:var(--mut3,#7C7873)">Contexto → Aprende → Aplica → Descarga → Comprueba → Activa</span></span>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+        <div style="flex:1 1 240px;max-width:320px;display:flex;flex-direction:column;gap:2px;padding:10px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:18px;background:var(--w-015,rgba(255,255,255,.015));position:sticky;top:120px">
+          <sc-for list="{{ steps }}" as="st" hint-placeholder-count="6">
+            <button onClick="{{ st.go }}" style="display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:center;padding:10px;border:none;border-radius:11px;background:{{ st.bg }};color:{{ st.color }};text-align:left;cursor:pointer;transition:background 160ms ease" style-hover="background:var(--w-04,rgba(255,255,255,.04))">
+              <span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1.5px solid {{ st.dotBorder }};background:{{ st.dotBg }};color:{{ st.dotColor }};font-size:11px;font-weight:700;transition:all 240ms ease">{{ st.mark }}</span>
+              <span style="display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;font-weight:600">{{ st.name }}</b><span style="font-size:11.5px;color:var(--mut3,#7C7873)">{{ st.q }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="flex:999 1 420px;display:flex;flex-direction:column;gap:18px;min-width:0;padding:clamp(22px,3vw,34px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:var(--w-02,rgba(255,255,255,.02))">
+          <span style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--o,#F9A51A)">{{ stepN }}</span><b style="font-size:clamp(22px,2.6vw,30px);font-weight:700;letter-spacing:-.025em;line-height:1.1">{{ stepName }}</b><span style="font-size:14px;color:var(--mut,#9A968F)">{{ stepQ }}</span></span>
+
+          <sc-if value="{{ isContexto }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:14px;max-width:66ch;animation:adsRise 300ms ease both"><sc-for list="{{ ctxParas }}" as="pp" hint-placeholder-count="2"><p style="margin:0;font-size:17px;line-height:1.7;color:var(--t2,#C9C5BE);text-wrap:pretty">{{ pp.t }}</p></sc-for>
+              <div style="display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1.5px dashed rgba(249,165,26,.45);border-radius:14px"><span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--o,#F9A51A)">Al terminar podrás</span><sc-for list="{{ learn }}" as="lr" hint-placeholder-count="3"><span style="display:flex;gap:10px;font-size:14.5px;line-height:1.45;color:var(--fg2,#E4E1DB)"><span style="flex:none;width:6px;height:6px;margin-top:8px;border-radius:50%;background:var(--o,#F9A51A)"></span>{{ lr.t }}</span></sc-for></div></div>
+          </sc-if>
+
+          <sc-if value="{{ isAprende }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:16px;animation:adsRise 300ms ease both">
+              <div class="ads-rail" style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+                <sc-for list="{{ lessonTabs }}" as="lt" hint-placeholder-count="4">
+                  <button onClick="{{ lt.go }}" style="flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid {{ lt.border }};border-radius:10px;background:{{ lt.bg }};color:{{ lt.color }};font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap"><span style="font-size:11px;color:var(--mut4,#6B6762)">{{ lt.n }}</span>{{ lt.t }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;padding:22px;border-radius:16px;background:var(--bg2,#0A0A0D);border:1px solid var(--w-07,rgba(255,255,255,.07))">
+                <span style="font-size:11.5px;color:var(--mut3,#7C7873)">{{ lessonN }}</span>
+                <b style="font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.2">{{ lessonT }}</b>
+                <sc-for list="{{ lessonParas }}" as="pp" hint-placeholder-count="2"><p style="margin:0;max-width:66ch;font-size:16px;line-height:1.7;color:var(--t2,#C9C5BE);text-wrap:pretty">{{ pp.t }}</p></sc-for>
+                <sc-if value="{{ lessonHasNext }}" hint-placeholder-val="{{ true }}"><button onClick="{{ lessonNext }}" style="align-self:flex-start;margin-top:4px;padding:0;border:none;background:transparent;color:var(--y,#FFCA05);font-size:13.5px;font-weight:600;cursor:pointer">Siguiente microlección →</button></sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          
+          <sc-if value="{{ isAplica }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:12px;animation:adsRise 300ms ease both">
+              <p style="margin:0;max-width:66ch;font-size:16.5px;line-height:1.65;color:var(--t2,#C9C5BE);text-wrap:pretty">{{ aplica }}</p>
+              <sc-if value="{{ hasPasos }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ pasos }}" as="ps" hint-placeholder-count="3"><span style="display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start;padding:12px 14px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:12px;background:var(--bg2,#0A0A0D)"><span style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--y,#FFCA05);color:#1A1200;font-size:11.5px;font-weight:700">{{ ps.n }}</span><span style="font-size:14.5px;line-height:1.55;color:var(--fg2,#E4E1DB)">{{ ps.t }}</span></span></sc-for></div></sc-if>
+              <textarea value="{{ notes }}" onChange="{{ onNotes }}" rows="5" placeholder="Escribe aquí tu ejercicio…" style="width:100%;padding:14px 16px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:12px;background:var(--bg2,#0A0A0D);color:var(--fg,#F2F0EC);font-size:15px;line-height:1.5;resize:vertical;outline:none"></textarea>
+              <button onClick="{{ saveNotes }}" style="align-self:flex-start;padding:9px 16px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">Guardar ejercicio</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isDescarga }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:18px;animation:adsRise 300ms ease both">
+              <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;padding:18px 20px;border:1px solid rgba(255,202,5,.22);border-radius:16px;background:linear-gradient(150deg,rgba(255,202,5,.08),transparent 65%),var(--bg2,#0A0A0D)">
+                <span style="display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:rgba(255,202,5,.1);border:1px solid rgba(255,202,5,.25)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--y,#FFCA05)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ tk.icon }}"></path></svg></span>
+                <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mut4,#6B6762)">ADS Tool · {{ tk.cat }} · {{ tk.pages }}</span><b style="font-size:19px;font-weight:700;letter-spacing:-.015em;line-height:1.2">{{ tk.name }}</b><span style="font-size:13px;color:var(--mut,#9A968F)">{{ tk.sub }}</span></span>
+                <span style="grid-column:1 / -1;display:flex;gap:8px;flex-wrap:wrap">
+                  <button onClick="{{ tk.download }}" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:13.5px;font-weight:700;cursor:pointer"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>Descargar material</button>
+                  <button onClick="{{ tk.print }}" style="padding:10px 16px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;background:transparent;color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Imprimir o guardar PDF</button>
+                </span>
+              </div>
+              <p style="margin:0;max-width:66ch;font-size:16px;line-height:1.65;color:var(--t2,#C9C5BE);text-wrap:pretty">{{ tk.intro }}</p>
+              <div style="display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1.5px dashed rgba(249,165,26,.45);border-radius:14px">
+                <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--o,#F9A51A)">Cuándo usarla</span>
+                <sc-for list="{{ tk.when }}" as="w" hint-placeholder-count="3"><span style="display:flex;gap:10px;font-size:14.5px;line-height:1.45;color:var(--fg2,#E4E1DB)"><span style="flex:none;width:6px;height:6px;margin-top:8px;border-radius:50%;background:var(--o,#F9A51A)"></span>{{ w.t }}</span></sc-for>
+              </div>
+              <sc-for list="{{ tk.sections }}" as="sx" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:10px;padding-top:6px">
+                  <span style="display:flex;align-items:center;gap:12px"><span style="display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--y,#FFCA05);color:#1A1200;font-size:11.5px;font-weight:700">{{ sx.n }}</span><b style="font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25">{{ sx.h }}</b></span>
+                  <sc-if value="{{ sx.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:13.5px;line-height:1.5;color:var(--mut,#9A968F)">{{ sx.note }}</span></sc-if>
+                  <sc-if value="{{ sx.isCheck }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;border-top:1px solid var(--w-07,rgba(255,255,255,.07))"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="3"><span style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--w-07,rgba(255,255,255,.07));font-size:14.5px;line-height:1.5;color:var(--fg2,#E4E1DB)"><span style="flex:none;width:16px;height:16px;margin-top:3px;border:1.6px solid var(--o2,#F37920);border-radius:4px"></span>{{ it.a }}</span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isList }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;border-top:1px solid var(--w-07,rgba(255,255,255,.07))"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="3"><span style="display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px;padding:11px 0;border-bottom:1px solid var(--w-07,rgba(255,255,255,.07))"><span style="display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--o,#F9A51A);color:var(--o,#F9A51A);font-size:11px;font-weight:700">{{ it.n }}</span><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:14.5px;font-weight:600">{{ it.a }}</b><span style="font-size:14px;line-height:1.55;color:var(--t2,#C9C5BE)">{{ it.b }}</span></span></span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isFields }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="3"><span style="display:flex;flex-direction:column;gap:6px;padding:10px 14px;border-radius:10px;background:var(--bg2,#0A0A0D);border:1px solid var(--w-07,rgba(255,255,255,.07))"><span style="font-size:13.5px;font-weight:600;color:var(--fg2,#E4E1DB)">{{ it.a }}</span><span style="display:block;height:18px;border-bottom:1px dashed var(--w-16,rgba(255,255,255,.16))"></span></span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isScript }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="2"><span style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;background:rgba(255,202,5,.06);border:1px solid rgba(255,202,5,.14)"><span style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--o,#F9A51A)">{{ it.a }}</span><span style="font-size:14.5px;line-height:1.6;color:var(--fg2,#E4E1DB)">{{ it.b }}</span></span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isTable }}" hint-placeholder-val="{{ false }}"><div class="ads-rail" style="overflow-x:auto;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:12px"><div style="min-width:560px;display:flex;flex-direction:column">
+                    <span style="display:grid;grid-template-columns:{{ sx.grid }};background:var(--w-05,rgba(255,255,255,.05))"><sc-for list="{{ sx.cols }}" as="co" hint-placeholder-count="3"><span style="padding:10px 12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--y,#FFCA05)">{{ co.t }}</span></sc-for></span>
+                    <sc-for list="{{ sx.rows }}" as="ro" hint-placeholder-count="3"><span style="display:grid;grid-template-columns:{{ sx.grid }};border-top:1px solid var(--w-07,rgba(255,255,255,.07))"><sc-for list="{{ ro.cells }}" as="ce" hint-placeholder-count="3"><span style="padding:10px 12px;font-size:13.5px;line-height:1.5;font-weight:{{ ce.w }};color:{{ ce.color }}">{{ ce.t }}</span></sc-for></span></sc-for>
+                  </div></div></sc-if>
+                </div>
+              </sc-for>
+              <div style="padding:18px 20px;border-radius:14px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:600;line-height:1.5">{{ tk.close }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isComprueba }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:16px;animation:adsRise 300ms ease both">
+              <sc-for list="{{ quiz }}" as="qz" hint-placeholder-count="2">
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <b style="font-size:15.5px;font-weight:600;line-height:1.35">{{ qz.n }}. {{ qz.q }}</b>
+                  <sc-for list="{{ qz.opts }}" as="o" hint-placeholder-count="3">
+                    <button onClick="{{ o.go }}" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid {{ o.border }};border-radius:11px;background:{{ o.bg }};color:{{ o.color }};font-size:14px;text-align:left;cursor:pointer;transition:all 220ms ease"><span style="display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:7px;background:var(--w-06,rgba(255,255,255,.06));font-size:11px;font-weight:700">{{ o.glyph }}</span>{{ o.t }}</button>
+                  </sc-for>
+                  <sc-if value="{{ qz.ok }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--g2,#7FD3A6)">Correcto.</span></sc-if>
+                  <sc-if value="{{ qz.bad }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#C97B6E">No exactamente: la respuesta correcta está marcada en verde.</span></sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ quizDone }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:var(--w-04,rgba(255,255,255,.04));font-size:14px"><b style="font-weight:700">{{ quizScore }}</b><button onClick="{{ quizRetry }}" style="margin-left:auto;padding:0;border:none;background:transparent;color:var(--y,#FFCA05);font-size:13px;font-weight:600;cursor:pointer">Repetir quiz</button></span></sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isActiva }}" hint-placeholder-val="{{ false }}">
+            <div style="position:relative;display:flex;flex-direction:column;gap:10px;padding:24px;border:1px solid rgba(255,202,5,.3);border-radius:16px;background:linear-gradient(160deg,rgba(255,202,5,.1),transparent 70%);animation:adsRise 300ms ease both">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--y,#FFCA05)">Tu acción de esta semana</span>
+              <b style="font-size:clamp(18px,2vw,22px);font-weight:600;line-height:1.35;letter-spacing:-.01em">“{{ activa }}”</b>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--w-07,rgba(255,255,255,.07))">
+            <sc-if value="{{ hasPrev }}" hint-placeholder-val="{{ false }}"><button onClick="{{ prevStep }}" style="padding:10px 16px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;background:transparent;color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">← Anterior</button></sc-if>
+            <span style="flex:1"></span>
+            <button onClick="{{ advance }}" style="padding:12px 22px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14.5px;font-weight:700;cursor:pointer;transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ advLabel }} →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ celebrate }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-label="Curso completado" style="position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:20px;background:rgba(4,4,6,.72);backdrop-filter:blur(8px);animation:adsRise 240ms ease both">
+      <div data-theme="dark" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;width:min(100%,440px);padding:34px 28px 28px;border:1px solid rgba(255,202,5,.25);border-radius:24px;background:radial-gradient(90% 70% at 50% 0%,rgba(255,202,5,.16),transparent 70%),#0B0B0E;color:#F2F0EC;text-align:center;animation:adsPop 420ms cubic-bezier(.22,.61,.36,1) both">
+        <dc-import name="GProgress" variant="mark" size="{{ 104 }}" pct="{{ 1 }}" duration="{{ 900 }}" hint-size="104px,104px"></dc-import>
+        <b style="font-size:26px;font-weight:700;letter-spacing:-.025em">Curso completado</b>
+        <span style="font-size:14px;color:#9A968F;max-width:34ch;line-height:1.5">{{ c.title }}</span>
+        <span style="padding:7px 16px;border-radius:99px;background:rgba(255,202,5,.14);font-size:15px;font-weight:700;color:#FFCA05">{{ celXp }}</span>
+        <sc-if value="{{ celHasPts }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#C9C5BE;max-width:36ch;line-height:1.5">{{ celPts }}</span></sc-if>
+        <sc-if value="{{ celHasNext }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ celNext.open }}" style="display:flex;flex-direction:column;gap:4px;width:100%;margin-top:8px;padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.03);color:#F2F0EC;text-align:left;cursor:pointer" style-hover="border-color:rgba(255,202,5,.4)">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#6B6762">Siguiente recomendado</span>
+            <b style="font-size:15px;font-weight:600;line-height:1.3">{{ celNext.title }}</b>
+            <span style="font-size:12.5px;color:#7C7873">{{ celNext.school }} · {{ celNext.dur }} · {{ celNext.xp }}</span>
+          </button>
+        </sc-if>
+        <div style="display:flex;gap:8px;width:100%">
+          <button onClick="{{ celHome }}" style="flex:1;padding:11px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:transparent;color:#F2F0EC;font-size:13.5px;font-weight:600;cursor:pointer">Volver a la Academia</button>
+          <sc-if value="{{ celHasNext }}" hint-placeholder-val="{{ true }}"><button onClick="{{ celNext.open }}" style="flex:1;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:13.5px;font-weight:700;cursor:pointer">Empezar siguiente</button></sc-if>
+        </div>
+        <button onClick="{{ closeCel }}" aria-label="Cerrar" style="position:absolute;right:14px;top:12px;border:none;background:transparent;color:#7C7873;font-size:20px;cursor:pointer">×</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="ADS Academy · Mi progreso" style="display:flex;flex-direction:column;gap:clamp(36px,5vh,56px);padding:clamp(28px,4vh,44px) 0 clamp(56px,8vh,96px);animation:adsRise 360ms cubic-bezier(.22,.61,.36,1) both">
+    <section style="display:flex;flex-wrap:wrap;gap:clamp(20px,3vw,36px);align-items:stretch">
+      <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:18px;padding:clamp(22px,3vw,32px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:22px;background:radial-gradient(90% 100% at 0% 0%,rgba(255,202,5,.08),transparent 60%),var(--w-015,rgba(255,255,255,.015))">
+        <span style="font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Tu progreso</span>
+        <div style="display:flex;align-items:center;gap:20px">
+          <span style="display:grid;place-items:center;flex:none;width:112px;height:112px;border-radius:50%;background:conic-gradient(#FFCA05,#F37920 {{ xpDeg }},var(--w-08,rgba(255,255,255,.08)) 0)"><span style="display:grid;place-items:center;width:94px;height:94px;border-radius:50%;background:var(--bg,#07070A)"><span style="display:flex;flex-direction:column;align-items:center;line-height:1"><b style="font-size:34px;font-weight:700">{{ xpLevelN }}</b><span style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut3,#7C7873)">Nivel</span></span></span></span>
+          <span style="display:flex;flex-direction:column;gap:4px"><b style="font-size:26px;font-weight:700;letter-spacing:-.02em">{{ xpLevelName }}</b><span style="font-size:15px;font-weight:600;color:var(--y,#FFCA05)">{{ xpLabel }}</span><span style="font-size:13px;color:var(--mut,#9A968F)">{{ xpNext }}</span></span>
+        </div>
+        <div style="display:flex;gap:4px">
+          <sc-for list="{{ xpLevels }}" as="l" hint-placeholder-count="6">
+            <span style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0"><span style="height:4px;border-radius:99px;background:{{ l.bar }}"></span><span style="font-size:10.5px;color:{{ l.color }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.name }}</span></span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:2 1 420px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:22px;overflow:hidden;background:var(--w-07,rgba(255,255,255,.07))">
+        <sc-for list="{{ stats }}" as="st" hint-placeholder-count="6">
+          <span style="display:flex;flex-direction:column;justify-content:flex-end;gap:6px;min-height:120px;padding:20px 22px;background:var(--bg,#07070A)"><b style="font-size:clamp(22px,2.4vw,30px);font-weight:700;letter-spacing:-.025em">{{ st.v }}</b><span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ st.k }}</span></span>
+        </sc-for>
+      </div>
+    </section>
+
+    <sc-if value="{{ guest }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 24px;border:1px dashed rgba(255,202,5,.35);border-radius:18px">
+        <span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;font-weight:600">Tu progreso aún no se guarda.</b><span style="font-size:13.5px;color:var(--mut,#9A968F)">Inicia sesión para acumular XP, completar rutas y obtener certificaciones.</span></span>
+        <button onClick="{{ goLogin }}" style="padding:11px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14px;font-weight:700;cursor:pointer">Iniciar sesión</button>
+      </div>
+    </sc-if>
+
+    <section style="display:flex;flex-direction:column;gap:18px">
+      <span style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Tus certificaciones</h2><b style="font-size:clamp(22px,2.4vw,28px);font-weight:700;letter-spacing:-.025em">Credenciales que puedes compartir.</b></span>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:12px">
+        <sc-for list="{{ certs }}" as="ce" hint-placeholder-count="5">
+          <div style="position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 22px 20px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:var(--w-015,rgba(255,255,255,.015));overflow:hidden;animation:adsRise 420ms ease {{ ce.delay }} both">
+            <span style="position:relative;display:grid;place-items:center;width:84px;height:84px;border-radius:50%;background:conic-gradient({{ ce.tone }} {{ ce.deg }},var(--w-08,rgba(255,255,255,.08)) 0);box-shadow:{{ ce.glow }}">
+              <span style="display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 30% 25%,var(--w-10,rgba(255,255,255,.1)),transparent 60%),var(--bg2,#0A0A0D);border:1px solid var(--w-10,rgba(255,255,255,.1))">
+                <span style="display:flex;flex-direction:column;align-items:center;gap:2px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="{{ ce.tone }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ce.icon }}"></path></svg><b style="font-size:12px;font-weight:700;letter-spacing:.12em">{{ ce.mark }}</b></span>
+              </span>
+            </span>
+            <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:{{ ce.stColor }}">{{ ce.state }}</span>
+            <b style="font-size:18px;font-weight:700;letter-spacing:-.02em;line-height:1.15">{{ ce.name }}</b>
+            <span style="font-size:13px;line-height:1.5;color:var(--mut,#9A968F)">{{ ce.desc }}</span>
+            <span style="display:flex;align-items:center;gap:10px;width:100%;margin-top:auto"><span style="flex:1;height:3px;border-radius:99px;background:var(--w-09,rgba(255,255,255,.09));overflow:hidden"><span style="display:block;height:100%;width:{{ ce.pct }};background:linear-gradient(90deg,#FFCA05,#F37920)"></span></span><span style="font-size:12px;color:var(--mut3,#7C7873);white-space:nowrap">{{ ce.progress }}</span></span>
+            <button onClick="{{ ce.act }}" style="padding:8px 14px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:12.5px;font-weight:600;cursor:pointer">{{ ce.cta }}</button>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-wrap:wrap;gap:14px">
+      <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:12px;padding:24px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px">
+        <span style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#FFCA05,#F37920)"></span><b style="font-size:17px;font-weight:700">XP Academia</b></span>
+        <span style="font-size:14px;line-height:1.5;color:var(--mut,#9A968F)">Reconoce tu aprendizaje y desarrollo profesional. Define tu nivel académico.</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;padding-top:6px">
+          <sc-for list="{{ xpRules }}" as="r" hint-placeholder-count="6">
+            <span style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--w-06,rgba(255,255,255,.06));font-size:13.5px"><span style="color:var(--t2,#C9C5BE)">{{ r.k }}</span><b style="font-weight:700;color:var(--y,#FFCA05)">{{ r.v }}</b></span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:12px;padding:24px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px">
+        <span style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--o,#F9A51A)"></span><b style="font-size:17px;font-weight:700">Puntos Sol</b></span>
+        <span style="font-size:14px;line-height:1.5;color:var(--mut,#9A968F)">Reconocen acciones y resultados dentro del ecosistema Aliados del Sol: referidos, oportunidades, eventos y rachas. Definen tu nivel de aliado y tus beneficios.</span>
+        <span style="margin-top:auto;font-size:13px;line-height:1.5;color:var(--mut3,#7C7873)">Son sistemas separados: los XP no se convierten en Puntos Sol. Cada minicurso completado suma además +5 Puntos Sol (máximo 20 al mes).</span>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <h2 style="margin:0;font-size:12px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Completados</h2>
+      <sc-if value="{{ hasHistory }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;overflow:hidden">
+          <sc-for list="{{ history }}" as="h" hint-placeholder-count="3">
+            <button onClick="{{ h.open }}" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 18px;border:none;border-bottom:1px solid var(--w-05,rgba(255,255,255,.05));background:transparent;color:var(--fg,#F2F0EC);text-align:left;cursor:pointer" style-hover="background:var(--w-03,rgba(255,255,255,.03))">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="{{ h.tone }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ h.icon }}"></path></svg>
+              <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><b style="font-size:14.5px;font-weight:600">{{ h.title }}</b><span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ h.school }} · {{ h.fmt }} · {{ h.dur }}</span></span>
+              <b style="font-size:13px;font-weight:700;color:var(--y,#FFCA05)">{{ h.xp }}</b>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noHistory }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:28px;border:1px dashed var(--w-12,rgba(255,255,255,.12));border-radius:18px">
+          <b style="font-size:16px;font-weight:600">Tu primer curso te está esperando.</b>
+          <span style="font-size:13.5px;color:var(--mut,#9A968F)">Empieza con un contenido de 5 minutos y suma tus primeros XP.</span>
+          <button onClick="{{ goHome }}" style="padding:10px 18px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Ver recomendados</button>
+        </div>
+      </sc-if>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ tmOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-label="Herramienta" onClick="{{ tmClose }}" style="position:fixed;inset:0;z-index:94;display:flex;justify-content:center;padding:clamp(12px,4vh,40px) 14px;background:rgba(4,4,6,.74);backdrop-filter:blur(8px);overflow-y:auto;animation:adsRise 220ms ease both">
+      <div onClick="{{ stop }}" style="position:relative;display:flex;flex-direction:column;gap:18px;width:min(100%,820px);height:max-content;padding:clamp(20px,3vw,32px);border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:22px;background:var(--bg,#07070A);color:var(--fg,#F2F0EC)">
+        <button onClick="{{ tmClose }}" aria-label="Cerrar" style="position:absolute;right:14px;top:10px;border:none;background:transparent;color:var(--mut3,#7C7873);font-size:24px;cursor:pointer">×</button>
+              <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;padding:18px 20px;border:1px solid rgba(255,202,5,.22);border-radius:16px;background:linear-gradient(150deg,rgba(255,202,5,.08),transparent 65%),var(--bg2,#0A0A0D)">
+                <span style="display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:rgba(255,202,5,.1);border:1px solid rgba(255,202,5,.25)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--y,#FFCA05)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ tm.icon }}"></path></svg></span>
+                <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mut4,#6B6762)">ADS Tool · {{ tm.cat }} · {{ tm.pages }}</span><b style="font-size:19px;font-weight:700;letter-spacing:-.015em;line-height:1.2">{{ tm.name }}</b><span style="font-size:13px;color:var(--mut,#9A968F)">{{ tm.sub }}</span></span>
+                <span style="grid-column:1 / -1;display:flex;gap:8px;flex-wrap:wrap">
+                  <button onClick="{{ tm.download }}" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:13.5px;font-weight:700;cursor:pointer"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>Descargar material</button>
+                  <button onClick="{{ tm.print }}" style="padding:10px 16px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:10px;background:transparent;color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Imprimir o guardar PDF</button>
+                </span>
+              </div>
+              <p style="margin:0;max-width:66ch;font-size:16px;line-height:1.65;color:var(--t2,#C9C5BE);text-wrap:pretty">{{ tm.intro }}</p>
+              <div style="display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1.5px dashed rgba(249,165,26,.45);border-radius:14px">
+                <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--o,#F9A51A)">Cuándo usarla</span>
+                <sc-for list="{{ tm.when }}" as="w" hint-placeholder-count="3"><span style="display:flex;gap:10px;font-size:14.5px;line-height:1.45;color:var(--fg2,#E4E1DB)"><span style="flex:none;width:6px;height:6px;margin-top:8px;border-radius:50%;background:var(--o,#F9A51A)"></span>{{ w.t }}</span></sc-for>
+              </div>
+              <sc-for list="{{ tm.sections }}" as="sx" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:10px;padding-top:6px">
+                  <span style="display:flex;align-items:center;gap:12px"><span style="display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--y,#FFCA05);color:#1A1200;font-size:11.5px;font-weight:700">{{ sx.n }}</span><b style="font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25">{{ sx.h }}</b></span>
+                  <sc-if value="{{ sx.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:13.5px;line-height:1.5;color:var(--mut,#9A968F)">{{ sx.note }}</span></sc-if>
+                  <sc-if value="{{ sx.isCheck }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;border-top:1px solid var(--w-07,rgba(255,255,255,.07))"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="3"><span style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--w-07,rgba(255,255,255,.07));font-size:14.5px;line-height:1.5;color:var(--fg2,#E4E1DB)"><span style="flex:none;width:16px;height:16px;margin-top:3px;border:1.6px solid var(--o2,#F37920);border-radius:4px"></span>{{ it.a }}</span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isList }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;border-top:1px solid var(--w-07,rgba(255,255,255,.07))"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="3"><span style="display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px;padding:11px 0;border-bottom:1px solid var(--w-07,rgba(255,255,255,.07))"><span style="display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--o,#F9A51A);color:var(--o,#F9A51A);font-size:11px;font-weight:700">{{ it.n }}</span><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:14.5px;font-weight:600">{{ it.a }}</b><span style="font-size:14px;line-height:1.55;color:var(--t2,#C9C5BE)">{{ it.b }}</span></span></span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isFields }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="3"><span style="display:flex;flex-direction:column;gap:6px;padding:10px 14px;border-radius:10px;background:var(--bg2,#0A0A0D);border:1px solid var(--w-07,rgba(255,255,255,.07))"><span style="font-size:13.5px;font-weight:600;color:var(--fg2,#E4E1DB)">{{ it.a }}</span><span style="display:block;height:18px;border-bottom:1px dashed var(--w-16,rgba(255,255,255,.16))"></span></span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isScript }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ sx.items }}" as="it" hint-placeholder-count="2"><span style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;background:rgba(255,202,5,.06);border:1px solid rgba(255,202,5,.14)"><span style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--o,#F9A51A)">{{ it.a }}</span><span style="font-size:14.5px;line-height:1.6;color:var(--fg2,#E4E1DB)">{{ it.b }}</span></span></sc-for></div></sc-if>
+                  <sc-if value="{{ sx.isTable }}" hint-placeholder-val="{{ false }}"><div class="ads-rail" style="overflow-x:auto;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:12px"><div style="min-width:560px;display:flex;flex-direction:column">
+                    <span style="display:grid;grid-template-columns:{{ sx.grid }};background:var(--w-05,rgba(255,255,255,.05))"><sc-for list="{{ sx.cols }}" as="co" hint-placeholder-count="3"><span style="padding:10px 12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--y,#FFCA05)">{{ co.t }}</span></sc-for></span>
+                    <sc-for list="{{ sx.rows }}" as="ro" hint-placeholder-count="3"><span style="display:grid;grid-template-columns:{{ sx.grid }};border-top:1px solid var(--w-07,rgba(255,255,255,.07))"><sc-for list="{{ ro.cells }}" as="ce" hint-placeholder-count="3"><span style="padding:10px 12px;font-size:13.5px;line-height:1.5;font-weight:{{ ce.w }};color:{{ ce.color }}">{{ ce.t }}</span></sc-for></span></sc-for>
+                  </div></div></sc-if>
+                </div>
+              </sc-for>
+              <div style="padding:18px 20px;border-radius:14px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:600;line-height:1.5">{{ tm.close }}</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:fixed;left:50%;bottom:28px;z-index:90;transform:translateX(-50%);max-width:min(92vw,460px);padding:12px 18px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:12px;background:var(--b-96,rgba(12,12,16,.96));box-shadow:0 18px 50px -20px rgba(0,0,0,.6);font-size:13.5px;color:var(--fg,#F2F0EC);animation:adsRise 240ms ease both">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;allyType&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;referidor&quot;,&quot;financiero&quot;,&quot;gremio&quot;],&quot;default&quot;:&quot;referidor&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Juan Rodríguez&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;guest&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;userKey&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onLogin&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onJoin&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const KEY = 'ads-academy-progress-v1';
+const ALLS = [0, 1, 2, 3, 4, 5];
+/* Avance por paso en el navegador (por aliado); los cursos completados salen de la base (v_mis_modulos), que es la que
+   da los Puntos Sol (+5 por minicurso, máximo 20 al mes) y de la que se calculan los XP. */
+const EMPTY = () => ({ courses: {}, notes: {} });
+const ALLY_MAP = { referidor: 'referidor', ejecutivo_banco: 'financiero', directivo_banco: 'financiero', financiero: 'financiero', gremio: 'gremio' };
+const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+const DUR = [['todas', 'Cualquier duración', () => true], ['d7', 'Hasta 7 min', m => m <= 7], ['d20', '10–20 min', m => m >= 8 && m <= 20], ['d45', '30–45 min', m => m > 20 && m <= 45], ['d90', 'Más de 45 min', m => m > 45]];
+const SORTS = [['populares', 'Más populares'], ['nuevos', 'Más nuevos'], ['corto', 'Menor duración']];
+const DEF_F = { school: 'todas', format: 'todos', level: 'todos', dur: 'todas', ally: 'todos', access: 'todos', sort: 'populares', cert: null };
+
+class Component extends DCLogic {
+  state = { hechos: {}, D: null, view: 'home', schoolId: null, courseId: null, step: 0, lesson: 0, quiz: {}, notes: '', q: '', f: Object.assign({}, DEF_F), prog: EMPTY(), ally: null, toast: '', celebrate: null, toolOpen: null };
+  locked(c) { return (!!this.props.guest && c.access !== 'free') || c.full === false; }
+  gate(msg) { this.ping(msg || 'Exclusivo para aliados registrados. Inicia sesión o hazte aliado.'); }
+
+  key() { return KEY + ':' + (this.props.userKey || 'sin-sesion'); }
+  load() {
+    let prog = EMPTY();
+    if (!this.props.guest) { try { const s = JSON.parse(localStorage.getItem(this.key()) || 'null'); if (s && s.courses) prog = Object.assign(EMPTY(), s); } catch (e) {} }
+    return prog;
+  }
+  componentDidMount() {
+    this.setState({ prog: this.load() });
+    const ready = () => { if (!window.ADS_ACADEMY) return false; this.setState({ D: window.ADS_ACADEMY }); return true; };
+    if (!ready()) this._poll = setInterval(() => { if (ready()) clearInterval(this._poll); }, 80);
+    // El catálogo cambia al iniciar o cerrar sesión (contenido completo para aliados activos) o si se recarga.
+    this._onCat = () => this.setState({ D: window.ADS_ACADEMY });
+    this._onDash = (e) => this.setHechos(e.detail);
+    window.addEventListener('ads:academy', this._onCat);
+    window.addEventListener('ads:dashboard', this._onDash);
+    if (!this.props.guest) window.dispatchEvent(new CustomEvent('ads:consultar-dashboard'));
+  }
+  componentDidUpdate(prev) {
+    if (prev.userKey !== this.props.userKey || prev.guest !== this.props.guest) this.setState({ prog: this.load(), hechos: {} });
+  }
+  componentWillUnmount() { clearInterval(this._poll); clearTimeout(this._tt); window.removeEventListener('ads:academy', this._onCat); window.removeEventListener('ads:dashboard', this._onDash); }
+
+  /* Cursos completados según la base. Un curso terminado en este navegador que la base aún no tiene (p. ej. sin señal)
+     se vuelve a enviar: es idempotente y los puntos se otorgan una sola vez. */
+  setHechos(d) {
+    if (this.props.guest || !d || !d.ok || !Array.isArray(d.modulos)) return;
+    const hechos = {}; d.modulos.forEach(m => { if (m.fecha_completado) hechos[m.codigo] = true; });
+    this.setState({ hechos });
+    const P = this.state.prog || {}; this._enviados = this._enviados || {};
+    Object.keys(P.courses || {}).forEach(id => { if (P.courses[id].done && !hechos[id] && !this._enviados[id]) { this._enviados[id] = true; this.completar(id); } });
+  }
+  completar(id) { window.dispatchEvent(new CustomEvent('ads:modulo-completado', { detail: { codigo: id } })); }
+
+  save(prog) { this.setState({ prog }); if (!this.props.guest) { try { localStorage.setItem(this.key(), JSON.stringify(prog)); } catch (e) {} } }
+  ping(t) { clearTimeout(this._tt); this.setState({ toast: t }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
+  top(el) { el = el || this.rootEl; if (!el) return; const y = el.getBoundingClientRect().top + window.scrollY - 120; window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' }); }
+  nav(view, extra) { this.setState(Object.assign({ view, celebrate: null }, extra || {})); setTimeout(() => this.top(), 20); }
+  sch(id) { return this.state.D.SCHOOLS.find(s => s.id === id); }
+  course(id) { return this.state.D.COURSES.find(c => c.id === id); }
+  cp(c) {
+    const p = this.state.prog.courses[c.id]; const db = !this.props.guest && !!this.state.hechos[c.id];
+    if (!p) return db ? { pct: 1, done: true, steps: ALLS.slice() } : { pct: 0, done: false, steps: [] };
+    const done = !!p.done || db;
+    return { pct: done ? 1 : Math.min(1, p.steps.filter(i => i < ALLS.length).length / ALLS.length), done, steps: done ? ALLS.slice() : p.steps };
+  }
+  ally() { return this.state.ally || ALLY_MAP[this.props.allyType] || 'referidor'; }
+  fits(c, a) { return c.allyType.indexOf('todos') >= 0 || c.allyType.indexOf(a) >= 0; }
+  /* XP de la Academy (no son Puntos Sol): cursos completados según su formato y +300 por certificación obtenida. */
+  xp() {
+    const D = this.state.D; let x = 0;
+    D.COURSES.forEach(c => { if (this.cp(c).done) x += c.xp; });
+    const cert = (D.FORMATS.find(f => f.id === 'cert') || {}).xp || 0;
+    D.CERTS.forEach(ce => { if (ce.courses.length && ce.courses.every(id => { const c = this.course(id); return c && this.cp(c).done; })) x += cert; });
+    return x;
+  }
+  setF(k, v) { this.setState({ f: Object.assign({}, this.state.f, { [k]: v }) }); }
+  scroll(key, dir) { const el = this['rail_' + key]; if (el) el.scrollBy({ left: dir * Math.min(el.clientWidth * .85, 720), behavior: 'smooth' }); }
+
+  open(id) {
+    const c = this.course(id); if (!c) return;
+    const p = this.cp(c); const first = p.done ? 0 : ALLS.find(i => p.steps.indexOf(i) < 0);
+    this.nav('course', { courseId: id, step: first == null ? 0 : first, lesson: 0, quiz: {}, notes: (this.state.prog.notes || {})[id] || '' });
+  }
+  toStep(i) { const c = this.course(this.state.courseId); if (c && this.locked(c)) { this.gate(); return; } this.setState({ step: i, lesson: 0 }); setTimeout(() => this.top(this.panelEl), 20); }
+  advance() {
+    const { courseId, step } = this.state; const c = this.course(courseId);
+    if (this.locked(c)) { this.gate(); return; }
+    const P = JSON.parse(JSON.stringify(this.state.prog)); const cur = P.courses[courseId] || { steps: [], done: false };
+    if (cur.steps.indexOf(step) < 0) cur.steps.push(step);
+    cur.t = Date.now(); P.courses[courseId] = cur;
+    if (step < ALLS.length - 1) { this.save(P); this.toStep(step + 1); return; }
+    const firstTime = !cur.done && !this.state.hechos[courseId]; cur.done = true; cur.steps = ALLS.slice(); this.save(P);
+    // La base registra el minicurso y otorga sus Puntos Sol; el Hub avisa el resultado (ads:modulo-resultado).
+    if (firstTime && !this.props.guest) this.completar(courseId);
+    this.setState({ celebrate: { xp: firstTime && !this.props.guest ? c.xp : 0, pts: firstTime && !this.props.guest ? c.points : 0 } });
+  }
+  nextFor(c) {
+    const D = this.state.D; const path = D.PATHS.find(p => p.ally === this.ally());
+    const pick = (path ? path.courses : []).map(id => this.course(id)).find(x => x && x.id !== c.id && !this.cp(x).done);
+    if (this.props.guest) return D.COURSES.find(x => x.id !== c.id && x.access === 'free' && !this.cp(x).done);
+    return pick || D.COURSES.find(x => x.id !== c.id && x.school === c.school && !this.cp(x).done) || D.COURSES.find(x => x.id !== c.id && !this.cp(x).done);
+  }
+
+  paras(t) { return String(t || '').split(/\n\n+/).map(x => x.trim()).filter(Boolean).map(t => ({ t })); }
+  toolView(id) {
+    const D = this.state.D, T = D.TOOLS.find(x => x.id === id) || D.TOOLS[0], KIT = window.ADS_TOOLKIT, X = KIT && KIT.TOOLS[T.id];
+    if (T.file) { // archivo subido desde el panel: tiene prioridad sobre el material incorporado
+      const abrir = () => { window.open(T.file.url, '_blank', 'noopener'); this.ping('Descargando «' + T.name + '».'); };
+      return { name: T.name, cat: T.cat, icon: T.icon, sub: T.desc, pages: T.file.name, intro: T.desc, when: [], sections: [], close: '', download: abrir, print: abrir };
+    }
+    if (!X) return { name: T.name, cat: T.cat, icon: T.icon, sub: T.desc, pages: '', intro: T.desc, when: [], sections: [], close: '', download: () => this.ping('Material en preparación.'), print: () => {} };
+    const sections = X.sections.map((s, i) => {
+      const tbl = s.type === 'table';
+      return { n: String(i + 1).padStart(2, '0'), h: s.h, note: s.note || '', hasNote: !!s.note,
+        isCheck: s.type === 'check', isList: s.type === 'list', isFields: s.type === 'fields', isScript: s.type === 'script', isTable: tbl,
+        items: tbl ? [] : s.items.map((x, j) => Array.isArray(x) ? { n: j + 1, a: x[0], b: x[1] } : { n: j + 1, a: x, b: '' }),
+        grid: tbl ? 'minmax(110px,.8fr) ' + s.cols.slice(1).map(() => 'minmax(0,1.3fr)').join(' ') : '',
+        cols: tbl ? s.cols.map(t => ({ t })) : [],
+        rows: tbl ? s.rows.map(r => ({ cells: r.map((t, j) => ({ t, w: j === 0 ? 600 : 400, color: j === 0 ? 'var(--fg,#F2F0EC)' : 'var(--t2,#C9C5BE)' })) })) : [] };
+    });
+    return { name: X.title, cat: T.cat, icon: T.icon, sub: X.sub, pages: X.pages, intro: X.intro, when: X.when.map(t => ({ t })), sections, close: X.close,
+      download: () => { KIT.download(T.id); this.ping('Descargamos «' + X.title + '». Ábrelo en tu navegador o imprímelo como PDF.'); },
+      print: () => { if (!KIT.print(T.id)) this.ping('Permite ventanas emergentes para imprimir el material.'); } };
+  }
+
+  card(c, i) {
+    const S = this.sch(c.school); const p = this.cp(c); const F = this.state.D.FORMATS.find(f => f.id === c.format);
+    return {
+      id: c.id, title: c.title, desc: c.shortDescription, school: S.name, icon: S.icon, tone: S.tone,
+      glow: rgba(S.tone, .2), soft: rgba(S.tone, .1), ring: rgba(S.tone, .35),
+      dur: c.duration + ' min', level: c.level, fmt: F.name, xp: c.xp ? '+' + c.xp + ' XP' : '',
+      pct: Math.round(p.pct * 100) + '%', pctW: Math.round(p.pct * 100) + '%', hasProg: p.pct > 0 && !p.done, done: p.done, notStarted: p.pct === 0,
+      locked: this.locked(c), freeTag: !!this.props.guest && c.access === 'free',
+      cta: this.locked(c) ? 'Ver temario' : (p.done ? 'Repasar' : (p.pct > 0 ? 'Continuar' : 'Empezar')), isNew: c.new, open: () => this.open(c.id),
+      delay: Math.min(i || 0, 8) * 50 + 'ms'
+    };
+  }
+
+  renderVals() {
+    const s = this.state, D = s.D;
+    const base = {
+      rootRef: el => { this.rootEl = el; }, panelRef: el => { this.panelEl = el; },
+      toast: s.toast, hasToast: !!s.toast, skel: [1, 2, 3, 4],
+      goHome: () => this.nav('home'), goProfile: () => this.nav('profile'), goCatalog: () => this.nav('catalog')
+    };
+    if (!D) return Object.assign(base, { loading: true, ready: false, tabs: [] });
+    const guest = !!this.props.guest, ally = this.ally(), view = s.view;
+    const card = (c, i) => this.card(c, i);
+    const allyName = (D.ALLY_TYPES.find(a => a.id === ally) || {}).name;
+
+    const tabs = [['home', 'Inicio'], ['catalog', 'Catálogo'], ['profile', 'Mi progreso']].map(([id, label]) => {
+      const on = view === id || (id === 'catalog' && view === 'school');
+      return { label, go: () => this.nav(id), color: on ? 'var(--fg,#F2F0EC)' : 'var(--mut,#9A968F)', bar: on ? 'var(--y,#FFCA05)' : 'transparent' };
+    });
+
+    /* XP · nivel académico (independiente de Puntos Sol) */
+    const xp = this.xp();
+    const lv = D.XP_LEVELS.filter(l => l.min <= xp).pop(); const nx = D.XP_LEVELS.find(l => l.min > xp);
+    const lvPct = nx ? (xp - lv.min) / (nx.min - lv.min) : 1;
+    const doneCourses = D.COURSES.filter(c => this.cp(c).done);
+    const doneMin = doneCourses.reduce((a, c) => a + c.duration, 0);
+
+    /* Búsqueda rápida */
+    const q = s.q.trim().toLowerCase();
+    const hits = q.length < 2 ? [] : D.COURSES.filter(c => (c.title + ' ' + c.shortDescription + ' ' + this.sch(c.school).name).toLowerCase().indexOf(q) >= 0);
+    const toolHits = q.length < 2 ? [] : D.TOOLS.filter(t => (t.name + ' ' + t.desc + ' ' + t.cat).toLowerCase().indexOf(q) >= 0);
+    const results = hits.slice(0, 5).map(c => { const S = this.sch(c.school); return { title: c.title, sub: S.short + ' · ' + D.FORMATS.find(f => f.id === c.format).name + ' · ' + c.duration + ' min', icon: S.icon, tone: S.tone, go: () => { this.setState({ q: '' }); this.open(c.id); } }; })
+      .concat(toolHits.slice(0, 2).map(t => ({ title: t.name, sub: 'ADS Tool · ' + t.cat, icon: t.icon, tone: '#FFCA05', go: () => { this.setState({ q: '' }); if (guest && t.access !== 'free') this.gate('Esta herramienta es exclusiva para aliados registrados.'); else this.setState({ toolOpen: t.id }); } })));
+
+    /* Continúa aprendiendo */
+    const inProg = D.COURSES.filter(c => { const p = this.cp(c); return p.pct > 0 && !p.done; }).sort((a, b) => (s.prog.courses[b.id].t || 0) - (s.prog.courses[a.id].t || 0));
+    const cc = inProg[0];
+    const cont = cc ? Object.assign(card(cc), { next: D.METHOD[ALLS.find(i => this.cp(cc).steps.indexOf(i) < 0) || 0].name, stepsLabel: Math.min(ALLS.length, this.cp(cc).steps.length) + ' de ' + ALLS.length + ' pasos' }) : null;
+
+    /* Tu ruta */
+    const P = D.PATHS.find(p => p.ally === ally);
+    const pc = P.courses.map(id => this.course(id)).filter(Boolean);
+    const curIdx = pc.findIndex(c => !this.cp(c).done);
+    const pathDone = pc.filter(c => this.cp(c).done).length;
+    const pathItems = pc.map((c, i) => { const p = this.cp(c); const cur = i === curIdx; const S = this.sch(c.school);
+      return { n: String(i + 1).padStart(2, '0'), title: c.title, meta: D.FORMATS.find(f => f.id === c.format).name + ' · ' + c.duration + ' min', school: S.short, open: () => this.open(c.id), done: p.done, cur,
+        mark: p.done ? '✓' : String(i + 1), dotBg: p.done ? 'var(--y,#FFCA05)' : (cur ? 'rgba(255,202,5,.14)' : 'transparent'), dotBorder: p.done || cur ? 'var(--y,#FFCA05)' : 'var(--w-16,rgba(255,255,255,.16))', dotColor: p.done ? '#1A1200' : (cur ? 'var(--y,#FFCA05)' : 'var(--mut3,#7C7873)'),
+        border: cur ? 'rgba(255,202,5,.4)' : 'var(--w-07,rgba(255,255,255,.07))', bg: cur ? 'rgba(255,202,5,.05)' : 'var(--w-02,rgba(255,255,255,.02))', label: p.done ? 'Completado' : (this.locked(c) ? 'Aliados' : (cur ? 'Siguiente' : (guest ? 'Gratis' : ''))) }; });
+    const pathCert = D.CERTS.find(c => c.id === P.cert);
+    const allyOpts = D.PATHS.map(p => { const on = p.ally === ally; return { label: (D.ALLY_TYPES.find(a => a.id === p.ally) || {}).name, go: () => this.setState({ ally: p.ally }), bg: on ? 'var(--fg,#F2F0EC)' : 'transparent', color: on ? 'var(--bg,#07070A)' : 'var(--mut,#9A968F)' }; });
+
+    /* Carruseles */
+    const rec = D.COURSES.filter(c => !c.quick && c.format !== 'masterclass' && this.fits(c, ally) && !this.cp(c).done && P.courses.indexOf(c.id) < 0 && !c.learningPath)
+      .sort((a, b) => (b.featured - a.featured) || (b.popularity - a.popularity)).slice(0, 10).map(card);
+    const quick = D.COURSES.filter(c => c.quick).map(card);
+    const ai = D.AI_FEATURED.map(id => this.course(id)).filter(Boolean).map(card);
+
+    const schools = D.SCHOOLS.map((S, i) => ({ n: String(i + 1).padStart(2, '0'), name: S.name, desc: S.desc, icon: S.icon, tone: S.tone, glow: rgba(S.tone, .16), ring: rgba(S.tone, .3),
+      count: D.COURSES.filter(c => c.school === S.id).length + ' contenidos', open: () => this.nav('school', { schoolId: S.id }), delay: i * 50 + 'ms', wide: S.id === 'ia' }));
+
+    const tools = D.TOOLS.map((t, i) => { const lk = guest && t.access !== 'free'; return { name: t.name, cat: t.cat, desc: t.desc, icon: t.icon, cta: lk ? 'Solo aliados' : t.kind, delay: i * 40 + 'ms', act: () => lk ? this.gate('Esta herramienta es exclusiva para aliados registrados.') : this.setState({ toolOpen: t.id }) }; });
+
+    /* Certificaciones */
+    const certs = D.CERTS.map((c, i) => { const S = this.sch(c.school); const tot = (c.courses || []).length || 1; const dn = (c.courses || []).filter(id => { const x = this.course(id); return x && this.cp(x).done; }).length; const pct = dn / tot; const ok = pct >= 1;
+      return { name: c.name, desc: c.desc, mark: c.mark, icon: S.icon, tone: S.tone, deg: Math.round(pct * 360) + 'deg', pct: Math.round(pct * 100) + '%', progress: dn + ' de ' + tot + ' contenidos', obtained: ok, pending: !ok,
+        state: ok ? 'Obtenida' : (dn > 0 ? 'En progreso' : 'Por iniciar'), stColor: ok ? 'var(--y,#FFCA05)' : (dn > 0 ? 'var(--o,#F9A51A)' : 'var(--mut3,#7C7873)'),
+        glow: ok ? '0 0 40px -6px ' + rgba(S.tone, .6) : 'none', delay: i * 60 + 'ms',
+        act: () => guest ? this.gate('Las certificaciones son exclusivas para aliados registrados.') : this.nav('catalog', { q: '', f: Object.assign({}, DEF_F, { cert: c.id }) }), cta: 'Ver contenidos' }; });
+    const certsOk = certs.filter(c => c.obtained).length;
+    const pathsOk = D.PATHS.filter(p => p.courses.every(id => { const x = this.course(id); return x && this.cp(x).done; })).length;
+
+    const stats = [['Nivel XP', lv.n + ' · ' + lv.name], ['XP acumulada', xp.toLocaleString('es-CO')], ['Cursos completados', String(doneCourses.length)], ['Rutas completadas', String(pathsOk)], ['Certificados', String(certsOk)], ['Horas de aprendizaje', (doneMin / 60).toFixed(1).replace('.', ',')]].map(([k, v]) => ({ k, v }));
+
+    const out = Object.assign(base, {
+      loading: false, ready: true, guest, notGuest: !guest, tabs, firstName: (this.props.userName || '').split(' ')[0],
+      isHome: view === 'home', isCatalog: view === 'catalog', isSchool: view === 'school', isCourse: view === 'course', isProfile: view === 'profile',
+      xp, xpLabel: xp.toLocaleString('es-CO') + ' XP', xpLevelN: lv.n, xpLevelName: lv.name, xpDeg: Math.round(lvPct * 360) + 'deg', xpPctW: Math.round(lvPct * 100) + '%',
+      xpNext: nx ? 'Faltan ' + (nx.min - xp) + ' XP para ' + nx.name : 'Nivel máximo alcanzado', doneCount: doneCourses.length,
+      q: s.q, onQ: e => this.setState({ q: e.target.value }), onQKey: e => { if (e.key === 'Enter' && s.q.trim()) this.nav('catalog'); if (e.key === 'Escape') this.setState({ q: '' }); },
+      hasResults: q.length >= 2 && results.length > 0, noResults: q.length >= 2 && results.length === 0, results, resultsCount: hits.length + ' resultados', seeAll: () => this.nav('catalog'), clearQ: () => this.setState({ q: '' }),
+      goExplore: () => this.top(this.schoolsEl), schoolsRef: el => { this.schoolsEl = el; },
+      hasCont: !!cont, noCont: !cont, cont: cont || {}, goContinue: () => cont ? cont.open() : this.nav('catalog'),
+      contLabel: cont ? 'Continuar aprendiendo' : 'Ver catálogo',
+      pathName: P.name, pathDesc: P.desc, pathItems, pathPct: Math.round(pathDone / pc.length * 100) + '%', pathPctW: Math.round(pathDone / pc.length * 100) + '%', pathMeta: pathDone + ' de ' + pc.length + ' cursos', pathCert: pathCert ? pathCert.name : '', allyOpts, allyName,
+      pathMin: pc.reduce((a, c) => a + c.duration, 0) + ' min',
+      rec, quick, ai,
+      railRec: el => { this.rail_rec = el; }, railQuick: el => { this.rail_quick = el; }, railAi: el => { this.rail_ai = el; },
+      recL: () => this.scroll('rec', -1), recR: () => this.scroll('rec', 1), quickL: () => this.scroll('quick', -1), quickR: () => this.scroll('quick', 1),
+      goAi: () => this.nav('school', { schoolId: 'ia' }),
+      schools, tools, certs, stats, xpRules: D.XP_RULES.map(r => ({ k: r.k, v: '+' + r.xp + ' XP' })),
+      xpLevels: D.XP_LEVELS.map(l => ({ n: l.n, name: l.name, min: l.min + ' XP', on: l.n <= lv.n, color: l.n <= lv.n ? 'var(--fg,#F2F0EC)' : 'var(--mut4,#6B6762)', bar: l.n < lv.n ? 'var(--y,#FFCA05)' : (l.n === lv.n ? 'linear-gradient(90deg,#FFCA05,#F37920)' : 'var(--w-08,rgba(255,255,255,.08))') })),
+      goLogin: () => this.props.onLogin ? this.props.onLogin() : this.ping('Inicia sesión para guardar tu progreso.'),
+      goJoin: () => this.props.onJoin ? this.props.onJoin() : (this.props.onLogin ? this.props.onLogin() : this.ping('Crea tu cuenta de aliado para desbloquear todo el contenido.')),
+      freeCount: D.COURSES.filter(c => c.access === 'free').length, totalCount: D.COURSES.length,
+      history: doneCourses.slice(0, 6).map(card), hasHistory: doneCourses.length > 0, noHistory: doneCourses.length === 0,
+      tmOpen: !!s.toolOpen, tm: s.toolOpen ? this.toolView(s.toolOpen) : {}, tmClose: () => this.setState({ toolOpen: null }), stop: e => e.stopPropagation()
+    });
+    return Object.assign(out, this.catalogVals(q), this.courseVals());
+  }
+
+  catalogVals(q) {
+    const s = this.state, D = s.D, f = s.f; const durF = (DUR.find(d => d[0] === f.dur) || DUR[0])[2];
+    const matchQ = t => !q || t.toLowerCase().indexOf(q) >= 0;
+    let list = D.COURSES.filter(c => (f.school === 'todas' || c.school === f.school) && (f.format === 'todos' || c.format === f.format) && (f.level === 'todos' || c.level === f.level) && (f.ally === 'todos' || this.fits(c, f.ally)) && (!f.access || f.access === 'todos' || c.access === f.access) && durF(c.duration) && matchQ(c.title + ' ' + c.shortDescription));
+    /* Certificación elegida: sus minicursos, en el orden en que se recomiendan. */
+    const cert = f.cert ? D.CERTS.find(x => x.id === f.cert) : null;
+    if (cert) list = cert.courses.map(id => this.course(id)).filter(c => c && list.indexOf(c) >= 0);
+    else {
+      if (f.sort === 'populares') list.sort((a, b) => b.popularity - a.popularity);
+      if (f.sort === 'nuevos') list.sort((a, b) => (b.new - a.new) || (b.publishDate > a.publishDate ? 1 : -1));
+      if (f.sort === 'corto') list.sort((a, b) => a.duration - b.duration);
+    }
+    const certDone = cert ? cert.courses.filter(id => { const c = this.course(id); return c && this.cp(c).done; }).length : 0;
+    const isTools = f.format === 'tool', isCerts = f.format === 'cert';
+    const fmts = [{ id: 'todos', name: 'Todos', range: '' }].concat(D.FORMATS).map(x => { const on = f.format === x.id; return { name: x.name, range: x.range, go: () => this.setState({ f: Object.assign({}, f, { format: x.id, cert: null }) }), bg: on ? 'var(--fg,#F2F0EC)' : 'var(--w-03,rgba(255,255,255,.03))', color: on ? 'var(--bg,#07070A)' : 'var(--t2,#C9C5BE)', sub: on ? 'var(--bg,#07070A)' : 'var(--mut3,#7C7873)', border: on ? 'var(--fg,#F2F0EC)' : 'var(--w-10,rgba(255,255,255,.1))', hasRange: !!x.range }; });
+    const opt = (arr) => arr.map(([v, label]) => ({ v, label }));
+    const S = s.schoolId ? this.sch(s.schoolId) : null;
+    const schoolVals = {};
+    if (S) {
+      const sc = D.COURSES.filter(c => c.school === S.id);
+      const groups = D.FORMATS.filter(x => ['flash', 'micro', 'curso', 'masterclass'].indexOf(x.id) >= 0).map(x => ({ name: x.name, range: x.range, items: sc.filter(c => c.format === x.id && !(S.id === 'energia' && c.learningPath && c.learningPath[0] === 'e')).map((c, i) => this.card(c, i)) })).filter(g => g.items.length);
+      const lv = S.id === 'energia' ? D.ENERGY_LEVELS.map(L => { const it = sc.filter(c => c.learningPath === L.id); const dn = it.filter(c => this.cp(c).done).length; return { n: 'Nivel ' + L.n, name: L.name, count: it.length + ' contenidos', pct: Math.round(dn / it.length * 100) + '%', pctW: Math.round(dn / it.length * 100) + '%', items: it.map((c, i) => this.card(c, i)) }; }) : [];
+      Object.assign(schoolVals, { sName: S.name, sDesc: S.desc, sIcon: S.icon, sTone: S.tone, sGlow: rgba(S.tone, .22), sCount: sc.length + ' contenidos', sMin: Math.round(sc.reduce((a, c) => a + c.duration, 0) / 60) + ' h de contenido', sGroups: groups, sLevels: lv, sIsEnergy: S.id === 'energia', sHasGroups: groups.length > 0,
+        sGroupsTitle: S.id === 'energia' ? 'Más de Energía & Sostenibilidad' : 'Contenidos',
+        sOthers: D.SCHOOLS.filter(x => x.id !== S.id).map(x => ({ name: x.short, icon: x.icon, tone: x.tone, go: () => this.nav('school', { schoolId: x.id }) })) });
+    }
+    return Object.assign({
+      catList: list.map((c, i) => this.card(c, i)), catCount: isTools ? D.TOOLS.length + ' herramientas' : (isCerts ? D.CERTS.length + ' certificaciones' : list.length + ' contenidos'),
+      catIsCourses: !isTools && !isCerts, catIsTools: isTools, catIsCerts: isCerts, catEmpty: !isTools && !isCerts && list.length === 0,
+      fmts, f, schoolOpts: opt([['todas', 'Todas las escuelas']].concat(D.SCHOOLS.map(x => [x.id, x.name]))), levelOpts: opt([['todos', 'Todos los niveles']].concat(D.LEVELS.map(l => [l, l]))),
+      durOpts: opt(DUR.map(d => [d[0], d[1]])), allyOpts2: opt(D.ALLY_TYPES.map(a => [a.id, a.id === 'todos' ? 'Todos los aliados' : a.name])), sortOpts: opt(SORTS),
+      onSchool: e => this.setF('school', e.target.value), onLevel: e => this.setF('level', e.target.value), onDur: e => this.setF('dur', e.target.value), onAlly: e => this.setF('ally', e.target.value), onSort: e => this.setF('sort', e.target.value),
+      clearFilters: () => this.setState({ q: '', f: Object.assign({}, DEF_F) }),
+      accessOpts: [{ v: 'todos', label: 'Todo el contenido' }, { v: 'free', label: 'Gratis' }, { v: 'aliado', label: 'Solo aliados' }], onAccess: e => this.setF('access', e.target.value),
+      hasQ: !!q, qLabel: '«' + s.q.trim() + '»',
+      hasCert: !!cert && !isTools && !isCerts, certName: cert ? cert.name : '', certMeta: cert ? certDone + ' de ' + cert.courses.length + ' minicursos completados' + (certDone === cert.courses.length ? ' · certificación obtenida' : '') : '',
+      certClear: () => this.setF('cert', null)
+    }, schoolVals);
+  }
+
+  courseVals() {
+    const s = this.state, D = s.D; const c = s.courseId ? this.course(s.courseId) : null;
+    if (!c) return {};
+    const S = this.sch(c.school), p = this.cp(c), K = c.content, F = D.FORMATS.find(f => f.id === c.format);
+    const path = D.PATHS.find(x => x.id === c.learningPath) || D.ENERGY_LEVELS.find(x => x.id === c.learningPath);
+    const crumbs = [{ label: 'Academia', go: () => this.nav('home'), link: true }, { label: S.short, go: () => this.nav('school', { schoolId: S.id }), link: true }]
+      .concat(path ? [{ label: path.name, go: () => path.ally ? this.nav('home') : this.nav('school', { schoolId: S.id }), link: true }] : [])
+      .concat([{ label: c.title, go: () => {}, link: false }]).map((x, i, a) => ({ label: x.label, go: x.go, color: x.link ? 'var(--mut,#9A968F)' : 'var(--fg,#F2F0EC)', sep: i < a.length - 1 }));
+    const st = D.METHOD[s.step] || D.METHOD[0];
+    const steps = D.METHOD.map((m, i) => { const on = i === s.step, dn = p.steps.indexOf(i) >= 0;
+      return { n: i + 1, name: m.name, q: m.q, go: () => this.toStep(i), mark: dn ? '✓' : String(i + 1),
+        dotBg: dn ? 'var(--y,#FFCA05)' : (on ? 'rgba(255,202,5,.14)' : 'transparent'), dotBorder: dn || on ? 'var(--y,#FFCA05)' : 'var(--w-16,rgba(255,255,255,.16))', dotColor: dn ? '#1A1200' : (on ? 'var(--y,#FFCA05)' : 'var(--mut3,#7C7873)'),
+        bg: on ? 'var(--w-05,rgba(255,255,255,.05))' : 'transparent', color: on ? 'var(--fg,#F2F0EC)' : 'var(--mut,#9A968F)', line: dn ? 'var(--y,#FFCA05)' : 'var(--w-10,rgba(255,255,255,.1))', last: i === D.METHOD.length - 1 }; });
+    const L = c.lessons[s.lesson] || c.lessons[0];
+    const tool = D.TOOLS.find(t => t.id === c.tools[0]) || D.TOOLS[0];
+    const quiz = c.quiz.slice(0, 5).map((qq, qi) => { const picked = s.quiz[qi]; const ans = picked != null;
+      return { n: qi + 1, q: qq.q, answered: ans, ok: ans && picked === qq.a, bad: ans && picked !== qq.a,
+        opts: qq.o.map((o, oi) => { const right = oi === qq.a, mine = oi === picked;
+          return { t: o, glyph: String.fromCharCode(65 + oi), go: () => { if (!ans) this.setState({ quiz: Object.assign({}, s.quiz, { [qi]: oi }) }); },
+            border: ans && right ? 'rgba(127,211,166,.6)' : (ans && mine ? 'rgba(201,123,110,.6)' : 'var(--w-10,rgba(255,255,255,.1))'), bg: ans && right ? 'rgba(127,211,166,.08)' : (ans && mine ? 'rgba(201,123,110,.08)' : 'var(--w-02,rgba(255,255,255,.02))'),
+            color: ans && !right && !mine ? 'var(--mut3,#7C7873)' : 'var(--fg,#F2F0EC)' }; }) }; });
+    const answered = quiz.filter(x => x.answered).length, correct = quiz.filter(x => x.ok).length;
+    const nx = this.nextFor(c); const cel = s.celebrate; const lk = this.locked(c);
+    return {
+      cLocked: lk, cOpen: !lk, lockRef: el => { this.lockEl = el; },
+      syllabus: c.lessons.map((x, i) => ({ n: String(i + 1).padStart(2, '0'), t: x.t })), lockPerks: D.ACCESS.perks.map(t => ({ t })),
+      c: { title: c.title, desc: c.longDescription, school: S.name, icon: S.icon, tone: S.tone, glow: rgba(S.tone, .22), level: c.level, dur: c.duration + ' min', xp: '+' + c.xp + ' XP', fmt: F.name, lessons: c.lessons.length + ' microlecciones', author: c.author,
+        pct: Math.round(p.pct * 100) + '%', pctW: Math.round(p.pct * 100) + '%', cta: lk ? 'Desbloquear como aliado' : (p.done ? 'Repasar curso' : (p.pct > 0 ? 'Continuar' : 'Empezar curso')), done: p.done },
+      crumbs, learn: K.learn.slice(0, 5).map(t => ({ t })), steps, stepName: st.name, stepQ: st.q, stepN: 'Paso ' + (s.step + 1) + ' de ' + D.METHOD.length,
+      isContexto: st.id === 'contexto', isAprende: st.id === 'aprende', isAplica: st.id === 'aplica', isDescarga: st.id === 'descarga', isComprueba: st.id === 'comprueba', isActiva: st.id === 'activa',
+      contexto: K.contexto, ctxParas: this.paras(K.contexto), aplica: K.aplica, pasos: (K.pasos || []).map((t, i) => ({ n: i + 1, t })), hasPasos: !!(K.pasos && K.pasos.length), activa: K.activa, lessonParas: this.paras(L.b), tk: this.toolView(tool.id),
+      lessonT: L.t, lessonB: L.b, lessonN: 'Microlección ' + (s.lesson + 1) + ' de ' + c.lessons.length,
+      lessonTabs: c.lessons.map((x, i) => { const on = i === s.lesson; return { n: i + 1, t: x.t, go: () => this.setState({ lesson: i }), bg: on ? 'rgba(255,202,5,.08)' : 'transparent', border: on ? 'rgba(255,202,5,.4)' : 'var(--w-08,rgba(255,255,255,.08))', color: on ? 'var(--fg,#F2F0EC)' : 'var(--mut,#9A968F)' }; }),
+      lessonHasNext: s.lesson < c.lessons.length - 1, lessonNext: () => this.setState({ lesson: s.lesson + 1 }),
+      notes: s.notes, onNotes: e => this.setState({ notes: e.target.value }), saveNotes: () => {
+        if (!s.notes.trim()) { this.ping('Escribe tu respuesta para guardarla.'); return; }
+        if (this.props.guest) { this.ping('Inicia sesión para guardar tu ejercicio.'); return; }
+        const P = JSON.parse(JSON.stringify(s.prog)); P.notes = Object.assign({}, P.notes, { [c.id]: s.notes }); this.save(P);
+        this.ping('Guardamos tu ejercicio en este dispositivo.');
+      },
+            quiz, quizScore: correct + ' de ' + quiz.length + ' correctas', quizDone: answered === quiz.length, quizPending: answered < quiz.length, quizRetry: () => this.setState({ quiz: {} }),
+      startCourse: () => this.top(lk ? this.lockEl : this.panelEl), prevStep: () => this.toStep(Math.max(0, s.step - 1)), hasPrev: s.step > 0,
+      advance: () => this.advance(), advLabel: s.step < D.METHOD.length - 1 ? 'Continuar con ' + D.METHOD[s.step + 1].name : (p.done ? 'Completar de nuevo' : 'Completar curso'),
+      celebrate: !!cel, celXp: cel ? (cel.xp ? '+' + cel.xp + ' XP' : (this.props.guest ? 'Inicia sesión para sumar XP' : 'Ya habías completado este curso')) : '', celHasXp: !!(cel && cel.xp),
+      celHasPts: !!(cel && cel.pts), celPts: cel && cel.pts ? '+' + cel.pts + ' Puntos Sol por este minicurso (máximo 20 al mes; lo que pase del tope se otorga el mes siguiente).' : '',
+      celNext: nx ? this.card(nx) : {}, celHasNext: !!nx, closeCel: () => this.setState({ celebrate: null }), celHome: () => this.nav('home')
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@
 import { crearClienteServidor } from '../../lib/supabase-servidor.js';
 import { aliadoDeLaSesion, cuerpoJson, ErrorHttp, responderError } from '../../lib/sesion.js';
 
-const CODIGO = /^[a-z0-9_-]{1,40}$/;
+const CODIGO = /^[a-z0-9_-]{1,80}$/; // igual que modulos.codigo (los cursos de la Academy usan el slug del título)
 
 // Errores de la base (prefijo estable) → respuesta para el aliado.
 const ERRORES = {

@@ -6,6 +6,7 @@
 // Todo texto que viene de la base se escapa antes de insertarlo en la página.
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm';
+import { crearAcademy } from './admin-academy.js';
 
 const MENSAJE_CAPTCHA = 'Confirma que no eres un robot y vuelve a intentarlo.';
 
@@ -18,11 +19,13 @@ const ACCIONES = { aprobar_aliado: 'Aprobó la solicitud', rechazar_aliado: 'Rec
   validar_evento: 'Validó un evento (+100)', rechazar_evento: 'Rechazó un evento', resolver_conflicto: 'Resolvió un conflicto',
   anular_canje: 'Anuló un canje', guardar_recompensa: 'Guardó una recompensa', invitar_operador: 'Invitó un operador',
   otorgar_meddpicc: 'Otorgó el MEDDPICC (+20)', reintentar_correo: 'Reintentó un correo', reintentar_aviso_n8n: 'Reintentó un aviso a n8n',
-  estado_operador: 'Cambió el estado de un operador', eliminar_operador: 'Eliminó un operador' };
+  estado_operador: 'Cambió el estado de un operador', eliminar_operador: 'Eliminó un operador',
+  guardar_curso: 'Guardó un minicurso de la Academy', guardar_certificacion: 'Guardó una certificación de la Academy',
+  guardar_herramienta: 'Guardó una herramienta de la Academy' };
 const VARIABLES = { calificado: 'Calificado', perfecto: 'Referido perfecto', fuera_perfil: 'Fuera del perfil', oportunidad_tecnica: 'Evaluación técnica',
   propuesta_comercial: 'Propuesta comercial', negocio_cerrado: 'Negocio cerrado', informacion_falsa: 'Información falsa', integridad_informacion: 'Integridad' };
 const PESTANAS = [['resumen', 'Resumen'], ['solicitudes', 'Solicitudes'], ['aliados', 'Aliados'], ['eventos', 'Eventos'], ['conflictos', 'Conflictos'],
-  ['canjes', 'Canjes'], ['recompensas', 'Recompensas'], ['operadores', 'Operadores'], ['auditoria', 'Auditoría']];
+  ['canjes', 'Canjes'], ['recompensas', 'Recompensas'], ['operadores', 'Operadores'], ['academy', 'Academy'], ['auditoria', 'Auditoría']];
 
 const $ = (id) => document.getElementById(id);
 let supabase = null;
@@ -545,7 +548,10 @@ function formularioOperador(o) {
 }
 
 const CARGAR = { resumen: async () => {}, solicitudes: cargarSolicitudes, aliados: cargarAliados, eventos: cargarEventos, conflictos: cargarConflictos,
-  canjes: cargarCanjes, recompensas: cargarRecompensas, operadores: cargarOperadores, auditoria: cargarAuditoria };
+  canjes: cargarCanjes, recompensas: cargarRecompensas, operadores: cargarOperadores, academy: () => academy.cargar(), auditoria: cargarAuditoria };
+
+// Academy (§4.9): minicursos, certificaciones y herramientas, en js/admin-academy.js.
+const academy = crearAcademy({ cliente: () => supabase, llamarAdmin, leer, esc, aviso, numero, chip, $ });
 
 // Acciones --------------------------------------------------------------------------------------------------------------
 
@@ -557,6 +563,7 @@ async function alHacerClic(ev) {
   const ir = ev.target.closest('[data-ir]');
   if (ir) return irA(ir.dataset.ir);
   if (!b) { if (fila) abrirAliado(fila.dataset.abrir).catch((e) => aviso(e.message)); return; }
+  if (academy.clic(b)) return;
   const { accion, codigo, nombre, evento, conflicto, variable, canje, puntos, recompensa } = b.dataset;
   const tras = async (msg) => { await recargar(); if (pestana === 'aliados' && codigo) await abrirAliado(codigo); return msg; };
 

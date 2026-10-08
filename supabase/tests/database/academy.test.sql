@@ -2,7 +2,7 @@
 -- panel con sus validaciones, Puntos Sol de los minicursos nuevos, cursos anteriores desactivados y permisos.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(35);
 
 create function pg_temp.aliado(id uuid, email text, celular text)
 returns void language sql as $$
@@ -48,8 +48,8 @@ select throws_ok($$select public.admin_guardar_curso('ac000000-0000-0000-0000-00
   'P0001', 'estado_invalido: ya existe un curso con ese código', 'no se duplica un código');
 select throws_ok($$select public.admin_guardar_curso('ac000000-0000-0000-0000-000000000001', pg_temp.curso('tap-otro'))$$,
   'P0001', 'no_autorizado: se requiere una cuenta de administrador activa', 'un aliado no edita la Academy');
-select throws_like($$select public.admin_guardar_curso('ac000000-0000-0000-0000-00000000000a', pg_temp.curso('tap-otro', '{"puntos":10}'))$$,
-  'dato_invalido: los Puntos Sol%', 'un curso da 5 o 0 Puntos Sol');
+select throws_like($$select public.admin_guardar_curso('ac000000-0000-0000-0000-00000000000a', pg_temp.curso('tap-otro', '{"puntos":7}'))$$,
+  'dato_invalido: los Puntos Sol%', 'un curso da 5, 10 (masterclass) o 0 Puntos Sol');
 select throws_like($$select public.admin_guardar_curso('ac000000-0000-0000-0000-00000000000a', pg_temp.curso('tap-otro', '{"herramienta":"t-no-existe"}'))$$,
   'dato_invalido: elige la herramienta%', 'la herramienta del paso Descarga debe existir');
 select throws_like($$select public.admin_guardar_curso('ac000000-0000-0000-0000-00000000000a',
@@ -129,6 +129,28 @@ select throws_like($$select public.admin_guardar_herramienta('ac000000-0000-0000
   'nombre', 'Nueva', 'categoria', 'IA', 'icono', 'ia', 'descripcion', 'Prueba.', 'acceso', 'aliado',
   'archivo_path', 'herramientas/00000000-0000-0000-0000-000000000000.pdf', 'archivo_nombre', 'x.pdf'))$$,
   'dato_invalido: el archivo no se subió', 'y el archivo debe estar en el bucket');
+
+-- Certificación completa: +15, aparte de los minicursos y por fuera del tope mensual --------------------------------
+select public.completar_modulo('ac000000-0000-0000-0000-000000000001', 'tap-curso-gratis');
+select row_eq($$select count(*)::integer, sum(puntos_aplicados)::integer, min(vinculo), min(nota) from public.movimientos_puntos
+                where aliado_id = 'ac000000-0000-0000-0000-000000000001' and motivo = 'certificacion_academy'$$,
+  row(1, 15, 'academy_certificaciones'::text, 'Certificación: Certificación de prueba'::text),
+  'al completar el último minicurso de la certificación gana +15');
+select public.admin_guardar_certificacion('ac000000-0000-0000-0000-00000000000a', jsonb_build_object('codigo', 'tap-cert',
+  'nombre', 'Certificación de prueba', 'descripcion', 'Prueba editada.', 'escuela', 'ia', 'sigla', 'TP',
+  'cursos', '["tap-curso-gratis","tap-curso-solo-aliados-con-un-codigo-bastante-largo-para-probar"]'::jsonb));
+select is(interno.otorgar_certificaciones('ac000000-0000-0000-0000-000000000001') + (select count(*)::integer from public.movimientos_puntos
+  where aliado_id = 'ac000000-0000-0000-0000-000000000001' and motivo = 'certificacion_academy'), 1,
+  'una sola vez por certificación, aunque se edite o se vuelva a revisar');
+select public.admin_guardar_certificacion('ac000000-0000-0000-0000-00000000000a', jsonb_build_object('nuevo', true, 'codigo', 'tap-cert3',
+  'nombre', 'Otra certificación', 'descripcion', 'Prueba.', 'escuela', 'ia', 'sigla', 'T3',
+  'cursos', '["tap-curso-solo-aliados-con-un-codigo-bastante-largo-para-probar"]'::jsonb));
+select is((select count(*)::integer from public.movimientos_puntos
+  where aliado_id = 'ac000000-0000-0000-0000-000000000001' and motivo = 'certificacion_academy'), 2,
+  'una certificación nueva da los +15 a quien ya completó sus minicursos');
+select ok(exists (select 1 from public.modulos where escuela is not null and formato = 'masterclass')
+      and not exists (select 1 from public.modulos where escuela is not null and formato = 'masterclass' and puntos <> 10),
+  'la masterclass da +10');
 
 -- Integridad del catálogo cargado --------------------------------------------------------------------------------
 select lives_ok($$select interno.validar_contenido_curso(contenido) from public.modulos_contenido$$,

@@ -83,6 +83,7 @@ test('formulario: código desde el título y datos limpios para la base', () => 
   assert.deepEqual(d.contenido.lecciones, [{ titulo: 'L1', texto: 'T1' }], 'sin microlecciones vacías');
   assert.deepEqual(d.contenido.quiz, [{ pregunta: '¿Q?', opciones: ['A', 'C'], correcta: 1 }], 'la correcta sigue a su opción al quitar las vacías');
   assert.equal(d.puntos, 5);
+  assert.equal(datosDelCurso(Object.assign({}, m, { formato: 'masterclass', puntos: '10' }), true).puntos, 10, 'la masterclass vale +10');
   m.quiz[0].correcta = 1; // la opción marcada está vacía
   assert.equal(datosDelCurso(m, true).contenido.quiz[0].correcta, -1);
 });

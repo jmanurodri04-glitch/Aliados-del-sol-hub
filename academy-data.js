@@ -90,7 +90,7 @@
   const ACCESS = {
     free: { label: 'Gratis', desc: 'Disponible en la versión abierta del Hub.' },
     aliado: { label: 'Aliados', desc: 'Exclusivo para aliados registrados en el Hub.' },
-    perks: ['Todos los cursos y rutas', 'Herramientas descargables', 'Progreso, XP y certificaciones', '+5 Puntos Sol por cada minicurso completado (máximo 20 al mes)']
+    perks: ['Todos los cursos y rutas', 'Herramientas descargables', 'Progreso, XP y certificaciones', '+5 Puntos Sol por minicurso, +10 la masterclass (máximo 40 al mes) y +15 por certificación']
   };
 
   const FMT = {}; FORMATS.forEach(f => { FMT[f.id] = f; });

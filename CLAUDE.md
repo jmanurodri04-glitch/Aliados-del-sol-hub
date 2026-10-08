@@ -249,7 +249,7 @@ tipo              text NOT NULL           -- 'ganado' | 'perdido' | 'redimido'
 puntos            int NOT NULL CHECK (puntos > 0)   -- valor nominal de la regla (p. ej. 30)
 puntos_aplicados  int NOT NULL CHECK (puntos_aplicados >= 0)   -- lo que realmente se descontó/sumó al saldo disponible (ver §5.4)
 motivo            text NOT NULL           -- código de la tabla §5
-vinculo           text NOT NULL           -- tabla origen: 'empresas' | 'eventos' | 'modulos_completados' | 'racha' | 'canjes' | 'ajuste_admin' | 'aliados' (bienvenida)
+vinculo           text NOT NULL           -- tabla origen: 'empresas' | 'eventos' | 'modulos_completados' | 'racha' | 'canjes' | 'ajuste_admin' | 'aliados' (bienvenida) | 'academy_certificaciones'
 vinculo_id        text NULL               -- id del registro origen
 clave_unica       text UNIQUE NOT NULL    -- IDEMPOTENCIA (ver §5.1)
 fecha             timestamptz NOT NULL DEFAULT now()
@@ -306,7 +306,7 @@ modulos_completados: id, aliado_id FK, modulo_id FK, fecha_completado timestampt
 - `modulos` es el catálogo: `codigo` = slug del título (hasta 80 caracteres, inmutable), `escuela`, `formato` (flash | micro | curso | masterclass), `minutos`, `nivel`, `aliados` (todos | financiero | referidor | gremio), `acceso` (free | aliado), etiquetas, `ruta` (e1–e4 de Energía), `descripcion`, `herramienta`. Los cursos anteriores (`c11`…, `escuela` NULL) quedaron ocultos; lo completado se conserva. El contenido va en `modulos_contenido` (jsonb `{ aprenderas, contexto, lecciones[{titulo, texto}], ejercicio, pasos, quiz[{pregunta, opciones, correcta}], accion }`, validado por `interno.validar_contenido_curso`), que solo leen el catálogo y los admins, porque `modulos` lo lee cualquier sesión.
 - `academy_certificaciones` (lista ordenada `cursos` de códigos) y `academy_herramientas` (sin archivo = material incorporado en `academy-tools.js`; con `archivo_path` = archivo subido al bucket **público** `academy`, PDF/XLSX/DOCX/PPTX de 10 MB; «solo aliados» es una restricción de la interfaz, igual que el material incorporado).
 - `public.academy_catalogo()` (anon y authenticated): cursos activos, certificaciones y herramientas; sin cuenta activa, los cursos «solo aliados» llegan solo con el temario. `js/supabase.js` lo carga al abrir y al cambiar la sesión (`window.ADS_ACADEMY_CATALOGO`, evento `ads:academy-catalogo`) y `academy-data.js` arma `window.ADS_ACADEMY` (escuelas, formatos, XP, rutas por tipo de aliado y los 6 pasos viven ahí, en el código).
-- **Puntos Sol sin cambios:** al terminar el paso 6 el componente emite `ads:modulo-completado` → `POST /api/modulos` (+5, tope 20 al mes). Un curso terminado sin señal se reenvía al recibir el dashboard (idempotente). **XP** (solo Academy, no son Puntos Sol): Flash 10, Microcurso 30, Curso 75, Masterclass 100, +300 por certificación; se calculan con los completados de la base (`v_mis_modulos`). El avance por paso y las notas viven en `localStorage` (`ads-academy-progress-v1:{codigo_aliado}`).
+- **Puntos Sol** (decisión del equipo, oct 2026; migración `academy_puntos`): al terminar el paso 6 el componente emite `ads:modulo-completado` → `POST /api/modulos` (+5 por minicurso, **+10 la masterclass**, tope **40 al mes**). **Certificación completa: +15** (`certificacion_academy`), aparte de los puntos de cada minicurso y **fuera del tope mensual**: el trigger `modulos_completados_certificaciones` llama a `interno.otorgar_certificaciones` al completar un minicurso; una vez por aliado y certificación (clave `certificacion:{cert_id}:{aliado_id}`, `vinculo = 'academy_certificaciones'`); si la cuenta no está activa, queda retenido. Al crear o editar una certificación en el panel se otorgan a quien ya completó todos sus minicursos (también al aplicar la migración). Un curso terminado sin señal se reenvía al recibir el dashboard (idempotente). **XP** (solo Academy, no son Puntos Sol): Flash 10, Microcurso 30, Curso 75, Masterclass 100, +300 por certificación; se calculan con los completados de la base (`v_mis_modulos`). El avance por paso y las notas viven en `localStorage` (`ads-academy-progress-v1:{codigo_aliado}`).
 - Sin masterclasses en vivo ni «Evaluación +50» (decisión del equipo). Una certificación lleva al catálogo filtrado con sus minicursos en orden.
 - Panel: pestaña **Academy** (`js/admin-academy.js`), vistas `v_admin_academy_cursos|certificaciones|herramientas`, acciones `guardar_curso`, `guardar_certificacion`, `guardar_herramienta`, `subir_archivo_herramienta` → `admin_guardar_*` (auditadas). Un curso no se borra: se oculta.
 - La semilla (`academy_contenido`, ~470 KB, 99 minicursos, 5 certificaciones, 15 herramientas) se generó con `scripts/academy-semilla.cjs` desde los archivos de `main`; es idempotente y se pega en el *SQL Editor* (el conector no admite envíos tan grandes).
@@ -412,7 +412,8 @@ Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre,
 | `fuera_perfil` | `fuera_perfil = si` (había información suficiente para identificarlo) | **−15** | `empresa:{id}:fuera_perfil` |
 | `informacion_falsa` | `informacion_falsa = si` (empresa inexistente o datos deliberadamente incorrectos) | **−30** | `empresa:{id}:informacion_falsa` |
 | `baja_calidad_reiterada` | Admin lo registra tras retroalimentación previa | **−20** | `aliado:{id}:baja_calidad:{fecha}` |
-| `modulo_completado` | Módulo terminado (máx. 20 pts/mes, ver §5.3) | **según el módulo** (hoy +5) | `modulo:{modulos_completados.id}` |
+| `modulo_completado` | Módulo terminado (máx. 40 pts/mes, ver §5.3) | **según el módulo** (+5; la masterclass +10) | `modulo:{modulos_completados.id}` |
+| `certificacion_academy` | Certificación de la Academy completa (todos sus minicursos; fuera del tope mensual, §4.9) | **+15** | `certificacion:{cert_id}:{aliado_id}` |
 | `evento_validado` | Evento validado por admin | **+100** | `evento:{id}` |
 | `racha_solar` | Racha 4x4 completada | **+75** | `racha:{aliado_id}:{lunes_semana_4}` |
 | `ajuste_admin` | Corrección manual justificada | ± | `ajuste:{uuid}` |
@@ -455,16 +456,16 @@ Expone al front únicamente lo que el aliado puede ver: `codigo_aliado`, nombre,
 - Una calificación retenida mientras la cuenta no estaba activa (§4.7) no cuenta para la racha (decisión del equipo).
 - Implementación: trigger `movimientos_puntos_racha` sobre el movimiento `empresa_calificada`, `interno.actualizar_racha` e `interno.reiniciar_rachas` (migración `racha_solar`).
 
-### 5.3 Módulos (puntos por módulo, máximo 20 puntos por mes calendario)
+### 5.3 Módulos (puntos por módulo, máximo 40 puntos por mes calendario)
 
-- **Cada módulo tiene su propio valor** en `modulos.puntos` (0 = contenido sin puntos, máximo 20). El tope mensual es de **20 puntos**, no de un número de módulos (decisión del equipo). La regla `modulo_completado` de `reglas_puntos` no tiene valor fijo.
+- **Cada módulo tiene su propio valor** en `modulos.puntos` (0 = contenido sin puntos, máximo 20). El tope mensual es de **40 puntos** (antes 20; se amplió con los rangos de las órbitas, oct 2026), no de un número de módulos (decisión del equipo). Los +15 de una certificación completa no cuentan para el tope. La regla `modulo_completado` de `reglas_puntos` no tiene valor fijo.
 - El catálogo `modulos` usa `codigo`, el mismo identificador de los cursos de la Academy del Hub (`c11`, `c12`…).
 - Completar un módulo (`public.completar_modulo(aliado, codigo)`, que llama el servidor con el aliado de la sesión) crea una fila en `modulos_completados` con el valor del módulo en ese momento y `recompensa_estado = 'pendiente'`, o `'no_aplica'` si el módulo no da puntos.
 - La función `otorgar_modulos_pendientes(aliado)` corre al completar un módulo, al activarse la cuenta y en un **cron el día 1 de cada mes a las 00:05**. Hace lo siguiente:
   - suma los puntos de los movimientos `modulo_completado` del mes en curso;
-  - otorga pendientes en orden FIFO mientras quepan completos en el tope de 20 puntos del mes; un módulo que no cabe espera al mes siguiente, y los que llegaron después también esperan;
+  - otorga pendientes en orden FIFO mientras quepan completos en el tope de 40 puntos del mes; un módulo que no cabe espera al mes siguiente, y los que llegaron después también esperan;
   - marca `otorgada` y `fecha_otorgada = now()`.
-- Ejemplo: 8 módulos de 5 puntos en septiembre dan 20 puntos en septiembre, los otros 4 quedan pendientes y se otorgan el 1 de octubre. Total visible: 40 puntos al cabo de dos meses.
+- Ejemplo: 12 módulos de 5 puntos en septiembre dan 40 puntos en septiembre, los otros 4 quedan pendientes y se otorgan el 1 de octubre. Total visible: 60 puntos al cabo de dos meses.
 - Una cuenta que no está activa no recibe puntos de módulos: quedan pendientes hasta que se active.
 - El dashboard muestra los módulos con "recompensa pendiente".
 
@@ -951,7 +952,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - Las etiquetas "aliado del sol hub" / "aliados del sol" marcan **referidos** (el formulario público pone "aliado del sol hub"); el contacto de un aliado se reconoce por su ID (§7.1, §8).
 - Las etiquetas de tipo ("AdS Financieros", "AdS EMI", "AdS Linker", "AdS Cliente Embajador", "AdS Agremiaciones") son las mismas del formulario público y del registro del Hub; se dejan así.
 - Racha Solar: al completar 4 de 4 se reinicia el lunes siguiente; las calificaciones retenidas no cuentan; máximo un +75 cada 4 semanas calendario, medido por semanas y no por horas (§5.2).
-- Módulos: cada uno vale lo que indique el catálogo y el tope es de 20 puntos por mes, sin partir módulos y en orden de llegada (§5.3).
+- Módulos: cada uno vale lo que indique el catálogo y el tope es de 40 puntos por mes (antes 20), sin partir módulos y en orden de llegada (§5.3).
 - `empresas` exige los campos obligatorios del formulario solo para `origen = 'hub'`; el formulario público de Clientify puede traerlos incompletos (§4.4, §7.1).
 - Financieros y Agremiaciones también ven sus puntos y su nivel (§9).
 - Agremiaciones: la distribución regional se agrupa por la ciudad de la empresa referida (§9).
@@ -983,7 +984,7 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 - **Formulario público propio** en lugar del de Clientify: pide el correo de quien refiere y la empresa queda en el Hub de ese aliado; si el correo no es de un aliado, no se registra (§7.1).
 - Solo el correo identifica a quien refiere (no el celular); se acepta un aliado activo, pendiente o suspendido (estos dos con puntos retenidos) (§7.1).
 - El error del formulario público es ambiguo («Hubo un problema al registrar esta oportunidad…») para no revelar quién es aliado; lleva casilla Ley 1581 y captcha (§7.1).
-- **Academy administrable:** minicursos (6 pasos), certificaciones y herramientas desde el panel; +5 Puntos Sol por minicurso y tope de 20 al mes sin cambios; XP solo de la Academy (no son Puntos Sol); masterclasses en vivo ocultas; Financieros siguen sin ver «Financiación Solar» (§4.9).
+- **Academy administrable:** minicursos (6 pasos), certificaciones y herramientas desde el panel; +5 Puntos Sol por minicurso, +10 la masterclass y tope de 40 al mes; +15 por certificación completa, aparte y fuera del tope; XP solo de la Academy (no son Puntos Sol); masterclasses en vivo ocultas; Financieros siguen sin ver «Financiación Solar» (§4.9).
 - **Aviso a n8n de los referidos:** el Hub llama a n8n por cada referido nuevo cuando ya está en Clientify, a un webhook distinto según sea imperfecto o perfecto (cada llamada a n8n cuesta una ejecución, así cada flujo solo recibe lo suyo) (§7.4).
 - Los referidos (Hub y formulario público) solo llevan "Referido perfecto" o "Referido imperfecto": los flujos de Clientify se disparan con "referido perfecto" y el imperfecto va a n8n (flujos de Valentina y Enrique); no llevan "aliado del sol hub" ni "aliados del sol" (§8, flujo B).
 
@@ -1017,5 +1018,5 @@ Botón **"Nueva oportunidad"** (§7.2) para todos los tipos.
 18. ~~Imágenes de las recompensas~~ Resuelta (oct 2026): imagen opcional por recompensa desde el panel (§4.10). Falta cargar las de las recompensas reales.
 23. **Key de Resend para el correo de confirmación (§7.3):** crear en Resend una key con permiso solo de envío para Preview y otra para Production y guardarlas como `RESEND_API_KEY` en Vercel. Sin ella, los correos quedan en «Correos no enviados». Mencionar el MEDDPICC y la bienvenida en los Términos o en la política de beneficios.
 24. **Aviso a n8n (§7.4):** flujo de imperfectos listo en n8n y sus variables en Vercel (solo Production, oct 2026). Falta lo mismo para el flujo de perfectos (`N8N_PERFECTOS_URL`, `N8N_PERFECTOS_TOKEN`) y, si se quiere probar en Preview, flujos de prueba con sus variables. La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n.
-25. **Academy en producción (§4.9):** aplicar `academy_catalogo` y luego pegar `academy_contenido` en el *SQL Editor* de `aliados-prod` al desplegar. Pendiente de decidir: masterclasses en vivo y si las rutas por tipo de aliado también se editan desde el panel.
+25. **Academy en producción (§4.9):** aplicar `academy_catalogo`, pegar `academy_contenido` en el *SQL Editor* de `aliados-prod` y después aplicar `academy_puntos` (la masterclass pasa a +10 solo si el catálogo ya está cargado), al desplegar. Pendiente de decidir: masterclasses en vivo y si las rutas por tipo de aliado también se editan desde el panel.
 19. **Correo de `geenera.com` (área de TI):** Microsoft 365 no tiene la firma DKIM propia activada y el DMARC está en `p=none`. No afecta al Hub. Pasado un tiempo sin problemas, subir el DMARC de `notificaciones` a `quarantine`.

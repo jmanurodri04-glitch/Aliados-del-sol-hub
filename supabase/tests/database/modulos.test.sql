@@ -1,4 +1,4 @@
--- Tests de los módulos de Academy y su recompensa (CLAUDE.md §4.9, §5.3; tope de 20 puntos por mes).
+-- Tests de los módulos de Academy y su recompensa (CLAUDE.md §4.9, §5.3; tope de 40 puntos por mes).
 -- `now()` es fijo dentro de la transacción: el "mes en curso" de los tests es el de la fecha en que corren,
 -- y el mes siguiente se simula pasando p_ahora al día 1 a las 00:05 hora Bogotá.
 begin;
@@ -43,9 +43,11 @@ insert into public.modulos (codigo, nombre, orden, puntos) values
   ('t10', 'Prueba 10 puntos', 100, 10),
   ('t15', 'Prueba 15 puntos', 101, 15),
   ('t05', 'Prueba 5 puntos',  102, 5),
-  ('m1', 'Prueba m1', 110, 5), ('m2', 'Prueba m2', 111, 5), ('m3', 'Prueba m3', 112, 5), ('m4', 'Prueba m4', 113, 5),
-  ('m5', 'Prueba m5', 114, 5), ('m6', 'Prueba m6', 115, 5), ('m7', 'Prueba m7', 116, 5), ('m8', 'Prueba m8', 117, 5);
-insert into public.modulos (codigo, nombre, orden, puntos, activo) values ('off', 'Prueba inactivo', 120, 5, false);
+  ('t20', 'Prueba 20 puntos', 103, 20);
+insert into public.modulos (codigo, nombre, orden, puntos) select 'm' || i, 'Prueba m' || i, 109 + i, 5 from generate_series(1, 12) i;
+insert into public.modulos (codigo, nombre, orden, puntos, activo) values ('off', 'Prueba inactivo', 130, 5, false);
+-- Los cursos c11… de la Academy anterior quedaron ocultos (academy_catalogo); se reactivan para probar con ellos.
+update public.modulos set activo = true where codigo in ('c11', 'c12', 'c13');
 
 select pg_temp.aliado('a2000000-0000-0000-0000-000000000001', 'a@modulos.test');
 select pg_temp.aliado('b2000000-0000-0000-0000-000000000001', 'b@modulos.test');
@@ -60,7 +62,7 @@ select is((select count(*) from public.modulos where codigo ~ '^c[0-9]{2}$' and 
 select is((select puntos from public.reglas_puntos where motivo = 'modulo_completado'), null::integer,
   'la regla modulo_completado no tiene valor fijo: lo define cada módulo');
 select throws_ok($$insert into public.modulos (codigo, nombre, puntos) values ('t99', 'Demasiado', 25)$$,
-  '23514', null, 'un módulo no puede valer más que el tope mensual de 20');
+  '23514', null, 'un módulo no puede valer más de 20');
 
 -- A: valores distintos y orden de llegada ---------------------------------------------------------------------
 
@@ -68,23 +70,24 @@ select pg_temp.completar('a2000000-0000-0000-0000-000000000001', 't10', 30);
 select is(pg_temp.estado('a2000000-0000-0000-0000-000000000001', 't10'), 'otorgada', 'un módulo de 10 cabe en el tope del mes');
 select is(pg_temp.disponibles('a2000000-0000-0000-0000-000000000001'), 10, 'suma sus 10 puntos');
 
-select pg_temp.completar('a2000000-0000-0000-0000-000000000001', 't15', 20);
-select is(pg_temp.estado('a2000000-0000-0000-0000-000000000001', 't15'), 'pendiente', '10 + 15 supera los 20: queda pendiente');
+select pg_temp.completar('a2000000-0000-0000-0000-000000000001', 't15', 25);
+select pg_temp.completar('a2000000-0000-0000-0000-000000000001', 't20', 20);
+select is(pg_temp.estado('a2000000-0000-0000-0000-000000000001', 't20'), 'pendiente', '10 + 15 + 20 supera los 40: queda pendiente');
 
 select pg_temp.completar('a2000000-0000-0000-0000-000000000001', 't05', 10);
 select is(pg_temp.estado('a2000000-0000-0000-0000-000000000001', 't05'), 'pendiente',
   'uno de 5 que llegó después también espera: se respeta el orden de llegada');
-select is(pg_temp.disponibles('a2000000-0000-0000-0000-000000000001'), 10, 'no se otorgan puntos parciales');
+select is(pg_temp.disponibles('a2000000-0000-0000-0000-000000000001'), 25, 'no se otorgan puntos parciales');
 
-select is(public.otorgar_modulos_pendientes('a2000000-0000-0000-0000-000000000001', pg_temp.mes_siguiente()), 20,
-  'el día 1 del mes siguiente se otorgan los pendientes (15 + 5)');
+select is(public.otorgar_modulos_pendientes('a2000000-0000-0000-0000-000000000001', pg_temp.mes_siguiente()), 25,
+  'el día 1 del mes siguiente se otorgan los pendientes (20 + 5)');
 select is(pg_temp.estado('a2000000-0000-0000-0000-000000000001', 't05'), 'otorgada', 'y quedan otorgados');
-select is(pg_temp.disponibles('a2000000-0000-0000-0000-000000000001'), 30, 'saldo total: 10 + 15 + 5');
+select is(pg_temp.disponibles('a2000000-0000-0000-0000-000000000001'), 50, 'saldo total: 10 + 15 + 20 + 5');
 select is(
   (select m.fecha from public.movimientos_puntos m
    join public.modulos_completados mc on mc.id::text = m.vinculo_id
    join public.modulos mo on mo.id = mc.modulo_id
-   where mc.aliado_id = 'a2000000-0000-0000-0000-000000000001' and mo.codigo = 't15'),
+   where mc.aliado_id = 'a2000000-0000-0000-0000-000000000001' and mo.codigo = 't20'),
   pg_temp.mes_siguiente(), 'el movimiento lleva la fecha en que se otorgó');
 select ok(
   (select m.puntos = 10 and m.vinculo = 'modulos_completados' and m.clave_unica = 'modulo:' || mc.id
@@ -95,16 +98,16 @@ select ok(
   'el movimiento vale lo del módulo y su clave es modulo:{id}'
 );
 
--- B: ejemplo del CLAUDE.md (8 módulos de 5 → 20 este mes y 20 el siguiente) ------------------------------------
+-- B: ejemplo del CLAUDE.md (12 módulos de 5 → 40 este mes y 20 el siguiente) -----------------------------------
 
-select pg_temp.completar('b2000000-0000-0000-0000-000000000001', 'm' || i, 100 - i) from generate_series(1, 8) i;
+select pg_temp.completar('b2000000-0000-0000-0000-000000000001', 'm' || i, 100 - i) from generate_series(1, 12) i;
 select is((select count(*) from public.modulos_completados where aliado_id = 'b2000000-0000-0000-0000-000000000001' and recompensa_estado = 'otorgada'),
-  4::bigint, '8 módulos de 5: se otorgan 4 este mes');
-select is(pg_temp.estado('b2000000-0000-0000-0000-000000000001', 'm5'), 'pendiente', 'los que llegaron después quedan pendientes');
-select is(pg_temp.disponibles('b2000000-0000-0000-0000-000000000001'), 20, '20 puntos este mes');
+  8::bigint, '12 módulos de 5: se otorgan 8 este mes');
+select is(pg_temp.estado('b2000000-0000-0000-0000-000000000001', 'm9'), 'pendiente', 'los que llegaron después quedan pendientes');
+select is(pg_temp.disponibles('b2000000-0000-0000-0000-000000000001'), 40, '40 puntos este mes');
 
 select is(interno.otorgar_modulos_todos(pg_temp.mes_siguiente()) >= 20, true, 'el cron del día 1 otorga los pendientes');
-select is(pg_temp.disponibles('b2000000-0000-0000-0000-000000000001'), 40, '40 puntos al cabo de dos meses');
+select is(pg_temp.disponibles('b2000000-0000-0000-0000-000000000001'), 60, '60 puntos al cabo de dos meses');
 select is(public.otorgar_modulos_pendientes('b2000000-0000-0000-0000-000000000001', pg_temp.mes_siguiente()), 0,
   'volver a correrlo no otorga nada más');
 

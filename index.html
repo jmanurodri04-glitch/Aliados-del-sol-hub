@@ -2874,7 +2874,7 @@ const POINTS_CONFIG = {
   perfectFields: ['Empresa', 'Nombre del contacto', 'Cargo', 'Teléfono', 'Correo', 'Sector', 'Subsector', 'Ciudad', 'Valor de la factura', 'Factura adjunta'],
   /* MEDDPICC: +20 una vez por referido cuando GEENERA revisa la información que envía el aliado (correo de confirmación). */
   meddpicc: { label: 'Información MEDDPICC del referido', pts: 20, desc: 'Responde el correo de confirmación con el MEDDPICC de la empresa. Aplica a referidos perfectos o con ciudad.' },
-  academy: { label: 'Módulo de Academy completado', pts: 5, monthlyCap: 20, category: 'Academy' },
+  academy: { label: 'Módulo de Academy completado', pts: 5, masterclassPts: 10, monthlyCap: 40, certPts: 15, category: 'Academy' },
   event: { label: 'Evento aliado validado', pts: 100, category: 'Eventos', requires: ['Evento realizado', 'GEENERA involucrada', 'Registro de asistentes', 'Mínimo 5 empresas dentro del perfil'], minCompanies: 5, note: 'Las oportunidades generadas en el evento acumulan sus Puntos Sol normalmente; el evento no las sustituye.' },
   penalties: [
     { id: 'p1', pts: -5, label: 'Referido imperfecto', help: 'Completa los datos del Referido Perfecto antes de enviar.' },
@@ -4639,7 +4639,7 @@ class Component extends DCLogic {
       gainedLabel: '+' + this.n(gained), lostLabel: '−' + this.n(Math.abs(lost)),
       earnOpportunity: POINTS_CONFIG.opportunity.concat([POINTS_CONFIG.meddpicc]).map(m => ({ label: m.label, pts: '+' + m.pts, desc: m.desc })),
       perfectFields: POINTS_CONFIG.perfectFields.map(t => ({ t })),
-      academyRule: 'Puntos Sol según el módulo · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' al mes',
+      academyRule: '+' + POINTS_CONFIG.academy.pts + ' por minicurso y +' + POINTS_CONFIG.academy.masterclassPts + ' por la masterclass · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' al mes · +' + POINTS_CONFIG.academy.certPts + ' por cada certificación completa',
       hasModulosPendientes: modulosPendientes.length > 0,
       modulosPendientesLabel: modulosPendientes.length === 1
         ? 'Tienes 1 curso con recompensa pendiente (+' + modulosPendientes[0].puntos_al_completar + '): se suma cuando haya cupo en el tope mensual.'
@@ -4819,7 +4819,8 @@ class Component extends DCLogic {
       hayQR: !!real, abrirQR,
       earnRules: POINTS_CONFIG.opportunity.map(m => ({ pts: m.pts, label: m.label, note: m.desc })).concat([
         { pts: POINTS_CONFIG.meddpicc.pts, label: POINTS_CONFIG.meddpicc.label, note: POINTS_CONFIG.meddpicc.desc },
-        { pts: POINTS_CONFIG.academy.pts, label: 'Módulo de Academy', note: 'Según el módulo · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' Puntos Sol al mes' },
+        { pts: POINTS_CONFIG.academy.pts, label: 'Módulo de Academy', note: '+' + POINTS_CONFIG.academy.pts + ' por minicurso y +' + POINTS_CONFIG.academy.masterclassPts + ' por la masterclass · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' Puntos Sol al mes' },
+        { pts: POINTS_CONFIG.academy.certPts, label: 'Certificación de la Academy', note: 'Al completar todos los minicursos de una certificación · aparte de los puntos de cada minicurso y fuera del tope mensual' },
         { pts: STREAK_CONFIG.bonus, label: STREAK_CONFIG.name, note: STREAK_CONFIG.rule }
       ]),
       levels: levelCards,

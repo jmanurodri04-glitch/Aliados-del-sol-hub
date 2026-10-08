@@ -608,6 +608,7 @@
         <span style="font-size:14px;color:#9A968F;max-width:34ch;line-height:1.5">{{ c.title }}</span>
         <span style="padding:7px 16px;border-radius:99px;background:rgba(255,202,5,.14);font-size:15px;font-weight:700;color:#FFCA05">{{ celXp }}</span>
         <sc-if value="{{ celHasPts }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#C9C5BE;max-width:36ch;line-height:1.5">{{ celPts }}</span></sc-if>
+        <sc-if value="{{ celHasCert }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:600;color:#FFCA05;max-width:36ch;line-height:1.5">{{ celCert }}</span></sc-if>
         <sc-if value="{{ celHasNext }}" hint-placeholder-val="{{ true }}">
           <button onClick="{{ celNext.open }}" style="display:flex;flex-direction:column;gap:4px;width:100%;margin-top:8px;padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.03);color:#F2F0EC;text-align:left;cursor:pointer" style-hover="border-color:rgba(255,202,5,.4)">
             <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#6B6762">Siguiente recomendado</span>
@@ -686,7 +687,7 @@
       <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:12px;padding:24px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px">
         <span style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--o,#F9A51A)"></span><b style="font-size:17px;font-weight:700">Puntos Sol</b></span>
         <span style="font-size:14px;line-height:1.5;color:var(--mut,#9A968F)">Reconocen acciones y resultados dentro del ecosistema Aliados del Sol: referidos, oportunidades, eventos y rachas. Definen tu nivel de aliado y tus beneficios.</span>
-        <span style="margin-top:auto;font-size:13px;line-height:1.5;color:var(--mut3,#7C7873)">Son sistemas separados: los XP no se convierten en Puntos Sol. Cada minicurso completado suma además +5 Puntos Sol (máximo 20 al mes).</span>
+        <span style="margin-top:auto;font-size:13px;line-height:1.5;color:var(--mut3,#7C7873)">Son sistemas separados: los XP no se convierten en Puntos Sol. Cada minicurso completado suma además +5 Puntos Sol (+10 la masterclass; máximo 40 al mes) y cada certificación completa, +15 Puntos Sol.</span>
       </div>
     </section>
 
@@ -759,7 +760,7 @@
 const KEY = 'ads-academy-progress-v1';
 const ALLS = [0, 1, 2, 3, 4, 5];
 /* Avance por paso en el navegador (por aliado); los cursos completados salen de la base (v_mis_modulos), que es la que
-   da los Puntos Sol (+5 por minicurso, máximo 20 al mes) y de la que se calculan los XP. */
+   da los Puntos Sol (+5 por minicurso, +10 la masterclass, máximo 40 al mes; +15 por certificación completa) y de la que se calculan los XP. */
 const EMPTY = () => ({ courses: {}, notes: {} });
 const ALLY_MAP = { referidor: 'referidor', ejecutivo_banco: 'financiero', directivo_banco: 'financiero', financiero: 'financiero', gremio: 'gremio' };
 const rgba = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
@@ -846,7 +847,10 @@ class Component extends DCLogic {
     const firstTime = !cur.done && !this.state.hechos[courseId]; cur.done = true; cur.steps = ALLS.slice(); this.save(P);
     // La base registra el minicurso y otorga sus Puntos Sol; el Hub avisa el resultado (ads:modulo-resultado).
     if (firstTime && !this.props.guest) this.completar(courseId);
-    this.setState({ celebrate: { xp: firstTime && !this.props.guest ? c.xp : 0, pts: firstTime && !this.props.guest ? c.points : 0 } });
+    // Certificaciones que este minicurso completa: la base otorga sus +15 Puntos Sol (fuera del tope mensual).
+    const certs = firstTime && !this.props.guest ? this.state.D.CERTS.filter(ce => ce.courses.indexOf(courseId) >= 0
+      && ce.courses.every(id => { if (id === courseId) return true; const x = this.course(id); return x && this.cp(x).done; })).map(ce => ce.name) : [];
+    this.setState({ celebrate: { xp: firstTime && !this.props.guest ? c.xp : 0, pts: firstTime && !this.props.guest ? c.points : 0, certs } });
   }
   nextFor(c) {
     const D = this.state.D; const path = D.PATHS.find(p => p.ally === this.ally());
@@ -952,7 +956,7 @@ class Component extends DCLogic {
     /* Certificaciones */
     const certs = D.CERTS.map((c, i) => { const S = this.sch(c.school); const tot = (c.courses || []).length || 1; const dn = (c.courses || []).filter(id => { const x = this.course(id); return x && this.cp(x).done; }).length; const pct = dn / tot; const ok = pct >= 1;
       return { name: c.name, desc: c.desc, mark: c.mark, icon: S.icon, tone: S.tone, deg: Math.round(pct * 360) + 'deg', pct: Math.round(pct * 100) + '%', progress: dn + ' de ' + tot + ' contenidos', obtained: ok, pending: !ok,
-        state: ok ? 'Obtenida' : (dn > 0 ? 'En progreso' : 'Por iniciar'), stColor: ok ? 'var(--y,#FFCA05)' : (dn > 0 ? 'var(--o,#F9A51A)' : 'var(--mut3,#7C7873)'),
+        state: (ok ? 'Obtenida' : (dn > 0 ? 'En progreso' : 'Por iniciar')) + ' · +15 Puntos Sol', stColor: ok ? 'var(--y,#FFCA05)' : (dn > 0 ? 'var(--o,#F9A51A)' : 'var(--mut3,#7C7873)'),
         glow: ok ? '0 0 40px -6px ' + rgba(S.tone, .6) : 'none', delay: i * 60 + 'ms',
         act: () => guest ? this.gate('Las certificaciones son exclusivas para aliados registrados.') : this.nav('catalog', { q: '', f: Object.assign({}, DEF_F, { cert: c.id }) }), cta: 'Ver contenidos' }; });
     const certsOk = certs.filter(c => c.obtained).length;
@@ -1022,7 +1026,7 @@ class Component extends DCLogic {
       clearFilters: () => this.setState({ q: '', f: Object.assign({}, DEF_F) }),
       accessOpts: [{ v: 'todos', label: 'Todo el contenido' }, { v: 'free', label: 'Gratis' }, { v: 'aliado', label: 'Solo aliados' }], onAccess: e => this.setF('access', e.target.value),
       hasQ: !!q, qLabel: '«' + s.q.trim() + '»',
-      hasCert: !!cert && !isTools && !isCerts, certName: cert ? cert.name : '', certMeta: cert ? certDone + ' de ' + cert.courses.length + ' minicursos completados' + (certDone === cert.courses.length ? ' · certificación obtenida' : '') : '',
+      hasCert: !!cert && !isTools && !isCerts, certName: cert ? cert.name : '', certMeta: cert ? certDone + ' de ' + cert.courses.length + ' minicursos completados' + (certDone === cert.courses.length ? ' · certificación obtenida' : ' · +15 Puntos Sol al completarla') : '',
       certClear: () => this.setF('cert', null)
     }, schoolVals);
   }
@@ -1071,7 +1075,8 @@ class Component extends DCLogic {
       startCourse: () => this.top(lk ? this.lockEl : this.panelEl), prevStep: () => this.toStep(Math.max(0, s.step - 1)), hasPrev: s.step > 0,
       advance: () => this.advance(), advLabel: s.step < D.METHOD.length - 1 ? 'Continuar con ' + D.METHOD[s.step + 1].name : (p.done ? 'Completar de nuevo' : 'Completar curso'),
       celebrate: !!cel, celXp: cel ? (cel.xp ? '+' + cel.xp + ' XP' : (this.props.guest ? 'Inicia sesión para sumar XP' : 'Ya habías completado este curso')) : '', celHasXp: !!(cel && cel.xp),
-      celHasPts: !!(cel && cel.pts), celPts: cel && cel.pts ? '+' + cel.pts + ' Puntos Sol por este minicurso (máximo 20 al mes; lo que pase del tope se otorga el mes siguiente).' : '',
+      celHasPts: !!(cel && cel.pts), celPts: cel && cel.pts ? '+' + cel.pts + ' Puntos Sol por este minicurso (máximo 40 al mes; lo que pase del tope se otorga el mes siguiente).' : '',
+      celHasCert: !!(cel && cel.certs && cel.certs.length), celCert: cel && cel.certs && cel.certs.length ? '¡Completaste la certificación ' + cel.certs.map(n => '«' + n + '»').join(' y ') + '! +' + 15 * cel.certs.length + ' Puntos Sol.' : '',
       celNext: nx ? this.card(nx) : {}, celHasNext: !!nx, closeCel: () => this.setState({ celebrate: null }), celHome: () => this.nav('home')
     };
   }

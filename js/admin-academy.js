@@ -150,7 +150,7 @@ export function crearAcademy({ cliente, llamarAdmin, leer, esc, aviso, numero, c
     let html = '';
     if (tipo === 'curso') {
       html = `<h2>${nuevo ? 'Nuevo minicurso' : 'Editar minicurso'}</h2>
-      <p class="nota">Todos los minicursos siguen los mismos 6 pasos. Al completarlos, el aliado suma +5 Puntos Sol (máximo 20 al mes) y los XP de su formato.</p>
+      <p class="nota">Todos los minicursos siguen los mismos 6 pasos. Al completarlos, el aliado suma sus Puntos Sol (+5; +10 la masterclass; máximo 40 al mes) y los XP de su formato.</p>
       <div class="aca-grilla">
         ${campo('Título', txt('titulo', m.titulo, 'maxlength="120"'))}
         ${campo('Código', txt('codigo', m.codigo, nuevo ? 'maxlength="80"' : 'readonly'), nuevo ? 'Se arma con el título. No se puede cambiar después.' : 'No cambia.')}
@@ -159,7 +159,7 @@ export function crearAcademy({ cliente, llamarAdmin, leer, esc, aviso, numero, c
         ${campo('Duración (minutos)', txt('minutos', m.minutos, 'type="number" min="1" max="240"'))}
         ${campo('Nivel', sel('nivel', NIVELES.map((n) => [n, n]), m.nivel))}
         ${campo('Acceso', sel('acceso', [['aliado', 'Solo aliados'], ['free', 'Gratis (también sin sesión)']], m.acceso))}
-        ${campo('Puntos Sol', sel('puntos', [['5', '+5 al completarlo'], ['0', 'Sin puntos']], String(m.puntos)))}
+        ${campo('Puntos Sol', sel('puntos', [['5', '+5 al completarlo'], ['10', '+10 (masterclass)'], ['0', 'Sin puntos']], String(m.puntos)))}
         ${campo('Nivel de la escuela Energía', sel('ruta', RUTAS, m.ruta), 'Solo para los cursos de Energía por niveles.')}
       </div>
       ${campo('Descripción corta', area('descripcion', m.descripcion, 2, 'maxlength="300"'), 'Se ve en las tarjetas del catálogo (máx. 300 caracteres).')}
@@ -184,7 +184,7 @@ export function crearAcademy({ cliente, llamarAdmin, leer, esc, aviso, numero, c
       const titulo = (id) => (cursos.find((c) => c.codigo === id) || { titulo: id + ' (no existe)' }).titulo;
       const libres = cursos.filter((c) => !m.cursos.includes(c.codigo));
       html = `<h2>${nuevo ? 'Nueva certificación' : 'Editar certificación'}</h2>
-      <p class="nota">El aliado la obtiene al completar todos sus minicursos (+300 XP). Al tocarla en la Academy ve estos minicursos en este orden.</p>
+      <p class="nota">El aliado la obtiene al completar todos sus minicursos: +300 XP y +15 Puntos Sol (una vez, aparte de los de cada minicurso y fuera del tope mensual; también quien ya los había completado). Al tocarla en la Academy ve estos minicursos en este orden.</p>
       <div class="aca-grilla">
         ${campo('Nombre', txt('nombre', m.nombre, 'maxlength="80"'))}
         ${campo('Código', txt('codigo', m.codigo, nuevo ? 'maxlength="60"' : 'readonly'), nuevo ? 'Se arma con el nombre. No se puede cambiar después.' : 'No cambia.')}
@@ -232,6 +232,11 @@ export function crearAcademy({ cliente, llamarAdmin, leer, esc, aviso, numero, c
       const k = el.dataset.k;
       m[k] = el.type === 'checkbox' ? el.checked : el.value;
       if (k === 'sigla') m.sigla = el.value.toUpperCase();
+      // La masterclass vale +10 y los demás formatos +5 (el admin puede cambiarlo después).
+      if (k === 'formato' && editor.nuevo && String(m.puntos) !== '0') {
+        m.puntos = el.value === 'masterclass' ? 10 : 5;
+        const p = document.querySelector('#aca-editor [data-k="puntos"]'); if (p) p.value = String(m.puntos);
+      }
       // El código sigue al título mientras sea nuevo.
       if (editor.nuevo && (k === 'titulo' || k === 'nombre')) {
         m.codigo = editor.tipo === 'herramienta' ? 't-' + codigoDe(el.value, 40) : codigoDe(el.value, editor.tipo === 'cert' ? 60 : 80);

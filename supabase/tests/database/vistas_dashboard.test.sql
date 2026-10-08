@@ -44,6 +44,7 @@ select public.aplicar_avance_clientify('e3000000-0000-0000-0000-000000000001',
   '{"valor_cotizado": 250000000, "valor_oportunidad": 250000000, "potencia_instalada_kwp": 410}'::jsonb,
   '{"calificado": "si", "perfecto": "no", "oportunidad_tecnica": "si", "integridad_informacion": "si"}'::jsonb);
 select public.aplicar_avance_clientify('e3000000-0000-0000-0000-000000000002', '{}'::jsonb, '{"calificado": "no"}'::jsonb);
+update public.modulos set activo = true where codigo = 'c11'; -- curso de la Academy anterior, oculto desde academy_catalogo
 select public.completar_modulo('a3000000-0000-0000-0000-000000000001', 'c11');
 -- Gamma (de B) llega a la oferta y al contrato: fechas de la serie mensual (oct 2026).
 select public.aplicar_avance_clientify('e3000000-0000-0000-0000-000000000003', '{}'::jsonb,
@@ -104,7 +105,7 @@ select is((select puntos from public.v_mis_referidos where empresa = 'Alfa S.A.S
 select row_eq($$select fecha_propuesta, fecha_cierre from public.v_mis_referidos where empresa = 'Alfa S.A.S.'$$,
   row(null::timestamptz, null::timestamptz), 'sin oferta ni contrato, las fechas de la serie quedan vacías');
 
-select is((select count(*) from public.v_mis_modulos), 11::bigint, 'A ve el catálogo activo de la Academy');
+select is((select count(*) from public.v_mis_modulos), (select count(*) from public.modulos where activo), 'A ve el catálogo activo de la Academy');
 select row_eq($$select recompensa_estado, puntos_al_completar from public.v_mis_modulos where codigo = 'c11'$$,
   row('otorgada'::text, 5), 'con su estado en cada módulo');
 select is((select count(*) from public.v_mis_modulos where recompensa_estado is not null), 1::bigint, 'y sin los módulos de otros');

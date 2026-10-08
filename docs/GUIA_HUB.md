@@ -1055,6 +1055,14 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 - **Las claves secretas nunca van en el código ni en los commits.** La API key de Resend (contraseña SMTP) vive solo en el panel de Supabase de cada proyecto; no es una variable de Vercel.
 - **Un celular pertenece a un solo aliado** (índice único): Clientify une en un contacto los que comparten celular.
 - **Una cuenta de admin solo usa el panel:** si entra por el login del Hub, se la envía a `admin.html`.
+- **Microsoft Clarity sin datos personales** (mapas de calor y grabaciones para marketing, oct 2026):
+  - Se carga solo en Production, con `CLARITY_PROJECT_ID`, y las pruebas de Preview no se graban.
+  - El Hub completo, los formularios (Quiero ser aliado, Referir una empresa, Nueva oportunidad), el login, «Mi QR» y los avisos van con el texto tapado (`data-clarity-mask`): se ven los clics y el recorrido, no lo que dice ni lo que se escribe.
+  - El proyecto de Clarity tiene el enmascarado en *Strict* como segunda capa.
+  - No se carga si la dirección trae un código (confirmación de correo, recuperación de contraseña, invitación de operador o QR), ni en `admin.html` ni en `canje.html`.
+  - No se envía la identidad de nadie: las sesiones son anónimas.
+  - El equipo de marketing entra directo a clarity.microsoft.com con el acceso compartido; no pasa por el panel ni por n8n.
+  - **No cambies el enmascarado a *Balanced* u *Off*** en *Settings → Masking*, ni agregues identificadores: los datos de los aliados quedarían grabados.
 
 **Variables de entorno en Vercel** (cada una con valor de `prod` para *Production* y de `dev` para *Preview*/*Development*):
 
@@ -1067,6 +1075,7 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
 | `CLIENTIFY_WEBHOOK_SECRET` | Token que Clientify y n8n envían al webhook. | **Nunca.** |
 | `CRON_SECRET` | Protege `/api/cron/*` (debe ser igual al `cron_secret` del Vault). | **Nunca.** |
 | `CANJES_API_KEYS` | `proveedor:key,proveedor:key` (keys de 24+ caracteres). | **Nunca.** |
+| `CLARITY_PROJECT_ID` | Id del proyecto de Microsoft Clarity «GEENERA - Aliados del Sol» (Clarity → *Settings → Setup*; es el texto tras `clarity.ms/tag/` en el script). Solo en **Production**: en Preview no se graba. Sin ella, Clarity no se carga. | Sí, por `/api/config`, solo en Production (es público por diseño). |
 | `TURNSTILE_SITE_KEY` | Clave pública del captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña. | Sí, por `/api/config`. |
 | `RESEND_API_KEY` | Key de Resend **solo con permiso de envío** para el correo «Confirmación de empresa referida» (oct 2026). Es otra key, distinta de la contraseña SMTP de Supabase, que sigue solo en Supabase. Sin ella los correos quedan en «Correos no enviados». | **Nunca.** |
 | `N8N_IMPERFECTOS_URL` | *Production URL* del webhook de n8n que recibe los referidos imperfectos (§5.2). Una por entorno (en Preview, la de un flujo de pruebas). Sin ella los avisos quedan en «Avisos a n8n no enviados». | **Nunca.** |
@@ -1161,6 +1170,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - El catálogo de recompensas se administra desde el panel, **con una imagen opcional por recompensa** (oct 2026): JPG, PNG o WebP de máximo 2 MB, idealmente de 1200×600 y con lo importante en el centro, porque la tarjeta recorta los bordes. El panel avisa si es más pequeña, pero la acepta; al cambiarla o quitarla se borra la anterior. El proveedor puede consultar el nivel y el saldo por código, sin datos personales. Un admin puede anular un canje: se devuelve el saldo, no los puntos de nivel.
 - **Canje con QR (fase 11):** QR dinámico de 5 minutos y un solo uso, renovado cada 60 s, con código corto de respaldo. Escanean operadores invitados por un admin y ligados a un proveedor (no son aliados); los admins también. La recompensa la elige el operador; una por escaneo; el aliado no aprueba en su celular, porque mostrar el QR es su consentimiento. El operador ve el nombre corto del aliado, su código, nivel y saldo, nunca su correo ni su celular. Un operador se elimina solo si no ha registrado canjes.
 - El Hub recarga los puntos solo al volver a la pestaña o a la app (y cada 2 minutos con la página abierta).
+- **Mapa de calor con Microsoft Clarity** (oct 2026): solo en Production, con el Hub y los formularios tapados, sesiones anónimas y enmascarado *Strict*; marketing lo consulta directo en Clarity (§8).
 
 ---
 
@@ -1300,6 +1310,7 @@ El dominio de envío (`notificaciones.geenera.com`) ya está verificado en Resen
 - `CANJES_API_KEYS` cuando exista el proveedor;
 - `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` del widget real de Cloudflare Turnstile (ver «Captcha» abajo). **Sin ellas el formulario público no funciona en Production.**
 - `N8N_IMPERFECTOS_URL`, `N8N_IMPERFECTOS_TOKEN`, `N8N_PERFECTOS_URL` y `N8N_PERFECTOS_TOKEN`: la *Production URL* del webhook de cada flujo de n8n y su token (§5.2); marcarlas *Sensitive*. En Preview, las de flujos de prueba.
+- `CLARITY_PROJECT_ID`: el id del proyecto de Microsoft Clarity (*Settings → Setup*, el texto tras `clarity.ms/tag/` del script de instalación manual), **solo en Production**. Después de desplegar, en Clarity *Settings → Setup* debe aparecer el sitio como instalado (puede tardar hasta 2 horas en mostrar datos).
 - `RESEND_API_KEY`: en Resend → *API Keys* → *Create API Key*, permiso **Sending access** y dominio `notificaciones.geenera.com`; marcarla *Sensitive* en Vercel. Una key para Preview y otra para Production. Sin ella no sale el correo de confirmación de los referidos (queda en «Correos no enviados»).
 
 **Captcha (Cloudflare Turnstile): formulario público, registro, login y recuperar contraseña, paso a paso:**
@@ -1397,6 +1408,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 16 | ~~Un referido ya cerrado al que solo le cambian el contacto no se volvía a revisar.~~ | Resuelto (6 oct 2026): además de la revisión horaria de los referidos en curso, una vez al día (2 a. m., hora de Bogotá) se revisan también los cerrados, así una etiqueta de «fraude» o un retroceso de Status puesto después del cierre se detecta en máximo un día (§5.3). |
 | 17 | Key de Resend para el correo de confirmación de los referidos (MEDDPICC). | Pendiente: crear en Resend una key con permiso solo de envío para Preview y otra para Production, y guardarlas en Vercel como `RESEND_API_KEY` (§10.2, paso 4). Mientras no exista, los correos quedan en «Correos no enviados» del panel. Mencionar el MEDDPICC y la bienvenida en los Términos o en la política de beneficios. |
 | 18 | Aviso a n8n de los referidos perfectos e imperfectos. | Flujo de imperfectos listo en n8n y sus variables en Vercel Production (oct 2026). Pendiente: lo mismo para el flujo de perfectos (`N8N_PERFECTOS_URL`, `N8N_PERFECTOS_TOKEN`; pasos en §5.2) y, si se quiere probar en Preview, flujos de prueba con sus variables. Mientras falten, esos avisos quedan en «Avisos a n8n no enviados». La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n (encargado del tratamiento). |
+| 20 | Microsoft Clarity. | Implementado (oct 2026, §8): proyecto creado, acceso compartido con marketing y enmascarado en *Strict*. Pendiente: guardar `CLARITY_PROJECT_ID` en Vercel Production (§10.2, paso 4) y, al desplegar, confirmar en Clarity que el sitio aparece instalado. Mencionar en la Política de Tratamiento de Datos la analítica con Microsoft Clarity (cookies, datos en EE. UU., sin datos personales). |
 | 19 | Catálogo de la Academy en producción. | Al desplegar, aplicar en orden las migraciones `academy_catalogo`, `academy_contenido` (es grande: se pega en el *SQL Editor*) y `academy_puntos`. Sin la segunda, la Academy se ve vacía. Pendiente: definir las masterclasses en vivo (se ocultaron) y si las rutas por tipo de aliado también se vuelven editables. |
 
 ---

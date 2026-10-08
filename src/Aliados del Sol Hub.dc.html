@@ -169,7 +169,7 @@
             <span style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mut4,#6B6762)">Paso {{ step }} de 2</span>
           </div>
           <sc-if value="{{ pubRefForm }}" hint-placeholder-val="{{ true }}">
-          <div style="position:relative;display:flex;flex-direction:column;padding:clamp(18px,2vw,26px);border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:16px;background:var(--bg2,#0D0D11)">
+          <div data-clarity-mask="true" style="position:relative;display:flex;flex-direction:column;padding:clamp(18px,2vw,26px);border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:16px;background:var(--bg2,#0D0D11)">
             <p style="margin:0 0 16px;font-size:14.5px;color:var(--mut,#9A968F)">{{ stepSubtitle }}</p>
             <div style="display:flex;gap:6px;padding-bottom:22px">
               <sc-for list="{{ stepBars }}" as="s" hint-placeholder-count="2">
@@ -218,7 +218,7 @@
           </div>
           </sc-if>
           <sc-if value="{{ pubRefDone }}" hint-placeholder-val="{{ false }}">
-          <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:16px;padding:44px 28px;text-align:center;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:16px;background:var(--bg2,#0D0D11)">
+          <div data-clarity-mask="true" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:16px;padding:44px 28px;text-align:center;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:16px;background:var(--bg2,#0D0D11)">
             <dc-import name="GProgress" variant="mark" size="{{ 112 }}" pct="{{ 1 }}" duration="{{ 700 }}" hint-size="112px,112px"></dc-import>
             <h3 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-.03em">Referido recibido</h3>
             <p style="margin:0;font-size:15px;color:var(--mut,#9A968F);max-width:40ch;line-height:1.5">{{ refEmpresa }} ya está en nuestro proceso comercial y quedó en el Hub del aliado que la refirió.</p>
@@ -931,7 +931,7 @@
   </sc-if>
 
   <sc-if value="{{ isJoin }}" hint-placeholder-val="{{ false }}">
-  <section data-screen-label="Registro de aliados" style="padding:clamp(44px,7vh,90px) clamp(16px,3.4vw,44px) clamp(60px,9vh,110px);animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
+  <section data-screen-label="Registro de aliados" data-clarity-mask="true" style="padding:clamp(44px,7vh,90px) clamp(16px,3.4vw,44px) clamp(60px,9vh,110px);animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
     <div style="max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(26px,4vh,40px)">
       <button onClick="{{ goHome }}" style="align-self:flex-start;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Volver al inicio</button>
       <div style="display:flex;flex-direction:column;gap:12px;max-width:60ch">
@@ -1073,7 +1073,8 @@
 </sc-if>
 
 <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
-<div style="display:grid;grid-template-columns:{{ appCols }};align-items:start;min-height:100vh">
+<!-- Hub: Microsoft Clarity graba los clics pero tapa todo el texto (datos de los aliados; CLAUDE.md §10). -->
+<div data-clarity-mask="true" style="display:grid;grid-template-columns:{{ appCols }};align-items:start;min-height:100vh">
 
   <sc-if value="{{ appMenuOpen }}" hint-placeholder-val="{{ false }}">
   <div onClick="{{ closeAppMenu }}" aria-hidden="true" style="position:fixed;inset:0;z-index:89;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);animation:riseIn 180ms ease both"></div>
@@ -2573,7 +2574,7 @@
 </sc-if>
 
 <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
-<section data-screen-label="Login" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));min-height:100vh">
+<section data-screen-label="Login" data-clarity-mask="true" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));min-height:100vh">
   <div style="position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:44px">
     <img src="assets/foto-equipo.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62">
     <div style="position:absolute;inset:0;background:linear-gradient(170deg,var(--b-55,rgba(7,7,10,.55)) 0%,rgba(28,16,48,.55) 45%,var(--b-94,rgba(7,7,10,.94)) 100%)"></div>
@@ -2681,7 +2682,7 @@
 </sc-if>
 
 <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
-<div style="position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:32px;background:rgba(4,4,6,.76);backdrop-filter:blur(8px);animation:fadeIn 220ms ease both">
+<div data-clarity-mask="true" style="position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:32px;background:rgba(4,4,6,.76);backdrop-filter:blur(8px);animation:fadeIn 220ms ease both">
   <div style="width:100%;max-width:620px;max-height:88vh;overflow:auto;border:1px solid var(--w-10,rgba(255,255,255,.1));border-radius:20px;background:var(--bg2,#0D0D11);color:var(--fg,#F2F0EC);box-shadow:0 50px 100px -40px rgba(0,0,0,.9);animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
 
     <sc-if value="{{ newForm }}" hint-placeholder-val="{{ true }}">
@@ -2767,7 +2768,7 @@
 </sc-if>
 
 <sc-if value="{{ levelUp }}" hint-placeholder-val="{{ false }}">
-<div data-theme="dark" style="position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:32px;background:radial-gradient(circle at 50% 42%,rgba(40,24,4,.96),rgba(4,4,6,.985) 62%);animation:fadeIn 320ms ease both">
+<div data-theme="dark" data-clarity-mask="true" style="position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:32px;background:radial-gradient(circle at 50% 42%,rgba(40,24,4,.96),rgba(4,4,6,.985) 62%);animation:fadeIn 320ms ease both">
   <div style="display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center;animation:riseIn 620ms cubic-bezier(.22,.61,.36,1) both">
     <dc-import name="GProgress" variant="mark" size="{{ 280 }}" pct="{{ 1 }}" duration="{{ 1100 }}" hint-size="280px,280px"></dc-import>
     <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
@@ -2792,7 +2793,7 @@
 </sc-if>
 
 <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
-<div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:99;display:flex;align-items:center;gap:11px;padding:12px 18px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:12px;background:rgba(18,18,22,.96);backdrop-filter:blur(10px);box-shadow:0 20px 50px -20px rgba(0,0,0,.9);animation:toastIn 260ms cubic-bezier(.22,.61,.36,1) both">
+<div data-clarity-mask="true" style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:99;display:flex;align-items:center;gap:11px;padding:12px 18px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:12px;background:rgba(18,18,22,.96);backdrop-filter:blur(10px);box-shadow:0 20px 50px -20px rgba(0,0,0,.9);animation:toastIn 260ms cubic-bezier(.22,.61,.36,1) both">
   <span style="width:7px;height:7px;border-radius:50%;background:#5FBF8B;flex:none"></span>
   <span style="font-size:14px;color:var(--fg2,#EDEAE4)">{{ toast }}</span>
 </div>

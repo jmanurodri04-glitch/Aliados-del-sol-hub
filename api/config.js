@@ -3,6 +3,8 @@
 // Solo expone la URL y la publishable key: la seguridad la da RLS. Nunca la secret key.
 // También la site key del captcha del formulario público (Cloudflare Turnstile), que es pública por diseño;
 // su clave secreta (TURNSTILE_SECRET_KEY) solo la usa el servidor.
+// Y el id del proyecto de Microsoft Clarity (público, va en la página), solo en Production: las pruebas de Preview
+// no se graban (js/clarity.js).
 
 import { urlDeSupabase } from '../lib/supabase-servidor.js';
 
@@ -20,5 +22,6 @@ export default function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
-  return res.status(200).json({ supabaseUrl, supabasePublishableKey, turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || null });
+  const clarityProjectId = process.env.VERCEL_ENV === 'production' ? (process.env.CLARITY_PROJECT_ID || '').trim() || null : null;
+  return res.status(200).json({ supabaseUrl, supabasePublishableKey, turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || null, clarityProjectId });
 }

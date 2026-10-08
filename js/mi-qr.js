@@ -31,6 +31,7 @@ const formatoCodigo = (c) => String(c || '').replace(/^(.{4})(.{4})$/, '$1-$2');
 function crear() {
   raiz = document.createElement('div');
   raiz.id = 'mi-qr';
+  raiz.setAttribute('data-clarity-mask', 'true'); // Microsoft Clarity no ve el código ni el saldo (js/clarity.js)
   raiz.hidden = true;
   raiz.setAttribute('role', 'dialog');
   raiz.setAttribute('aria-modal', 'true');

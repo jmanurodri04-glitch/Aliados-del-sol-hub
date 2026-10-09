@@ -5,3 +5,6 @@ Thumbs.db
 *.log
 .bundles/
 dist/
+
+# Variables de entorno locales (vercel env pull .env.local)
+.env*.local

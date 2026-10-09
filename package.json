@@ -2,13 +2,19 @@
   "name": "aliados-del-sol-hub",
   "version": "1.0.1",
   "private": true,
+  "type": "module",
   "description": "Aliados del Sol — programa de aliados de GEENERA. Sitio estático, sin paso de build.",
   "scripts": {
-    "dev": "npx --yes serve . -l 4173",
-    "start": "npx --yes serve . -l 4173"
+    "dev": "npx --yes vercel dev --listen 4173",
+    "start": "npx --yes serve . -l 4173",
+    "test:db": "npx --yes supabase test db",
+    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\""
   },
   "engines": {
-    "node": ">=18"
+    "node": "22.x"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2"
+  }
 }

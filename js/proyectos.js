@@ -2,8 +2,8 @@
 // a la página con el formato del Hub. WordPress sigue siendo el dueño del contenido: el Hub solo lee su API pública
 // (tipo de contenido `cpt-proyectos` de JetEngine, con sus campos publicados en la API) y no guarda nada.
 // La página pide los datos con `ads:proyectos-cargar` y los recibe en `ads:proyectos { ok, proyectos, mensaje? }`.
-// El QR para Maps solo se muestra en los proyectos que lo tienen cargado (el cliente lo autorizó); la dirección
-// se muestra siempre (decisión del equipo, oct 2026). Maps abre en vista satélite: con el campo `c-coordenadas`
+// Google Maps solo se ofrece en los proyectos que tienen QR o coordenadas cargados (el cliente lo autorizó); la
+// dirección se muestra siempre (decisiones del equipo, oct 2026). Maps abre en vista satélite: con el campo `c-coordenadas`
 // («lat, lng») el enlace centra el mapa en el proyecto, que también respeta el satélite en la app del celular; sin él,
 // busca la dirección. Un proyecto es residencial si su título tiene la palabra «Casa».
 

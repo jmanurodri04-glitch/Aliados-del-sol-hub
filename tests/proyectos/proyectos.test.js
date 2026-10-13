@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { numero, textoPlano, normalizarProyecto, idsDeMedios, cargarProyectos, WP_API } from '../../js/proyectos.js';
+import { numero, textoPlano, normalizarProyecto, idsDeMedios, cargarProyectos, WP_API, coordenadas, enlaceMaps, esResidencial } from '../../js/proyectos.js';
 
 const medio = (id, url) => ({ id, source_url: url, media_details: { sizes: { large: { source_url: url.replace('.webp', '-1024.webp') } } } });
 
@@ -87,4 +87,34 @@ test('cargarProyectos: pagina la API y pide los medios en un solo lote', async (
 test('cargarProyectos: un error de WordPress se propaga para mostrar «Reintentar»', async () => {
   const f = async () => ({ ok: false, status: 503, json: async () => ({}), headers: { get: () => null } });
   await assert.rejects(cargarProyectos(f), /wordpress_503/);
+});
+
+test('coordenadas acepta «lat, lng», coma decimal con punto y coma y enlaces de Maps', () => {
+  assert.deepEqual(coordenadas('4.8133, -75.6961'), { lat: 4.8133, lng: -75.6961 });
+  assert.deepEqual(coordenadas('4,8133; -75,6961'), { lat: 4.8133, lng: -75.6961 });
+  assert.deepEqual(coordenadas('https://www.google.com/maps/place/X/@7.1193,-73.1227,17z'), { lat: 7.1193, lng: -73.1227 });
+  assert.equal(coordenadas(''), null);
+  assert.equal(coordenadas('Calle 10 # 5-20'), null);
+  assert.equal(coordenadas('120, 10'), null);
+});
+
+test('enlaceMaps abre en satélite, con coordenadas o con la dirección', () => {
+  assert.equal(enlaceMaps({ lat: 4.8, lng: -75.6 }, 'Pereira'), 'https://www.google.com/maps/@?api=1&map_action=map&center=4.8,-75.6&zoom=19&basemap=satellite');
+  assert.equal(enlaceMaps(null, 'Km 2 vía Pereira'), 'https://maps.google.com/maps?t=k&q=Km%202%20v%C3%ADa%20Pereira');
+  assert.equal(enlaceMaps(null, ''), null);
+});
+
+test('esResidencial reconoce «Casa» como palabra, sin importar mayúsculas', () => {
+  assert.equal(esResidencial('CASA MONTOYA'), true);
+  assert.equal(esResidencial('Casa Arenas'), true);
+  assert.equal(esResidencial('Sistema fotovoltaico casa Genoma'), true);
+  assert.equal(esResidencial('Casablanca Logística'), false);
+  assert.equal(esResidencial('Extractora Vizcaya'), false);
+});
+
+test('normalizarProyecto agrega residencial, coordenadas y el enlace de Maps', () => {
+  const p = normalizarProyecto({ id: 9, title: { rendered: 'CASA GENOMA' }, meta: { 'c-ubicacion-del-proyecto': 'Rionegro', 'c-coordenadas': '6.15, -75.37' } });
+  assert.equal(p.residencial, true);
+  assert.deepEqual(p.coordenadas, { lat: 6.15, lng: -75.37 });
+  assert.match(p.maps, /basemap=satellite/);
 });

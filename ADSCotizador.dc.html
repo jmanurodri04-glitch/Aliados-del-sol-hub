@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-ads-theme="dark"]{--ads-bg:#07070A;--ads-surface:#121214;--ads-surface-2:#19191C;--ads-field:#151517;--ads-line:#27272C;--ads-ink:#F4F1EA;--ads-muted:#A6A39C;--ads-accent:#FFC20E;--ads-accent-ink:#FFC20E;--ads-eyebrow:#C9A23A;--ads-chip-bg:#2A2208;--ads-chip-ink:#FFC20E;--ads-cta:linear-gradient(90deg,#FFC20E,#F7931E);--ads-cta-ink:#1A1205;--ads-glow:rgba(255,178,14,.55);--ads-head:rgba(10,10,12,.92);--ads-glass:rgba(14,14,16,.88);--ads-card-glow:radial-gradient(90% 60% at 100% 0%,rgba(255,194,14,.13),rgba(255,194,14,0) 60%);--ads-stage:radial-gradient(90% 70% at 70% 0%,#FFF4DA 0%,#F3ECE1 55%,#ECE4D7 100%);--ads-ok:#3CCB7F}
+[data-ads-theme="light"]{--ads-bg:#F6F2EC;--ads-surface:#FDFBF8;--ads-surface-2:#EFEBE4;--ads-field:#F3EFE9;--ads-line:#DED7CC;--ads-ink:#1A1814;--ads-muted:#5E5A52;--ads-accent:#B87400;--ads-accent-ink:#9A6400;--ads-eyebrow:#9A6A00;--ads-chip-bg:#FBEBC8;--ads-chip-ink:#9A5E00;--ads-cta:linear-gradient(90deg,#FFC20E,#F7931E);--ads-cta-ink:#1A1205;--ads-glow:rgba(247,147,30,.45);--ads-head:rgba(246,242,236,.92);--ads-glass:rgba(253,251,248,.9);--ads-card-glow:radial-gradient(90% 60% at 100% 0%,rgba(255,194,14,.18),rgba(255,194,14,0) 60%);--ads-stage:radial-gradient(90% 70% at 70% 0%,#FFF4DA 0%,#F3ECE1 55%,#ECE4D7 100%);--ads-ok:#1E8A52}
+[data-ads-theme] :focus-visible{outline:2px solid var(--ads-accent);outline-offset:2px}
+[data-ads-theme] a{color:var(--ads-accent-ink)}
+[data-ads-theme] a:hover{color:var(--ads-ink)}
+[data-ads-theme] input::placeholder{color:var(--ads-muted);opacity:.8}
+[data-ads-theme] input[type=range],[data-ads-theme] input[type=checkbox]{accent-color:#F5A800}
+@keyframes ads-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<!-- Cotizador Solar (diseño «Cotizador Aliados del Sol v5»). Va dentro del Hub (rutas cotizador y p-cotizador): sin encabezado ni pie
+     propios y con el tema del Hub. Las fórmulas y las listas viven en js/cotizador-calculo.js (window.ADS_COTIZADOR). Los datos se
+     guardan con js/cotizador.js → /api/cotizador; el texto con datos personales queda tapado para Clarity. -->
+<div data-ads-theme="{{ themeAttr }}" data-clarity-mask="true" style="color:var(--ads-ink); font-family:'Titillium Web',system-ui,sans-serif; transition:background-color 220ms cubic-bezier(.2,0,0,1), color 220ms cubic-bezier(.2,0,0,1)">
+
+
+  <section style="padding:36px 0 28px; display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:20px 48px">
+    <div style="display:flex; flex-direction:column; gap:16px; max-width:760px">
+      <button type="button" onClick="{{ goBack }}" style="align-self:flex-start; padding:0; border:none; background:transparent; cursor:pointer; font:600 14px/1.2 'Titillium Web',sans-serif; color:var(--ads-muted)">← Herramientas</button>
+      <span style="font-weight:600; font-size:13px; letter-spacing:.3em; text-transform:uppercase; color:var(--ads-eyebrow)">Cotizador solar</span>
+      <h1 style="margin:0; font-weight:700; font-size:clamp(36px,4.6vw,64px); line-height:1; letter-spacing:-.02em; text-wrap:balance">Diseña el sistema solar <span style="color:var(--ads-accent)">mientras respondes.</span></h1>
+    </div>
+    <p style="margin:0; max-width:460px; font-weight:300; font-size:18px; line-height:1.55; color:var(--ads-muted); text-wrap:pretty">Cinco datos y el modelo se arma solo: edificación, módulos, almacenamiento e inversor. Al final lo conectas y lo ves funcionar un día completo.</p>
+  </section>
+
+  <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+    <div style="height:420px; border-radius:24px; border:1px solid var(--ads-line); background:var(--ads-surface-2)"></div>
+  </sc-if>
+  <sc-if value="{{ listo }}" hint-placeholder-val="{{ true }}">
+  <section style="display:flex; flex-wrap:wrap; align-items:flex-start; gap:24px; padding:0 0 64px">
+
+    <div aria-label="Modelo 3D del sistema" style="position:{{ stagePos }}; top:{{ stageTop }}; flex:999 1 560px; min-width:0; height:{{ stageH }}; border-radius:24px; overflow:hidden; border:1px solid var(--ads-line); background:var(--ads-stage)">
+      <div ref="{{ stageRef }}" style="position:absolute; inset:0; cursor:grab; touch-action:pan-y"></div>
+
+      <div style="position:absolute; left:20px; top:20px; right:20px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; pointer-events:none">
+        <span style="display:flex; align-items:center; gap:10px; padding:8px 14px; border-radius:10px; background:var(--ads-glass); border:1px solid var(--ads-line)">
+          <span style="font-weight:600; font-size:10px; letter-spacing:.24em; text-transform:uppercase; color:var(--ads-eyebrow)">Proyecto</span>
+          <span style="font-weight:600; font-size:15px">{{ projectName }}</span>
+        </span>
+        <sc-if value="{{ showHud }}" hint-placeholder-val="{{ false }}">
+          <span style="display:flex; gap:18px; padding:8px 14px; border-radius:10px; background:var(--ads-glass); border:1px solid var(--ads-line); font-variant-numeric:tabular-nums">
+            <span style="display:flex; align-items:baseline; gap:5px"><span style="font-weight:700; font-size:16px">{{ hud.kwp }}</span><span style="font-size:12px; color:var(--ads-muted)">kWp</span></span>
+            <span style="display:flex; align-items:baseline; gap:5px"><span style="font-weight:700; font-size:16px">{{ hud.mods }}</span><span style="font-size:12px; color:var(--ads-muted)">módulos</span></span>
+          </span>
+        </sc-if>
+      </div>
+
+
+      <sc-if value="{{ connected }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; left:12px; right:12px; bottom:12px; display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; padding:8px 10px 8px 8px; border-radius:14px; background:var(--ads-glass); border:1px solid var(--ads-line); animation:ads-rise 420ms cubic-bezier(.2,.8,.2,1)">
+          <button type="button" onClick="{{ togglePlay }}" style="flex:none; min-height:44px; padding:0 16px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 14px/1 'Titillium Web',sans-serif">{{ playLabel }}</button>
+          <label style="flex:1 1 200px; display:flex; align-items:center; gap:12px; min-width:0">
+            <span style="flex:none; font-weight:700; font-size:16px; font-variant-numeric:tabular-nums; min-width:46px">{{ sim.clock }}</span>
+            <input type="range" min="0" max="24" step="0.1" value="{{ simH }}" onChange="{{ setHour }}" aria-label="Simulación 24 h · hora del día" style="flex:1; min-width:0; margin:0; accent-color:var(--ads-accent)">
+          </label>
+          <div style="flex:0 1 auto; display:flex; flex-wrap:wrap; gap:6px 18px; padding-left:18px; border-left:1px solid var(--ads-line)">
+            <span style="display:flex; flex-direction:column; gap:3px"><span style="font-weight:600; font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--ads-muted)">Sol</span><span style="font-weight:700; font-size:16px; color:var(--ads-accent-ink); font-variant-numeric:tabular-nums">{{ sim.pv }}</span></span>
+            <span style="display:flex; flex-direction:column; gap:3px"><span style="font-weight:600; font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--ads-muted)">Consumo</span><span style="font-weight:700; font-size:16px; font-variant-numeric:tabular-nums">{{ sim.load }}</span></span>
+            <sc-if value="{{ hasBat }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex; flex-direction:column; gap:3px"><span style="font-weight:600; font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--ads-muted)">Batería</span><span style="font-weight:700; font-size:16px; font-variant-numeric:tabular-nums">{{ sim.soc }}</span></span>
+            </sc-if>
+            <span style="display:flex; flex-direction:column; gap:3px"><span style="font-weight:600; font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--ads-muted)">{{ sim.gridLabel }}</span><span style="font-weight:700; font-size:16px; font-variant-numeric:tabular-nums">{{ sim.grid }}</span></span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ webglFail }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; left:20px; right:20px; bottom:20px; padding:14px 16px; border-radius:12px; border:1px solid var(--ads-line); background:var(--ads-glass); font-size:14px; color:var(--ads-muted)">Este navegador no pudo iniciar el modelo 3D. El cotizador calcula igual.</div>
+      </sc-if>
+    </div>
+
+    <aside aria-label="Configuración del sistema" style="flex:1 1 420px; min-width:0; max-width:620px; position:relative; padding:24px; border-radius:24px; border:1px solid var(--ads-line); background:var(--ads-card-glow), var(--ads-surface-2); display:flex; flex-direction:column; gap:18px; box-sizing:border-box">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 6px 0">
+        <span style="font-weight:700; font-size:20px">Cotizador solar</span>
+        <span style="font-weight:600; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--ads-muted)">{{ pasoTxt }}</span>
+      </div>
+
+      <div style="padding:24px; border-radius:18px; background:var(--ads-surface); border:1px solid var(--ads-line); display:flex; flex-direction:column; gap:4px">
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:12px">
+          <sc-for list="{{ progress }}" as="p" hint-placeholder-count="5">
+            <span style="height:3px; border-radius:2px; background:{{ p.bg }}; transition:background-color 420ms cubic-bezier(.2,.8,.2,1)"></span>
+          </sc-for>
+        </div>
+
+        <div style="padding:14px 0; border-bottom:1px solid var(--ads-line); display:flex; flex-direction:column; gap:14px">
+          <button type="button" onClick="{{ s1.open }}" disabled="{{ s1.locked }}" style="width:100%; min-height:44px; display:flex; align-items:center; gap:14px; background:none; border:none; padding:0; text-align:left; cursor:pointer; color:inherit; font:inherit">
+            <span style="flex:none; width:40px; height:40px; border-radius:10px; display:grid; place-items:center; background:{{ s1.badgeBg }}; color:{{ s1.badgeInk }}; font-weight:700; font-size:15px">{{ s1.badge }}</span>
+            <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px"><span style="font-weight:600; font-size:17px; color:{{ s1.titleInk }}">Tipo de proyecto</span><sc-if value="{{ s1.showSummary }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px; color:var(--ads-muted)">{{ s1.summary }}</span></sc-if></span>
+            <sc-if value="{{ s1.showEdit }}" hint-placeholder-val="{{ false }}"><span style="font-weight:600; font-size:13px; color:var(--ads-accent-ink)">Cambiar</span></sc-if>
+          </button>
+          <sc-if value="{{ s1.isOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; animation:ads-rise 220ms cubic-bezier(.2,0,0,1)">
+              <sc-for list="{{ tipoOpts }}" as="o" hint-placeholder-count="3">
+                <button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height:72px; display:flex; flex-direction:column; justify-content:center; gap:6px; padding:12px 16px; border-radius:14px; border:1px solid {{ o.border }}; background:{{ o.bg }}; color:var(--ads-ink); text-align:left; cursor:pointer; font:inherit; box-shadow:{{ o.shadow }}; transition:border-color 220ms cubic-bezier(.2,0,0,1)" style-hover="border-color:var(--ads-accent)">
+                  <span style="font-weight:600; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--ads-eyebrow)">{{ o.eyebrow }}</span>
+                  <span style="display:flex; flex-direction:column; gap:4px"><span style="font-weight:700; font-size:18px; line-height:1">{{ o.title }}</span></span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="padding:14px 0; border-bottom:1px solid var(--ads-line); display:flex; flex-direction:column; gap:14px">
+          <button type="button" onClick="{{ s2.open }}" disabled="{{ s2.locked }}" style="width:100%; min-height:44px; display:flex; align-items:center; gap:14px; background:none; border:none; padding:0; text-align:left; cursor:pointer; color:inherit; font:inherit">
+            <span style="flex:none; width:40px; height:40px; border-radius:10px; display:grid; place-items:center; background:{{ s2.badgeBg }}; color:{{ s2.badgeInk }}; font-weight:700; font-size:15px">{{ s2.badge }}</span>
+            <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px"><span style="font-weight:600; font-size:17px; color:{{ s2.titleInk }}">Datos de contacto</span><sc-if value="{{ s2.showSummary }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px; color:var(--ads-muted)">{{ s2.summary }}</span></sc-if></span>
+            <sc-if value="{{ s2.showEdit }}" hint-placeholder-val="{{ false }}"><span style="font-weight:600; font-size:13px; color:var(--ads-accent-ink)">Cambiar</span></sc-if>
+          </button>
+          <sc-if value="{{ s2.isOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:12px; animation:ads-rise 220ms cubic-bezier(.2,0,0,1)">
+              <sc-if value="{{ isEmp }}" hint-placeholder-val="{{ true }}">
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Empresa</span>
+                  <input type="text" value="{{ f.empresa }}" onChange="{{ set.empresa }}" placeholder="Nombre de la empresa" autocomplete="organization" maxlength="200" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.empresa }}">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Contacto</span>
+                  <input type="text" value="{{ f.contacto }}" onChange="{{ set.contacto }}" placeholder="Nombre y apellido" autocomplete="name" maxlength="200" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.contacto }}">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Teléfono</span>
+                  <span style="display:flex; gap:8px; min-width:0">
+                    <select aria-label="País del teléfono" value="{{ f.pais }}" onChange="{{ setPais }}" style="flex:0 0 auto; max-width:132px; min-height:54px; padding:0 8px 0 12px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:600 14px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid var(--ads-line); cursor:pointer">
+                      <sc-for list="{{ paises }}" as="c" hint-placeholder-count="1"><option value="{{ c.id }}">{{ c.label }}</option></sc-for>
+                    </select>
+                    <input type="tel" inputmode="numeric" value="{{ f.telefono }}" onChange="{{ set.telefono }}" placeholder="{{ telPh }}" autocomplete="tel-national" style="flex:1; min-width:0; width:100%; min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.telefono }}">
+                  </span>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Correo</span>
+                  <input type="email" value="{{ f.correo }}" onChange="{{ set.correo }}" placeholder="nombre@correo.com" autocomplete="email" maxlength="200" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.correo }}">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Ciudad</span>
+                  <select value="{{ f.ciudad }}" onChange="{{ set.ciudad }}" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.ciudad }}; cursor:pointer">
+                    <option value="">Selecciona la ciudad</option>
+                    {{ cityOptions }}
+                  </select>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Subsector</span>
+                  <select value="{{ f.subsector }}" onChange="{{ set.subsector }}" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.subsector }}; cursor:pointer">
+                    <option value="">Selecciona el subsector</option>
+                    {{ subOptions }}
+                  </select>
+                </label>
+              </sc-if>
+              <sc-if value="{{ isRes }}" hint-placeholder-val="{{ false }}">
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Nombre</span>
+                  <input type="text" value="{{ f.nombre }}" onChange="{{ set.nombre }}" placeholder="Nombre y apellido" autocomplete="name" maxlength="200" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.nombre }}">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Teléfono</span>
+                  <span style="display:flex; gap:8px; min-width:0">
+                    <select aria-label="País del teléfono" value="{{ f.pais }}" onChange="{{ setPais }}" style="flex:0 0 auto; max-width:132px; min-height:54px; padding:0 8px 0 12px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:600 14px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid var(--ads-line); cursor:pointer">
+                      <sc-for list="{{ paises }}" as="c" hint-placeholder-count="1"><option value="{{ c.id }}">{{ c.label }}</option></sc-for>
+                    </select>
+                    <input type="tel" inputmode="numeric" value="{{ f.telefono }}" onChange="{{ set.telefono }}" placeholder="{{ telPh }}" autocomplete="tel-national" style="flex:1; min-width:0; width:100%; min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.telefono }}">
+                  </span>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Correo</span>
+                  <input type="email" value="{{ f.correo }}" onChange="{{ set.correo }}" placeholder="nombre@correo.com" autocomplete="email" maxlength="200" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.correo }}">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Ciudad</span>
+                  <select value="{{ f.ciudad }}" onChange="{{ set.ciudad }}" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.ciudad }}; cursor:pointer">
+                    <option value="">Selecciona la ciudad</option>
+                    {{ cityOptions }}
+                  </select>
+                </label>
+              </sc-if>
+              <sc-if value="{{ hasFormErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ formErr }}</span></sc-if>
+              <button type="button" onClick="{{ next2 }}" style="align-self:flex-start; min-height:46px; padding:0 22px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 15px/1 'Titillium Web',sans-serif" style-active="transform:translateY(1px) scale(.99)">Continuar</button>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="padding:14px 0; border-bottom:1px solid var(--ads-line); display:flex; flex-direction:column; gap:14px">
+          <button type="button" onClick="{{ s3.open }}" disabled="{{ s3.locked }}" style="width:100%; min-height:44px; display:flex; align-items:center; gap:14px; background:none; border:none; padding:0; text-align:left; cursor:pointer; color:inherit; font:inherit">
+            <span style="flex:none; width:40px; height:40px; border-radius:10px; display:grid; place-items:center; background:{{ s3.badgeBg }}; color:{{ s3.badgeInk }}; font-weight:700; font-size:15px">{{ s3.badge }}</span>
+            <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px"><span style="font-weight:600; font-size:17px; color:{{ s3.titleInk }}">Consumo de energía</span><sc-if value="{{ s3.showSummary }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px; color:var(--ads-muted)">{{ s3.summary }}</span></sc-if></span>
+            <sc-if value="{{ s3.showEdit }}" hint-placeholder-val="{{ false }}"><span style="font-weight:600; font-size:13px; color:var(--ads-accent-ink)">Cambiar</span></sc-if>
+          </button>
+          <sc-if value="{{ s3.isOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:14px; animation:ads-rise 220ms cubic-bezier(.2,0,0,1)">
+              <div role="group" aria-label="Unidad" style="display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; border-radius:12px; border:1px solid var(--ads-line); background:var(--ads-field)">
+                <sc-for list="{{ unitOpts }}" as="u" hint-placeholder-count="2">
+                  <button type="button" onClick="{{ u.pick }}" aria-pressed="{{ u.on }}" style="min-height:42px; border-radius:9px; border:none; cursor:pointer; font:600 14px/1 'Titillium Web',sans-serif; background:{{ u.bg }}; color:{{ u.ink }}">{{ u.label }}</button>
+                </sc-for>
+              </div>
+              <label style="display:flex; flex-direction:column; gap:8px">
+                <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">{{ consumoLabel }}</span>
+                <span style="position:relative; display:flex">
+                  <input type="text" inputmode="decimal" value="{{ valor }}" onChange="{{ setValor }}" onKeyDown="{{ enter3 }}" placeholder="{{ valorPh }}" style="flex:1; min-width:0; min-height:54px; padding:0 120px 0 16px; border-radius:10px; border:1px solid {{ valorBorder }}; background:var(--ads-field); color:var(--ads-ink); font:600 18px/1 'Titillium Web',sans-serif; font-variant-numeric:tabular-nums; box-sizing:border-box">
+                  <span style="position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--ads-muted); pointer-events:none">{{ valorSuffix }}</span>
+                </span>
+              </label>
+              <span style="font-size:13px; color:{{ valorHintInk }}">{{ valorHint }}</span>
+              <label style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-radius:12px; border:1px solid {{ aisladoBorder }}; background:{{ aisladoBg }}; cursor:pointer">
+                <input type="checkbox" checked="{{ aislado }}" onChange="{{ toggleAislado }}" style="flex:none; width:20px; height:20px; margin:2px 0 0">
+                <span style="display:flex; flex-direction:column; gap:3px"><span style="font-weight:600; font-size:15px">No estamos conectados a la red</span><span style="font-size:13px; line-height:1.4; color:var(--ads-muted)">Sistema aislado: genera y almacena toda la energía que se consume. Requiere baterías.</span></span>
+              </label>
+              <button type="button" onClick="{{ next3 }}" style="align-self:flex-start; min-height:46px; padding:0 22px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 15px/1 'Titillium Web',sans-serif" style-active="transform:translateY(1px) scale(.99)">Continuar</button>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="padding:14px 0; border-bottom:1px solid var(--ads-line); display:flex; flex-direction:column; gap:14px">
+          <button type="button" onClick="{{ s4.open }}" disabled="{{ s4.locked }}" style="width:100%; min-height:44px; display:flex; align-items:center; gap:14px; background:none; border:none; padding:0; text-align:left; cursor:pointer; color:inherit; font:inherit">
+            <span style="flex:none; width:40px; height:40px; border-radius:10px; display:grid; place-items:center; background:{{ s4.badgeBg }}; color:{{ s4.badgeInk }}; font-weight:700; font-size:15px">{{ s4.badge }}</span>
+            <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px"><span style="font-weight:600; font-size:17px; color:{{ s4.titleInk }}">Almacenamiento</span><sc-if value="{{ s4.showSummary }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px; color:var(--ads-muted)">{{ s4.summary }}</span></sc-if></span>
+            <sc-if value="{{ s4.showEdit }}" hint-placeholder-val="{{ false }}"><span style="font-weight:600; font-size:13px; color:var(--ads-accent-ink)">Cambiar</span></sc-if>
+          </button>
+          <sc-if value="{{ s4.isOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:10px; animation:ads-rise 220ms cubic-bezier(.2,0,0,1)">
+              <sc-if value="{{ aislado }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:12px 14px; border-radius:12px; border:1px dashed var(--ads-accent); font-size:13px; line-height:1.45; color:var(--ads-ink)">Al ser un sistema aislado, el respaldo con baterías es obligatorio.</span>
+              </sc-if>
+              <sc-if value="{{ batReview }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:12px 14px; border-radius:12px; border:1px dashed var(--ads-accent); font-size:13px; line-height:1.45; color:var(--ads-ink)">Sistemas de más de 5.000 kWp: el almacenamiento y su valor se revisan con el equipo comercial de GEENERA.</span>
+              </sc-if>
+              <sc-for list="{{ batOpts }}" as="o" hint-placeholder-count="3">
+                <button type="button" onClick="{{ o.pick }}" disabled="{{ o.disabled }}" aria-pressed="{{ o.on }}" style="min-height:66px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-radius:12px; border:1px solid {{ o.border }}; background:{{ o.bg }}; color:var(--ads-ink); text-align:left; cursor:{{ o.cursor }}; opacity:{{ o.opacity }}; font:inherit; transition:border-color 220ms cubic-bezier(.2,0,0,1)">
+                  <span style="display:flex; flex-direction:column; gap:3px"><span style="font-weight:700; font-size:16px">{{ o.title }}</span><span style="font-size:13px; color:var(--ads-muted)">{{ o.sub }}</span></span>
+                  <span style="flex:none; padding:6px 10px; border-radius:8px; background:var(--ads-chip-bg); color:var(--ads-chip-ink); font-weight:700; font-size:13px; font-variant-numeric:tabular-nums">{{ o.kwh }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="padding:14px 0 4px; display:flex; flex-direction:column; gap:14px">
+          <button type="button" onClick="{{ s5.open }}" disabled="{{ s5.locked }}" style="width:100%; min-height:44px; display:flex; align-items:center; gap:14px; background:none; border:none; padding:0; text-align:left; cursor:pointer; color:inherit; font:inherit">
+            <span style="flex:none; width:40px; height:40px; border-radius:10px; display:grid; place-items:center; background:{{ s5.badgeBg }}; color:{{ s5.badgeInk }}; font-weight:700; font-size:15px">{{ s5.badge }}</span>
+            <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px"><span style="font-weight:600; font-size:17px; color:{{ s5.titleInk }}">Conexión al inversor</span><sc-if value="{{ s5.showSummary }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px; color:var(--ads-muted)">{{ s5.summary }}</span></sc-if></span>
+          </button>
+          <sc-if value="{{ s5.isOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:14px; animation:ads-rise 220ms cubic-bezier(.2,0,0,1)">
+              <span style="font-size:15px; line-height:1.5; color:var(--ads-muted); text-wrap:pretty">{{ connectSummary }}</span>
+              <sc-if value="{{ showConnectBtn }}" hint-placeholder-val="{{ true }}">
+                <label style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-radius:12px; border:1px solid {{ autBorder }}; background:var(--ads-field); cursor:pointer">
+                  <input type="checkbox" checked="{{ autoriza }}" onChange="{{ toggleAutoriza }}" style="flex:none; width:20px; height:20px; margin:2px 0 0">
+                  <span style="font-size:13px; line-height:1.45; color:var(--ads-muted)">Autorizo a GEENERA a tratar mis datos para calcular este diseño y, si lo pido, contactarme con la propuesta, según la <a href="{{ politicaUrl }}" target="_blank" rel="noopener">Política de Tratamiento de Datos</a>.</span>
+                </label>
+                <div data-captcha="cotizador"></div>
+                <sc-if value="{{ hasConnErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ connErr }}</span></sc-if>
+                <button type="button" onClick="{{ connect }}" disabled="{{ connecting }}" style="width:100%; min-height:56px; border-radius:12px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 17px/1 'Titillium Web',sans-serif; box-shadow:0 12px 32px -12px var(--ads-glow)" style-active="transform:translateY(1px) scale(.99)">{{ connectLabel }}</button>
+              </sc-if>
+              <sc-if value="{{ connected }}" hint-placeholder-val="{{ false }}">
+                <span style="display:flex; align-items:center; gap:10px; min-height:48px; padding:0 16px; border-radius:12px; background:var(--ads-chip-bg); color:var(--ads-chip-ink); font-weight:700; font-size:15px"><span style="width:10px; height:10px; border-radius:50%; background:var(--ads-ok)"></span>Sistema en operación</span>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <sc-if value="{{ connected }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px; border-radius:18px; background:var(--ads-surface); border:1px solid var(--ads-line); display:flex; flex-direction:column; gap:18px; animation:ads-rise 420ms cubic-bezier(.2,.8,.2,1)">
+          <span style="font-weight:600; font-size:12px; letter-spacing:.26em; text-transform:uppercase; color:var(--ads-eyebrow)">Resultado del diseño</span>
+          <span style="font-weight:700; font-size:clamp(26px,2.4vw,34px); line-height:1.05; letter-spacing:-.01em; text-wrap:balance">{{ res.lead }} <span style="color:var(--ads-accent)">{{ res.figure }}</span> {{ res.tail }}</span>
+          <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px">
+            <sc-for list="{{ res.stats }}" as="st" hint-placeholder-count="6">
+              <span style="display:flex; flex-direction:column; gap:4px; padding:14px 16px; border-radius:14px; border:1px solid var(--ads-line); background:var(--ads-surface-2)"><span style="font-weight:700; font-size:22px; color:var(--ads-accent-ink); font-variant-numeric:tabular-nums">{{ st.v }}</span><span style="font-size:13px; color:var(--ads-muted)">{{ st.k }}</span></span>
+            </sc-for>
+          </div>
+          <span style="font-size:13px; line-height:1.5; color:var(--ads-muted)">El equipo GEENERA valida el diseño con la factura real.</span>
+          <div style="display:flex; flex-direction:column; gap:6px; padding:18px 20px; border-radius:16px; background:var(--ads-chip-bg); border:1px solid var(--ads-accent)">
+            <span style="font-weight:600; font-size:11px; letter-spacing:.26em; text-transform:uppercase; color:var(--ads-chip-ink)">Inversión total</span>
+            <span style="font-weight:700; font-size:clamp(28px,2.6vw,38px); line-height:1; letter-spacing:-.01em; font-variant-numeric:tabular-nums; color:var(--ads-ink)">{{ total.v }}</span>
+            <span style="font-size:13px; color:var(--ads-ink)">{{ total.note }}</span>
+          </div>
+          <sc-if value="{{ showFin }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:12px">
+            <span style="font-weight:700; font-size:18px">Financia con un banco aliado</span>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px">
+              <sc-for list="{{ bankOpts }}" as="bk" hint-placeholder-count="5">
+                <button type="button" onClick="{{ bk.pick }}" aria-pressed="{{ bk.on }}" style="min-height:56px; padding:10px 14px; border-radius:12px; border:1px solid {{ bk.border }}; background:{{ bk.bg }}; color:var(--ads-ink); text-align:left; cursor:pointer; font:600 15px/1.2 'Titillium Web',sans-serif; transition:border-color 220ms cubic-bezier(.2,0,0,1)" style-hover="border-color:var(--ads-accent)">{{ bk.name }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ hasBank }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:6px; padding:16px 18px; border-radius:14px; border:1px solid var(--ads-line); background:var(--ads-surface-2); animation:ads-rise 220ms cubic-bezier(.2,0,0,1)">
+                <span style="font-weight:600; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--ads-eyebrow)">{{ bank.name }}</span>
+                <span style="font-weight:700; font-size:20px; line-height:1.1">{{ bank.line }}</span>
+                <span style="font-size:14px; line-height:1.5; color:var(--ads-muted)">{{ bank.desc }}</span>
+                <a href="{{ bank.url }}" target="_blank" rel="noopener" style="align-self:flex-start; font-weight:600; font-size:14px; color:var(--ads-accent-ink)">Ver la línea en el sitio de {{ bank.name }} ↗</a>
+              </div>
+            </sc-if>
+            <span style="font-size:12px; line-height:1.5; color:var(--ads-muted)">Financiación Solar no es una oferta de crédito: cada entidad define tasas, plazos y montos según el estudio de cada empresa.</span>
+          </div>
+          </sc-if>
+          <sc-if value="{{ leadOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:10px; padding-top:6px; border-top:1px solid var(--ads-line)">
+              <span style="font-weight:700; font-size:18px; padding-top:12px">Recibe la propuesta técnica y financiera</span>
+              <sc-if value="{{ hasLeadErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ leadErr }}</span></sc-if>
+              <button type="button" onClick="{{ submitLead }}" disabled="{{ leadSending }}" style="min-height:52px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 16px/1 'Titillium Web',sans-serif; box-shadow:0 10px 28px -12px var(--ads-glow)" style-active="transform:translateY(1px) scale(.99)">{{ leadLabel }}</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ leadSent }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:6px; padding:16px; border-radius:14px; background:var(--ads-chip-bg); color:var(--ads-chip-ink)"><span style="font-weight:700; font-size:18px">Solicitud recibida</span><span style="font-size:14px; line-height:1.5; color:var(--ads-ink)">Una consultora de GEENERA te contactará con la propuesta de este diseño.</span></div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </aside>
+  </section>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark'|'light'&quot;,&quot;section&quot;:&quot;Cotizador&quot;},&quot;headerOffset&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:72,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:140,&quot;unit&quot;:&quot;px&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;simSeconds&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:8,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;s&quot;,&quot;default&quot;:24,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulación&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;alta&quot;,&quot;ligera&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'alta'|'ligera'&quot;,&quot;section&quot;:&quot;Modelo 3D&quot;}}">
+/* Fórmulas, listas y teléfono: js/cotizador-calculo.js, que js/cotizador.js publica en window.ADS_COTIZADOR (el servidor usa el
+   mismo archivo para recalcular). Hasta que llegue, el componente muestra un recuadro vacío. */
+let HSP, PANEL_WP, PR, MOD_W, MOD_D, TARIFA, CITIES = [], cityOf, SEGMENTOS = [], SUBSECTORES = [], BATS, calc, kwhOf, pesosOf,
+  errorDeConsumo, PAISES_TELEFONO = [], paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, POLITICA_URL;
+function enlazar() {
+  const M = window.ADS_COTIZADOR;
+  if (!M || calc) return !!calc;
+  ({ HSP, PANEL_WP, PR, MOD_W, MOD_D, TARIFA, CITIES, cityOf, SEGMENTOS, SUBSECTORES, BATS, calc, kwhOf, pesosOf, errorDeConsumo,
+    PAISES_TELEFONO, paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE } = M);
+  POLITICA_URL = M.POLITICA_URL;
+  return true;
+}
+const BANKS = [
+  { id: 'bancoldex', url: 'https://www.bancoldex.com/credito-traves-de-aliados/linea-de-credito-energia-solar-se-reactiva-i', name: 'Bancóldex', line: 'Energía Solar se Reactiva', desc: 'Línea de crédito para sistemas solares fotovoltaicos en empresas de todos los tamaños. Se tramita a través de un intermediario financiero.' },
+  { id: 'bogota', url: 'https://saladeprensa.bancodebogota.com/2024/05/28/banco-de-bogota-ha-colocado-en-2024-medio-billon-de-pesos-para-impulsar-proyectos-de-energia-solar/', name: 'Banco de Bogotá', line: 'Crédito de paneles solares', desc: 'Crédito para micro, pequeñas y medianas empresas que instalan sistemas solares fotovoltaicos.' },
+  { id: 'davivienda', url: 'https://www.leasingdavivienda.com/eficiencia-energetica.html', name: 'Davivienda', line: 'Leasing Eficiencia Energética', desc: 'Leasing que financia paneles, inversores, cableado y estructura del proyecto solar.' },
+  { id: 'agrario', url: 'https://www.bancoagrario.gov.co/credito-verde-pyme', name: 'Banco Agrario', line: 'Crédito Verde PYME', desc: 'Crédito para proyectos de sostenibilidad ambiental, incluida la adquisición de paneles solares para el negocio.' },
+  { id: 'occidente', url: 'https://www.bancodeoccidente.com.co/wps/portal/banco-de-occidente/bancodeoccidente/para-empresas/financiacion/leasing-aliado/', name: 'Banco de Occidente', line: 'Leasing Aliado · energía solar', desc: 'Leasing con proveedores aliados para empresas que hacen su transición a energía solar.' }
+];
+const nf = (n, d) => new Intl.NumberFormat('es-CO', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }).format(n);
+const money = n => '$' + nf(n / 1e6, n < 1e7 ? 1 : 0) + ' M';
+const moneyFull = n => '$' + nf(Math.round(n / 1000) * 1000);
+const ease = p => 1 - Math.pow(1 - p, 3);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function profile(c) {
+  const N = 240, pv = [], load = [], soc = [], bat = [], grid = [];
+  let sPv = 0, sL = 0;
+  const g = (h, m, w) => Math.exp(-Math.pow((h - m) / w, 2));
+  for (let i = 0; i <= N; i++) {
+    const h = i / 10;
+    const s = h > 6 && h < 18 ? Math.pow(Math.sin(Math.PI * (h - 6) / 12), 1.3) : 0;
+    const l = c.tipo === 'hogar' ? 0.45 + 0.55 * g(h, 7, 1.3) + 1.1 * g(h, 19.6, 2) : (h >= 6 && h <= 18 ? 1 + 0.1 * g(h, 12, 3) : 0.32);
+    pv.push(s); load.push(l); if (i < N) { sPv += s * 0.1; sL += l * 0.1; }
+  }
+  const kPv = (c.gen / 30) / sPv, kL = c.daily / sL;
+  for (let i = 0; i <= N; i++) { pv[i] *= kPv; load[i] *= kL; }
+  const cap = c.bkwh, rate = cap * 0.5;
+  let e = cap * 0.6;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i <= N; i++) {
+      const net = pv[i] - load[i];
+      let b = 0;
+      if (cap) {
+        if (net > 0) b = Math.min(net, rate, (cap - e) / 0.1);
+        else b = -Math.min(-net, rate, Math.max(0, e - cap * 0.1) / 0.1);
+        e += b * 0.1;
+      }
+      if (pass === 1) { soc[i] = cap ? e / cap : 0; bat[i] = b; grid[i] = load[i] - pv[i] + b; }
+    }
+  }
+  return { pv, load, soc, bat, grid, peak: Math.max.apply(null, pv), lpeak: Math.max.apply(null, load) };
+}
+class Component extends DCLogic {
+  stageRef = React.createRef();
+  lblRefs = {};
+  state = {
+    segmento: null, empresa: '', contacto: '', telefono: '', correo: '', nombre: '', formErr: null, errKey: null, ciudad: '', subsector: '', banco: null, tipo: null, unidad: 'kwh', valor: '', valorErr: null, aislado: false, bateria: null,
+    step: 1, maxStep: 1, connecting: false, connected: false, simH: 11, playing: false,
+    mode: 'auto', sysDark: false, vw: typeof window !== 'undefined' ? window.innerWidth : 1440,
+    lbl: { w: '', d: '', inv: '', bat: '', grid: '' }, leadErr: null, leadSent: false, leadSending: false, webglFail: false,
+    listo: false, pais: 'CO', autoriza: false, autErr: false, connErr: null, simId: null
+  };
+
+  componentDidMount() {
+    this.anims = []; this.timers = []; this.simH = 11; this.lblPos = {}; this.minGap = 16;
+    this.mq = window.matchMedia('(prefers-color-scheme: dark)');
+    this.onMq = e => this.setState({ sysDark: e.matches });
+    this.mq.addEventListener('change', this.onMq);
+    this.rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.onResize = () => this.setState({ vw: window.innerWidth });
+    window.addEventListener('resize', this.onResize);
+    this.setState({ sysDark: this.mq.matches, listo: enlazar() });
+    if (!enlazar()) this._poll = setInterval(() => { if (enlazar()) { clearInterval(this._poll); this.setState({ listo: true }); } }, 80);
+    if (!window.THREE && !window.__adsThree) {
+      window.__adsThree = true;
+      const s = document.createElement('script'); s.type = 'module';
+      s.textContent = 'import * as T from "https://unpkg.com/three@0.155.0/build/three.module.js"; window.THREE = T;';
+      document.head.appendChild(s);
+    }
+    this.waitThree(0);
+  }
+  componentWillUnmount() {
+    this.dead = true; cancelAnimationFrame(this.raf); this.timers.forEach(clearTimeout); clearInterval(this._poll); this.pedidos = null;
+    this.mq.removeEventListener('change', this.onMq); window.removeEventListener('resize', this.onResize);
+    if (this.ro) this.ro.disconnect(); if (this.renderer) this.renderer.dispose();
+  }
+  waitThree(n) {
+    if (this.dead) return;
+    if (window.THREE && enlazar()) { try { this.build(window.THREE); } catch (e) { console.warn('3D', e); this.setState({ webglFail: true }); } return; }
+    if (n > 120) { this.setState({ webglFail: true }); return; }
+    setTimeout(() => this.waitThree(n + 1), 100);
+  }
+  isDark(s) { s = s || this.state; const t = this.props.theme; if (t === 'dark' || t === 'light') return t === 'dark'; return s.mode === 'dark' || (s.mode === 'auto' && s.sysDark); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+
+  componentDidUpdate() {
+    const s = this.state, ps = this._prev || s;
+    this._prev = Object.assign({}, s);
+    if (!this.three) return;
+    const dark = this.isDark(s);
+    if (dark !== this.dark) { this.applyTheme(dark); this.dirty = true; }
+    const c = calc(s), pc = calc(ps);
+    const key = c ? c.spec.key : null, pkey = pc ? pc.spec.key : null;
+    const et = s.tipo || 'industria', pet = ps.tipo || 'industria';
+    if (et !== pet || key !== pkey) {
+      clearTimeout(this.rebuildT);
+      const animate = et !== pet;
+      if (animate) this.buildSite(true);
+      else this.rebuildT = setTimeout(() => this.buildSite(false), 280);
+      this.dirty = true; return;
+    }
+    if (!c) return;
+    if (c.mods !== (pc ? pc.mods : 0)) { this.setPanels(c.mods, 0); this.dirty = true; }
+    if (!pc || c.visUnits !== pc.visUnits || c.inv !== pc.inv || s.aislado !== ps.aislado) { this.buildEquip(c, true, 0); this.dirty = true; }
+    if (ps.connected && !s.connected) { this.clearCables(); this.dirty = true; }
+    if (s.simH !== ps.simH || s.connected !== ps.connected) this.dirty = true;
+  }
+
+  build(T) {
+    const el = this.stageRef.current; if (!el || this.renderer) return;
+    let renderer;
+    try { renderer = new T.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance', preserveDrawingBuffer: true }); }
+    catch (e) { this.setState({ webglFail: true }); return; }
+    let sw = false;
+    try { const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); const r = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : ''; sw = /swiftshader|llvmpipe|software|basic render/i.test(r); } catch (e) {}
+    const q = this.props.quality || 'auto';
+    this.lite = q === 'ligera' || (q === 'auto' && sw);
+    renderer.setPixelRatio(this.lite ? 1 : Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+    renderer.shadowMap.enabled = !this.lite; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    renderer.domElement.style.display = 'block';
+    el.appendChild(renderer.domElement);
+    this.T = T; this.renderer = renderer;
+    const scene = new T.Scene(); this.scene = scene;
+    this.cam = new T.OrthographicCamera(-1, 1, 1, -1, -3000, 5000);
+    this.camTarget = new T.Vector3(); this.camCenter = new T.Vector3();
+    this.fH = 50; this.fHTarget = 50; this.isoDir = new T.Vector3(1, 0.78, 1.15).normalize();
+    this.hemi = new T.HemisphereLight(0xdfeaff, 0x5a4a38, 0.8); scene.add(this.hemi);
+    this.sun = new T.DirectionalLight(0xfff0d8, 2.4); this.sun.castShadow = !this.lite;
+    this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.bias = -0.0005; this.sun.shadow.normalBias = 0.04;
+    scene.add(this.sun); scene.add(this.sun.target);
+    this.root = new T.Group(); scene.add(this.root);
+    this.makeTextures();
+    this.groundMat = new T.MeshStandardMaterial({ color: 0xe9e1d2, roughness: 1 });
+    const ground = new T.Mesh(new T.CircleGeometry(900, 48), this.groundMat);
+    ground.rotation.x = -Math.PI / 2; ground.position.y = -0.05; ground.receiveShadow = true; this.root.add(ground);
+    if (this.tx.panel && this.renderer) this.tx.panel.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    this.panelMat = new T.MeshStandardMaterial({ map: this.tx.panel, roughness: 0.32, metalness: 0.1, emissive: 0x1a2a6a, emissiveIntensity: 0 });
+    this.frameMat = new T.MeshStandardMaterial({ color: 0xaeb3ba, roughness: 0.35, metalness: 0.85 });
+    this.panelGeo = new T.BoxGeometry(MOD_W, 0.035, MOD_D);
+    this.legGeo = new T.BoxGeometry(MOD_W * 0.96, 0.3, 0.05); this.legGeo.translate(0, -0.17, -MOD_D * 0.3);
+    this.edgeMat = new T.LineBasicMaterial({ color: 0xffc20e, transparent: true, opacity: 0 });
+    this.dimMat = new T.LineBasicMaterial({ color: 0xf5a800, transparent: true, opacity: 0.9 });
+    this.ledMat = new T.MeshStandardMaterial({ color: 0x222226, emissive: 0x3ccb7f, emissiveIntensity: 0 });
+    this.socMat = new T.MeshStandardMaterial({ color: 0x2a2a2a, emissive: 0xffc20e, emissiveIntensity: 1.2 });
+    this.cableMat = new T.MeshStandardMaterial({ color: 0x1c1c1f, emissive: 0xf7931e, emissiveIntensity: 0.9, roughness: 0.5 });
+    this.dotMat = new T.MeshBasicMaterial({ color: 0xffd447 });
+    this.glassMats = [];
+    this.ro = new ResizeObserver(() => this.resize()); this.ro.observe(el); this.resize();
+    let drag = null;
+    renderer.domElement.addEventListener('pointerdown', e => { drag = { x: e.clientX, r: this.root.rotation.y }; el.style.cursor = 'grabbing'; });
+    this.onMove = e => { if (drag) { this.root.rotation.y = drag.r + (e.clientX - drag.x) * 0.006; this.dirty = true; } };
+    this.onUp = () => { if (drag) { drag = null; el.style.cursor = 'grab'; } };
+    window.addEventListener('pointermove', this.onMove); window.addEventListener('pointerup', this.onUp);
+    this.three = true; this._prev = Object.assign({}, this.state);
+    this.applyTheme(this.isDark());
+    this.buildSite(false);
+    this.camCenter.copy(this.camTarget); this.fH = this.fHTarget; this.placeCam();
+    this.dirty = true; this.loop();
+  }
+
+  canvasTex(w, h, draw, rep) {
+    const T = this.T, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const x = cv.getContext('2d'); draw(x, w, h);
+    const t = new T.CanvasTexture(cv); t.colorSpace = T.SRGBColorSpace;
+    if (rep) { t.wrapS = t.wrapT = T.RepeatWrapping; }
+    t.anisotropy = 4; return t;
+  }
+  noise(x, w, h, base, amt, n) {
+    x.fillStyle = base; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < n; i++) { const a = Math.random() * amt; x.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,' + a + ')' : 'rgba(0,0,0,' + a + ')'; const s = 1 + Math.random() * 2.5; x.fillRect(Math.random() * w, Math.random() * h, s, s); }
+  }
+  makeTextures() {
+    const R = (a, b) => a + Math.random() * (b - a);
+    this.tx = {
+      panel: this.canvasTex(1024, 512, (x, w, h) => {
+        x.fillStyle = '#E4E7EC'; x.fillRect(0, 0, w, h);
+        const fr = 10, bx = fr, by = fr, bw = w - fr * 2, bh = h - fr * 2;
+        x.fillStyle = '#F2F3F5'; x.fillRect(bx, by, bw, bh);
+        const cols = 24, rows = 6, gap = 2.2, mid = 6;
+        const cw = (bw - mid) / cols, ch = bh / rows;
+        for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+          const cx = bx + i * cw + (i >= cols / 2 ? mid : 0) + gap / 2, cy = by + j * ch + gap / 2, ww = cw - gap, hh = ch - gap;
+          const g = x.createLinearGradient(cx, cy, cx + ww, cy + hh);
+          g.addColorStop(0, '#2a3d6e'); g.addColorStop(0.55, '#1b2a52'); g.addColorStop(1, '#23366a');
+          x.fillStyle = g; x.fillRect(cx, cy, ww, hh);
+          x.fillStyle = '#F2F3F5'; const cc = 3; x.fillRect(cx, cy, cc, cc); x.fillRect(cx + ww - cc, cy, cc, cc); x.fillRect(cx, cy + hh - cc, cc, cc); x.fillRect(cx + ww - cc, cy + hh - cc, cc, cc);
+          x.strokeStyle = 'rgba(175,185,205,.28)'; x.lineWidth = 0.8;
+          for (let k = 1; k < 5; k++) { const yy = cy + k * hh / 5; x.beginPath(); x.moveTo(cx, yy); x.lineTo(cx + ww, yy); x.stroke(); }
+          x.strokeStyle = 'rgba(120,130,150,.12)';
+          for (let k = 1; k < 10; k++) { const xx = cx + k * ww / 10; x.beginPath(); x.moveTo(xx, cy); x.lineTo(xx, cy + hh); x.stroke(); }
+        }
+        const sh = x.createLinearGradient(0, 0, w, h); sh.addColorStop(0, 'rgba(120,150,210,.10)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(90,110,170,.08)');
+        x.fillStyle = sh; x.fillRect(bx, by, bw, bh);
+        x.strokeStyle = '#B9BEC6'; x.lineWidth = fr * 2; x.strokeRect(0, 0, w, h);
+        x.strokeStyle = 'rgba(0,0,0,.35)'; x.lineWidth = 1.5; x.strokeRect(fr, fr, bw, bh);
+      }),
+      stucco: this.canvasTex(256, 256, (x, w, h) => this.noise(x, w, h, '#EEE9E0', 0.05, 5000), true),
+      stone: this.canvasTex(256, 256, (x, w, h) => {
+        x.fillStyle = '#6E6A62'; x.fillRect(0, 0, w, h);
+        let y = 0; while (y < h) { const rh = R(18, 34); let xx = -R(0, 40); while (xx < w) { const rw = R(30, 70); const l = R(52, 72); x.fillStyle = 'hsl(36,8%,' + l + '%)'; x.fillRect(xx + 2, y + 2, rw - 4, rh - 4); xx += rw; } y += rh; }
+      }, true),
+      wood: this.canvasTex(256, 256, (x, w, h) => {
+        for (let i = 0; i < 16; i++) { x.fillStyle = 'hsl(' + R(24, 30) + ',' + R(38, 48) + '%,' + R(30, 40) + '%)'; x.fillRect(i * 16, 0, 15, h); x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(i * 16 + 15, 0, 1, h); }
+        for (let k = 0; k < 300; k++) { x.fillStyle = 'rgba(0,0,0,' + R(0.03, 0.1) + ')'; x.fillRect(R(0, w), R(0, h), 1, R(10, 40)); }
+      }, true),
+      grass: this.canvasTex(256, 256, (x, w, h) => {
+        this.noise(x, w, h, '#7E9A5A', 0.09, 9000);
+        for (let k = 0; k < 40; k++) { x.fillStyle = 'rgba(60,80,40,' + R(0.05, 0.12) + ')'; x.beginPath(); x.arc(R(0, w), R(0, h), R(10, 30), 0, 7); x.fill(); }
+      }, true),
+      concrete: this.canvasTex(256, 256, (x, w, h) => { this.noise(x, w, h, '#C9C4BA', 0.06, 6000); x.strokeStyle = 'rgba(0,0,0,.12)'; x.lineWidth = 2; x.strokeRect(0, 0, w, h); }, true),
+      asphalt: this.canvasTex(256, 256, (x, w, h) => this.noise(x, w, h, '#4A4B4F', 0.12, 9000), true),
+      metal: this.canvasTex(128, 64, (x, w, h) => {
+        const g = x.createLinearGradient(0, 0, w, 0);
+        for (let i = 0; i <= 8; i++) { g.addColorStop(i / 8, i % 2 ? '#B9BEC5' : '#E1E4E8'); }
+        x.fillStyle = g; x.fillRect(0, 0, w, h);
+      }, true),
+      roof: this.canvasTex(256, 256, (x, w, h) => { this.noise(x, w, h, '#B7BBC1', 0.05, 5000); x.fillStyle = 'rgba(0,0,0,.08)'; for (let i = 0; i < 4; i++) x.fillRect(i * 64, 0, 2, h); }, true),
+      garage: this.canvasTex(128, 128, (x, w, h) => { x.fillStyle = '#E7E5E0'; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(0,0,0,.18)'; for (let i = 1; i < 6; i++) x.fillRect(0, i * h / 6, w, 2); }),
+      dock: this.canvasTex(128, 128, (x, w, h) => { x.fillStyle = '#5C6068'; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(0,0,0,.25)'; for (let i = 1; i < 8; i++) x.fillRect(0, i * h / 8, w, 2); }),
+      container: this.canvasTex(256, 64, (x, w, h) => { const g = x.createLinearGradient(0, 0, w, 0); for (let i = 0; i <= 24; i++) g.addColorStop(i / 24, i % 2 ? '#D4D2CC' : '#F2F0EB'); x.fillStyle = g; x.fillRect(0, 0, w, h); }, true)
+    };
+  }
+  mat(kind, rx, ry, o) {
+    const T = this.T, base = this.tx[kind];
+    const t = base.clone(); t.needsUpdate = true; t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rx || 1, ry || 1);
+    return new T.MeshStandardMaterial(Object.assign({ map: t, roughness: 0.85 }, o || {}));
+  }
+  std(color, o) { return new this.T.MeshStandardMaterial(Object.assign({ color, roughness: 0.8 }, o || {})); }
+
+  resize() {
+    const el = this.stageRef.current; if (!el || !this.renderer) return;
+    this.w = el.clientWidth || 800; this.h = el.clientHeight || 600;
+    this.renderer.setSize(this.w, this.h); this.fitCam(); this.placeCam(); this.dirty = true;
+  }
+  fitCam() {
+    const sp = this.spec;
+    const a = (this.w || 800) / (this.h || 600);
+    if (!sp) { this.fHTarget = 50; this.camTarget.set(0, 0, 0); return; }
+    const R = Math.max(sp.x1 - sp.x0, sp.z1 - sp.z0);
+    this.fHTarget = Math.max(1.3 * R / a, 0.78 * R);
+    this.camTarget.set((sp.x0 + sp.x1) / 2, sp.tipo === 'hogar' ? 2 : 5, (sp.z0 + sp.z1) / 2);
+  }
+  placeCam() {
+    const a = (this.w || 800) / (this.h || 600), f = this.fH, c = this.cam;
+    c.left = -f * a / 2; c.right = f * a / 2; c.top = f / 2; c.bottom = -f / 2; c.updateProjectionMatrix();
+    c.position.copy(this.camCenter).addScaledVector(this.isoDir, 1200); c.lookAt(this.camCenter);
+  }
+  applyTheme(dark) {
+    this.dark = dark;
+    this.groundMat.color.set(0xe9e1d2);
+    this.dimMat.color.set(dark ? 0xffc20e : 0xb87a00);
+    this.dirty = true;
+  }
+
+  loop = () => {
+    if (this.dead) return;
+    this.raf = requestAnimationFrame(this.loop);
+    const now = performance.now();
+    const moving = Math.abs(this.fHTarget - this.fH) > 0.02 || this.camCenter.distanceToSquared(this.camTarget) > 0.0004;
+    const live = this.state.connected || this.state.connecting;
+    const busy = this.anims.length || this.panelDirty || now < (this.panelUntil || 0) + 60 || moving || live;
+    if (!busy && !this.dirty) return;
+    const gap = Math.max(this.minGap, live ? 33 : 16, this.lite ? 50 : 0);
+    if (now - (this.lastR || 0) < gap) return;
+    const dt = Math.min(0.08, (now - (this.lastR || now)) / 1000);
+    this.lastR = now; this.dirty = false;
+    this.anims = this.anims.filter(a => { if (now < a.t0) return true; const p = Math.min(1, (now - a.t0) / a.dur); a.fn(ease(p)); return p < 1; });
+    this.updatePanels(now);
+    if (moving) { const k = Math.min(1, dt * 3.5); this.fH += (this.fHTarget - this.fH) * k; this.camCenter.lerp(this.camTarget, k); }
+    this.placeCam();
+    if (this.state.playing) {
+      this.simH += dt * 24 / (this.props.simSeconds ?? 24);
+      if (this.simH >= 24) { this.simH = 24; this.setState({ playing: false, simH: 24 }); }
+      else if (now - (this.lastSS || 0) > 150) { this.lastSS = now; this.setState({ simH: this.simH }); }
+    }
+    this.updateSim(now, dt);
+    this.updateLabels();
+    const r0 = performance.now();
+    this.renderer.render(this.scene, this.cam);
+    const ms = performance.now() - r0;
+    this.minGap = Math.max(16, Math.min(400, ms * 3));
+  };
+
+  updateLabels() {
+    const T = this.T, v = this._v || (this._v = new T.Vector3());
+    this.root.updateMatrixWorld();
+    Object.keys(this.lblRefs).forEach(k => {
+      const el = this.lblRefs[k].current; if (!el) return;
+      const p = this.lblPos[k];
+      if (!p) { el.style.transform = 'translate(-9999px,0)'; return; }
+      v.fromArray(p).applyMatrix4(this.root.matrixWorld).project(this.cam);
+      el.style.transform = 'translate(' + ((v.x + 1) / 2 * this.w).toFixed(1) + 'px,' + ((1 - v.y) / 2 * this.h).toFixed(1) + 'px) translate(-50%,-50%)';
+    });
+  }
+  vol(parent, w, h, d, mat, x, y, z, grow) {
+    const T = this.T, geo = new T.BoxGeometry(w, h, d); geo.translate(0, h / 2, 0);
+    const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+    parent.add(m); if (grow !== false) this.grows.push(m); return m;
+  }
+  part(parent, w, h, d, mat, x, y, z) {
+    const m = new this.T.Mesh(new this.T.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
+  }
+  cyl(parent, rt, rb, h, mat, x, y, z, seg) {
+    const geo = new this.T.CylinderGeometry(rt, rb, h, seg || 10); geo.translate(0, h / 2, 0);
+    const m = new this.T.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m;
+  }
+  glass() { const g = this.std(0x26324a, { roughness: 0.08, metalness: 0.6, emissive: 0xffc27a, emissiveIntensity: 0 }); this.glassMats.push(g); return g; }
+  dispose(obj) { if (!obj) return; obj.traverse(o => { if (o.geometry && o.geometry !== this.panelGeo && o.geometry !== this.legGeo) o.geometry.dispose(); }); if (obj.parent) obj.parent.remove(obj); }
+  tree(g, x, z, k) {
+    const t = new this.T.Group(); t.position.set(x, 0, z); g.add(t); this.grows.push(t);
+    this.cyl(t, 0.16 * k, 0.24 * k, 2.4 * k, this.m.trunk, 0, 0, 0, 7);
+    [[0, 3.3, 0, 1.6], [0.8, 2.8, 0.4, 1.15], [-0.7, 3.0, -0.3, 1.2], [0.1, 4.1, 0.2, 1.0]].forEach((p, i) => {
+      const c = new this.T.Mesh(new this.T.IcosahedronGeometry(p[3] * k, 1), i % 2 ? this.m.leaf2 : this.m.leaf);
+      c.position.set(p[0] * k, p[1] * k, p[2] * k); c.castShadow = true; t.add(c);
+    });
+  }
+  palm(g, x, z) {
+    const t = new this.T.Group(); t.position.set(x, 0, z); g.add(t); this.grows.push(t);
+    for (let i = 0; i < 6; i++) this.cyl(t, 0.17, 0.2, 1.05, this.m.trunk, i * 0.08, i * 1.0, 0, 7);
+    for (let i = 0; i < 7; i++) {
+      const l = new this.T.Mesh(new this.T.BoxGeometry(2.6, 0.04, 0.55), this.m.leaf);
+      l.geometry.translate(1.3, 0, 0); l.position.set(0.48, 6.1, 0); l.rotation.set(0, i * Math.PI * 2 / 7, -0.45); l.castShadow = true; t.add(l);
+    }
+  }
+  car(g, x, z, ry, color) {
+    const T = this.T, c = new T.Group(); c.position.set(x, 0, z); c.rotation.y = ry; g.add(c); this.grows.push(c);
+    const body = this.std(color, { roughness: 0.3, metalness: 0.6 });
+    this.part(c, 4.4, 0.75, 1.85, body, 0, 0.65, 0);
+    this.part(c, 2.4, 0.6, 1.65, this.m.darkGlass, -0.2, 1.3, 0);
+    [[-1.4, 0.85], [1.4, 0.85], [-1.4, -0.85], [1.4, -0.85]].forEach(p => { const w = new T.Mesh(new T.CylinderGeometry(0.34, 0.34, 0.24, 12), this.m.tire); w.rotation.x = Math.PI / 2; w.position.set(p[0], 0.34, p[1]); c.add(w); });
+  }
+  ev(g, x, z, ry, color) {
+    const T = this.T, c = new T.Group(); c.position.set(x, 0, z); c.rotation.y = ry; g.add(c); this.grows.push(c);
+    const L = 4.7, Wd = 1.92;
+    const sh = new T.Shape();
+    sh.moveTo(-L / 2, 0.42); sh.lineTo(-L / 2, 0.82); sh.quadraticCurveTo(-L / 2 + 0.05, 1.0, -L / 2 + 0.5, 1.02);
+    sh.lineTo(-0.95, 1.06); sh.quadraticCurveTo(-0.25, 1.45, 0.45, 1.42); sh.quadraticCurveTo(1.1, 1.38, 1.55, 1.0);
+    sh.quadraticCurveTo(L / 2 - 0.05, 0.9, L / 2, 0.7); sh.lineTo(L / 2, 0.42); sh.lineTo(-L / 2, 0.42);
+    const eg = new T.ExtrudeGeometry(sh, { depth: Wd, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 3, curveSegments: 14 });
+    eg.translate(0, 0, -Wd / 2);
+    const paint = this.std(color, { roughness: 0.18, metalness: 0.55 });
+    const b = new T.Mesh(eg, paint); b.castShadow = true; b.receiveShadow = true; c.add(b);
+    const gs = new T.Shape();
+    gs.moveTo(-1.0, 1.08); gs.quadraticCurveTo(-0.25, 1.5, 0.45, 1.47); gs.quadraticCurveTo(1.05, 1.43, 1.5, 1.06); gs.lineTo(-1.0, 1.08);
+    const gg = new T.ExtrudeGeometry(gs, { depth: Wd - 0.22, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.06, bevelSegments: 2, curveSegments: 14 });
+    gg.translate(0, 0, -(Wd - 0.22) / 2);
+    c.add(new T.Mesh(gg, this.m.darkGlass));
+    const lightMat = this.std(0xffffff, { roughness: 0.2, emissive: 0xdfefff, emissiveIntensity: 0.6 });
+    const tailMat = this.std(0x8a0d14, { roughness: 0.3, emissive: 0xff2030, emissiveIntensity: 0.5 });
+    this.part(c, 0.04, 0.05, Wd * 0.9, lightMat, L / 2 + 0.07, 0.78, 0);
+    this.part(c, 0.04, 0.06, Wd * 0.95, tailMat, -L / 2 - 0.07, 0.86, 0);
+    const rim = this.std(0x2b2d31, { roughness: 0.35, metalness: 0.8 });
+    [[-1.45, 0.9], [1.45, 0.9], [-1.45, -0.9], [1.45, -0.9]].forEach(p => {
+      const w = new T.Mesh(new T.CylinderGeometry(0.36, 0.36, 0.26, 20), this.m.tire); w.rotation.x = Math.PI / 2; w.position.set(p[0], 0.36, p[1]); c.add(w);
+      const r = new T.Mesh(new T.CylinderGeometry(0.26, 0.26, 0.02, 20), rim); r.rotation.x = Math.PI / 2; r.position.set(p[0], 0.36, p[1] + Math.sign(p[1]) * 0.135); c.add(r);
+    });
+  }
+  truck(g, x, z, color, reefer) {
+    const T = this.T, c = new T.Group(); c.position.set(x, 0, z); g.add(c); this.grows.push(c);
+    if (reefer) this.part(c, 1.9, 1.2, 0.5, this.std(0x2f3237, { roughness: 0.5, metalness: 0.4 }), 0, 3.2, 13.25);
+    const cab = this.std(color, { roughness: 0.35, metalness: 0.5 });
+    this.part(c, 2.55, 2.9, 13, this.m.trailer, 0, 2.6, 6.5);
+    this.part(c, 1.2, 0.3, 13, this.m.tire, 0, 0.95, 6.5);
+    this.part(c, 2.5, 2.4, 2.4, cab, 0, 2.2, 14.6);
+    this.part(c, 2.3, 0.9, 0.08, this.m.darkGlass, 0, 2.8, 15.82);
+    this.part(c, 2.5, 1.1, 1.4, cab, 0, 1.45, 16.4);
+    [1.2, 2.6, 11.5, 14.8, 16.2].forEach(zz => [-1.1, 1.1].forEach(xx => { const w = new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 0.36, 12), this.m.tire); w.rotation.z = Math.PI / 2; w.position.set(xx, 0.5, zz); c.add(w); }));
+  }
+  signTex(text) {
+    return this.canvasTex(1024, 192, (x, w, h) => {
+      x.fillStyle = '#16161A'; x.fillRect(0, 0, w, h);
+      x.fillStyle = '#FFC20E'; x.fillRect(0, h - 14, w, 14);
+      x.fillStyle = '#FFFFFF'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      let fs = 110; x.font = '700 ' + fs + 'px "Titillium Web", sans-serif';
+      while (x.measureText(text).width > w - 80 && fs > 30) { fs -= 6; x.font = '700 ' + fs + 'px "Titillium Web", sans-serif'; }
+      x.fillText(text, w / 2, h / 2 - 4);
+    });
+  }
+  poleTx(pole, y, r, hh, off) {
+    const T = this.T, tank = this.std(0x8d969c, { roughness: 0.45, metalness: 0.55 }), dk = this.std(0x3a3d42, { roughness: 0.6 }), por = this.std(0x6b4a2e, { roughness: 0.4 });
+    const t = new T.Mesh(new T.CylinderGeometry(r, r, hh, 18), tank); t.position.set(off, y, 0); t.castShadow = true; pole.add(t);
+    const lid = new T.Mesh(new T.CylinderGeometry(r * 1.06, r * 1.06, hh * 0.08, 18), dk); lid.position.set(off, y + hh / 2, 0); pole.add(lid);
+    for (let k = -1; k <= 1; k++) { const b = new T.Mesh(new T.CylinderGeometry(r * 0.12, r * 0.16, hh * 0.38, 8), por); b.position.set(off + k * r * 0.5, y + hh / 2 + hh * 0.2, 0); pole.add(b); }
+    for (let k = 0; k < 5; k++) { const f = new T.Mesh(new T.BoxGeometry(r * 0.08, hh * 0.8, r * 0.5), tank); const a = -0.8 + k * 0.4; f.position.set(off + Math.cos(a) * r, y, Math.sin(a) * r); f.rotation.y = -a; pole.add(f); }
+    this.part(pole, off, hh * 0.1, 0.14, dk, off / 2, y + hh * 0.25, 0);
+    this.part(pole, off, hh * 0.1, 0.14, dk, off / 2, y - hh * 0.25, 0);
+  }
+  dimLine(a, b, off) {
+    const T = this.T, A = new T.Vector3().fromArray(a), B = new T.Vector3().fromArray(b), O = new T.Vector3().fromArray(off);
+    this.site.add(new T.LineSegments(new T.BufferGeometry().setFromPoints([A, B, A.clone().sub(O), A.clone().add(O), B.clone().sub(O), B.clone().add(O)]), this.dimMat));
+  }
+  buildSite(animated) {
+    const s = this.state, T = this.T;
+    this.clearCables(); this.dispose(this.site); this.dispose(this.equip); this.site = null; this.equip = null;
+    ['panelMesh', 'legMesh'].forEach(k => { if (this[k]) { this.root.remove(this[k]); this[k].dispose(); this[k] = null; } });
+    this.anims = []; this.glassMats = []; this.lblPos = {};
+    const c = calc(s);
+    if (!c) { this.spec = null; this.fitCam(); this.setState({ lbl: { w: '', d: '', inv: '', bat: '', grid: '' } }); return; }
+    const sp = c.spec; this.spec = sp;
+    this.site = new T.Group(); this.root.add(this.site); this.grows = [];
+    this.m = {
+      trunk: this.std(0x6b4f3a), leaf: this.std(0x5f7f45, { roughness: 1 }), leaf2: this.std(0x7a9455, { roughness: 1 }),
+      darkGlass: this.std(0x1d222b, { roughness: 0.1, metalness: 0.7 }), tire: this.std(0x1b1b1d, { roughness: 0.9 }),
+      trailer: this.std(0xf1f0ec, { roughness: 0.5 }), frame: this.std(0x2c2e33, { roughness: 0.5, metalness: 0.5 })
+    };
+    const lbl = sp.tipo === 'hogar' ? this.buildHouse(sp) : this.buildWarehouse(sp);
+    const n = this.grows.length, anim = animated && !this.rm;
+    const step = anim ? Math.min(70, 1300 / n) : 0, now = performance.now();
+    if (anim) this.grows.forEach((m, i) => { m.scale.y = 0.001; this.anims.push({ t0: now + i * step, dur: 480, fn: p => { m.scale.y = Math.max(0.001, p); } }); });
+    const buildDur = anim ? n * step + 480 : 0;
+    const cap = Math.max(1, sp.slots.length);
+    this.panelMesh = new T.InstancedMesh(this.panelGeo, this.panelMat, cap);
+    this.legMesh = new T.InstancedMesh(this.legGeo, this.frameMat, cap);
+    this.panelMesh.castShadow = true; this.panelMesh.count = 0; this.legMesh.count = 0;
+    this.root.add(this.panelMesh); this.root.add(this.legMesh);
+    this.panelAt = []; this.shown = 0;
+    this.buildEquip(c, anim, buildDur);
+    this.setPanels(c.mods, anim ? buildDur + 150 : 0, !animated);
+    this.fitCam();
+    this.setState({ lbl: Object.assign({}, this.state.lbl, lbl) });
+  }
+  buildHouse(sp) {
+    const g = this.site, { W, D, H1, W2, D2, H2, ux, uz, s } = sp, m = this.m;
+    const PW = sp.x1 - sp.x0, PD = sp.z1 - sp.z0, cx = (sp.x0 + sp.x1) / 2, cz = (sp.z0 + sp.z1) / 2;
+    const stucco = this.mat('stucco', 3, 1), white = this.std(0xf4f2ed, { roughness: 0.6 });
+    const stX = this.mat('stucco', D / 4, H1 / 4), stZ = this.mat('stucco', W / 4, H1 / 4);
+    const lawn = this.vol(g, PW, 0.06, PD, this.mat('grass', PW / 7, PD / 7, { roughness: 1 }), cx, 0, cz); lawn.castShadow = false;
+    const gx = W / 2 - 3.1;
+    this.vol(g, 5.4, 0.1, sp.z1 - D / 2, this.mat('concrete', 1.5, (sp.z1 - D / 2) / 3.5), gx, 0, (D / 2 + sp.z1) / 2);
+    this.vol(g, W * 0.62, 0.12, 3, this.mat('concrete', W * 0.62 / 3, 1), -W * 0.16, 0, D / 2 + 1.5);
+    const wallMat = this.mat('stucco', PW / 4, 1);
+    this.vol(g, gx - 2.7 - sp.x0, 1.0, 0.25, wallMat, (sp.x0 + gx - 2.7) / 2, 0, sp.z1 - 0.2);
+    this.vol(g, sp.x1 - gx - 2.7, 1.0, 0.25, wallMat, (sp.x1 + gx + 2.7) / 2, 0, sp.z1 - 0.2);
+    this.vol(g, W, 0.55, D, this.mat('stone', W / 2.5, 0.4), 0, 0, 0);
+    const gh = H1 - 0.55, fz = D / 2 + 0.04;
+    const g1 = this.vol(g, W, gh, D, [stX, stX, stucco, stucco, stZ, stZ], 0, 0.55, 0);
+    this.part(g1, W * 0.42, gh * 0.82, 0.08, this.glass(), -W * 0.2, gh * 0.45, fz);
+    for (let i = 0; i <= 4; i++) this.part(g1, 0.07, gh * 0.84, 0.12, m.frame, -W * 0.41 + i * W * 0.105, gh * 0.45, fz + 0.02);
+    this.part(g1, W * 0.43, 0.08, 0.12, m.frame, -W * 0.2, gh * 0.87, fz + 0.02);
+    this.part(g1, 5.0, 2.45, 0.1, this.mat('garage', 1, 1), gx, 1.22, fz);
+    this.part(g1, 1.1, 2.3, 0.1, this.mat('wood', 0.5, 1), W * 0.06, 1.15, fz);
+    this.part(g1, 0.08, gh * 0.5, D * 0.3, this.glass(), W / 2 + 0.04, gh * 0.55, D * 0.22);
+    this.vol(g, W + 0.8, 0.3, D + 0.8, white, 0, H1, 0);
+    const s2X = this.mat('stucco', D2 / 4, H2 / 4), s2Z = this.mat('stucco', W2 / 4, H2 / 4);
+    const g2 = this.vol(g, W2, H2, D2, [s2X, s2X, stucco, stucco, s2Z, s2Z], ux, H1 + 0.3, uz);
+    this.part(g2, W2 * 0.4, H2, 0.12, this.mat('wood', W2 * 0.2, H2 / 2), -W2 * 0.3, H2 / 2, D2 / 2 + 0.06);
+    this.part(g2, W2 * 0.5, H2 * 0.7, 0.08, this.glass(), W2 * 0.2, H2 * 0.48, D2 / 2 + 0.04);
+    for (let i = 0; i <= 3; i++) this.part(g2, 0.07, H2 * 0.72, 0.12, m.frame, -W2 * 0.05 + i * W2 * 0.167, H2 * 0.48, D2 / 2 + 0.06);
+    this.part(g2, 0.08, H2 * 0.62, D2 * 0.55, this.glass(), W2 / 2 + 0.04, H2 * 0.5, 0);
+    const rY = H1 + 0.3 + H2, RW = W2 + 0.9, RD = D2 + 0.9;
+    this.vol(g, RW, 0.3, RD, white, ux, rY, uz);
+    [[RW, 0.12, 0, RD / 2], [RW, 0.12, 0, -RD / 2], [0.12, RD, RW / 2, 0], [0.12, RD, -RW / 2, 0]].forEach(p => this.vol(g, p[0], 0.3, p[1], white, ux + p[2], rY + 0.3, uz + p[3]));
+    if (sp.pool) {
+      const pz = D / 2 + 3 + 3.4 * s;
+      this.vol(g, W * 0.6, 0.14, 6.4 * s, this.mat('wood', W * 0.3, 3 * s), -W * 0.18, 0, pz);
+      this.vol(g, W * 0.46, 0.18, 4 * s, this.std(0x3fa7c9, { roughness: 0.05, metalness: 0.1, emissive: 0x1b6f93, emissiveIntensity: 0.3 }), -W * 0.18, 0, pz);
+    }
+    if (sp.wing) {
+      const wx = -W / 2 - 5.5, wz = -D / 2 + 3.8;
+      this.vol(g, 7.5, 0.5, 7, this.mat('stone', 3, 0.4), wx, 0, wz);
+      const gw = this.vol(g, 7.5, 2.8, 7, stucco, wx, 0.5, wz);
+      this.part(gw, 4.2, 2, 0.08, this.glass(), 0.8, 1.2, 3.54);
+      this.part(gw, 2.2, 2.8, 0.12, this.mat('wood', 1, 1.4), -2.4, 1.4, 3.56);
+      this.vol(g, 8.1, 0.3, 7.6, white, wx, 3.3, wz);
+    }
+    const hedge = this.std(0x4f6b3c, { roughness: 1 });
+    this.vol(g, PW - 1, 1.2, 0.9, hedge, cx, 0, sp.z0 + 0.6);
+    this.tree(g, sp.x0 + 2.4, sp.z1 - 2.6, 1.1); this.tree(g, sp.x1 - 2.4, sp.z0 + 3, 1.2); this.tree(g, sp.x0 + 2.6, sp.z0 + 3.2, 0.9);
+    this.palm(g, sp.x1 - 2.6, sp.z1 - 3.5); this.palm(g, -W / 2 - 2.2, D / 2 + 2);
+    this.ev(g, gx, D / 2 + 5.2, Math.PI / 2, 0xeef0f2);
+    return { w: nf(W, 1) + ' m', d: nf(D, 1) + ' m · ' + nf(sp.m2) + ' m²' };
+  }
+  buildWarehouse(sp) {
+    const g = this.site, { w, d, h } = sp, m = this.m;
+    const PW = sp.x1 - sp.x0, PD = sp.z1 - sp.z0, cx = (sp.x0 + sp.x1) / 2, cz = (sp.z0 + sp.z1) / 2;
+    const yard = this.vol(g, PW, 0.06, PD, this.mat('asphalt', PW / 10, PD / 10, { roughness: 1 }), cx, 0, cz); yard.castShadow = false;
+    this.vol(g, w + 4, 0.1, 19, this.mat('concrete', (w + 4) / 6, 3), 0, 0, d / 2 + 9.5);
+    const lineM = this.std(0xf2f2ee);
+    for (let i = 0; i < 9; i++) this.vol(g, 0.12, 0.08, 5, lineM, w / 2 + 3 + i * 2.8, 0.03, d / 2 + 22);
+    const conc = this.mat('concrete', w / 5, 0.3);
+    this.vol(g, w, 1.2, d, conc, 0, 0, 0);
+    const mX = this.mat('metal', d / 1.1, 1, { metalness: 0.35, roughness: 0.55 }), mZ = this.mat('metal', w / 1.1, 1, { metalness: 0.35, roughness: 0.55 });
+    const roofM = this.mat('roof', w / 8, d / 8);
+    const main = this.vol(g, w, h - 1.2, d, [mX, mX, roofM, roofM, mZ, mZ], 0, 1.2, 0);
+    const fascia = this.std(0x2a2b30, { roughness: 0.6, metalness: 0.3 });
+    this.vol(g, w + 0.3, 1.0, d + 0.3, [fascia, fascia, roofM, fascia, fascia, fascia], 0, h, 0);
+    const name = (this.state.empresa || '').trim();
+    if (name) {
+      const sw = Math.min(w * 0.42, 34), sh = sw * 192 / 1024;
+      this.part(main, sw, sh, 0.15, new this.T.MeshStandardMaterial({ map: this.signTex(name.toUpperCase()), roughness: 0.5 }), -w * 0.18, h - 1.2 - sh / 2 - 0.8, d / 2 + 0.1);
+    }
+    const nd = Math.max(3, Math.min(14, Math.floor((w - 24) / 6)));
+    const doors = [];
+    for (let i = 0; i < nd; i++) {
+      const x = -w / 2 + 5 + i * ((w - 26) / Math.max(1, nd - 1)); doors.push(x);
+      this.part(main, 3.6, 4.1, 0.1, m.tire, x, 1.45, d / 2 + 0.06);
+      this.part(main, 3.0, 3.6, 0.12, this.mat('dock', 1, 1), x, 1.35, d / 2 + 0.1);
+      this.part(main, 4.4, 0.2, 2.0, fascia, x, 3.7, d / 2 + 1.0);
+    }
+    const ow = 14, od = 12, oh = 7.5, oxc = w / 2 + ow / 2, ozc = d / 2 - od / 2;
+    this.vol(g, ow, 0.8, od, conc, oxc, 0, ozc);
+    const off = this.vol(g, ow, oh - 0.8, od, this.glass(), oxc, 0.8, ozc);
+    const fh = oh - 0.8;
+    for (let i = 0; i <= 7; i++) this.part(off, 0.12, fh, 0.14, m.frame, -ow / 2 + i * ow / 7, fh / 2, od / 2 + 0.04);
+    for (let i = 0; i <= 6; i++) this.part(off, 0.14, fh, 0.12, m.frame, ow / 2 + 0.04, fh / 2, -od / 2 + i * od / 6);
+    [2.4, 4.8].forEach(y => { this.part(off, ow + 0.1, 0.12, 0.14, m.frame, 0, y, od / 2 + 0.05); this.part(off, 0.14, 0.12, od + 0.1, m.frame, ow / 2 + 0.05, y, 0); });
+    this.vol(g, ow + 0.6, 0.5, od + 0.6, fascia, oxc, oh, ozc);
+    const nt = Math.min(doors.length, 2 + Math.floor(w / 50));
+    const tc = [0xffc20e, 0x2b3a8c, 0xc8312b, 0xf2f2ee];
+    const sub = sp.sub, reefer = ['Cadena de frío y refrigeración', 'Lácteos', 'Alimentos y bebidas', 'Farmacéutica'].includes(sub);
+    for (let k = 0; k < nt; k++) {
+      const dx = doors[Math.round(k * (doors.length - 1) / Math.max(1, nt - 1))];
+      if (sub === 'Educación') this.bus(g, dx, d / 2 + 6);
+      else this.truck(g, dx, d / 2 + 1.2, reefer ? 0xf2f2ee : tc[k % 4], reefer);
+    }
+    if (sp.back) this['back_' + sp.back](g, sp);
+    const cc = [0xe8e6e1, 0x2a2c33, 0x8a8f97, 0x7a1f24, 0x1f3a5c, 0xc9c6bf];
+    for (let i = 0; i < 8; i++) this.car(g, w / 2 + 4.4 + i * 2.8, d / 2 + 22, Math.PI / 2, cc[i % cc.length]);
+    for (let x = sp.x0 + 4; x < sp.x1 - 3; x += 11) this.tree(g, x, sp.z1 - 2.5, 1.5);
+    for (let z = sp.z0 + 6; z < d / 2 - 4; z += 12) this.tree(g, sp.x0 + 3, z, 1.4);
+    return { w: nf(w) + ' m', d: nf(d) + ' m · ' + nf(w * d) + ' m²' };
+  }
+  bus(g, x, z) {
+    const T = this.T, c = new T.Group(); c.position.set(x, 0, z); c.rotation.y = Math.PI / 2; g.add(c); this.grows.push(c);
+    const yel = this.std(0xf6b800, { roughness: 0.35, metalness: 0.3 }), blk = this.std(0x1c1d20, { roughness: 0.5 });
+    this.part(c, 11, 2.6, 2.5, yel, 0, 1.75, 0);
+    this.part(c, 1.6, 1.2, 2.4, yel, 6.2, 1.05, 0);
+    this.part(c, 9.6, 0.8, 2.52, this.m.darkGlass, -0.3, 2.45, 0);
+    this.part(c, 0.06, 0.9, 2.2, this.m.darkGlass, 5.52, 2.4, 0);
+    [0.9, 1.45].forEach(y => this.part(c, 11.02, 0.12, 2.54, blk, 0, y, 0));
+    this.part(c, 11.1, 0.12, 2.6, this.std(0xf2f2ee), 0, 3.08, 0);
+    [-3.6, 4.6].forEach(xx => [-1.2, 1.2].forEach(zz => { const w = new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 0.32, 14), this.m.tire); w.rotation.x = Math.PI / 2; w.position.set(xx, 0.5, zz); c.add(w); }));
+  }
+  backArea(sp) { const z1 = -sp.d / 2 - 4, z0 = sp.z0 + 3; return { x0: -sp.w / 2, x1: sp.w / 2, z0, z1, L: sp.w, D: z1 - z0 }; }
+  back_galpones(g, sp) {
+    const T = this.T, a = this.backArea(sp), wall = this.std(0xf1efe9, { roughness: 0.8 }), cur = this.std(0xe5b72c, { roughness: 0.7 }), roof = this.mat('metal', 20, 1, { metalness: 0.4, roughness: 0.5 });
+    const L = Math.min(a.L * 0.8, 110), W = 11, n = Math.max(2, Math.min(3, Math.floor(a.D / 14)));
+    for (let i = 0; i < n; i++) {
+      const gr = new T.Group(); gr.position.set(-L * 0.08, 0, a.z1 - 7 - i * 14); g.add(gr); this.grows.push(gr);
+      this.vol(gr, L, 0.3, W, this.std(0xbdb7ab), 0, 0, 0, false);
+      this.vol(gr, L, 2.6, W, wall, 0, 0.3, 0, false);
+      [-1, 1].forEach(sd => this.part(gr, L * 0.96, 1.3, 0.06, cur, 0, 1.75, sd * (W / 2 + 0.04)));
+      [-1, 1].forEach(sd => { const r = new T.Mesh(new T.BoxGeometry(L + 0.8, 0.12, W / 2 + 0.9), roof); r.position.set(0, 3.55, sd * (W / 4 + 0.2)); r.rotation.x = sd * 0.3; r.castShadow = true; gr.add(r); });
+      this.part(gr, L + 0.6, 0.3, 0.5, wall, 0, 3.95, 0);
+      [0, 1].forEach(k => { const s = this.cyl(gr, 1.3, 1.3, 6, this.std(0xc9ccd1, { metalness: 0.6, roughness: 0.4 }), L / 2 + 2.6 + k * 3, 0, 0, 16); const cone = new T.Mesh(new T.ConeGeometry(1.35, 1.2, 16), s.material); cone.position.y = 6.6; s.add(cone); });
+    }
+  }
+  back_corrales(g, sp) {
+    const T = this.T, a = this.backArea(sp), slab = this.std(0xb9b4aa, { roughness: 0.9 }), wallM = this.std(0xe4e0d8, { roughness: 0.8 }), post = this.std(0x7b7f86, { metalness: 0.5 });
+    const roof = this.mat('metal', 10, 1, { metalness: 0.4, roughness: 0.5 }), pink = this.std(0xf0b4a8, { roughness: 0.75 }), snout = this.std(0xe39a8f, { roughness: 0.7 });
+    const pw = 8, pd = 7, cols = Math.max(3, Math.min(10, Math.floor(a.L * 0.8 / pw))), rows = 2, L = cols * pw, D = rows * pd;
+    const gr = new T.Group(); gr.position.set(-a.L * 0.05, 0, a.z1 - 4 - D / 2 - 2); g.add(gr); this.grows.push(gr);
+    this.vol(gr, L + 2, 0.25, D + 6, slab, 0, 0, 0, false);
+    for (let i = 0; i <= cols; i++) this.part(gr, 0.2, 1.1, D, wallM, -L / 2 + i * pw, 0.8, -1);
+    for (let j = 0; j <= rows; j++) this.part(gr, L, 1.1, 0.2, wallM, 0, 0.8, -1 - D / 2 + j * pd);
+    for (let i = 0; i <= cols; i += 2) [-D / 2 - 1, -D / 2 - 1 + D * 0.3].forEach(z => this.part(gr, 0.18, 3.6, 0.18, post, -L / 2 + i * pw, 1.8, z));
+    const r = new T.Mesh(new T.BoxGeometry(L + 1, 0.12, D * 0.32), roof); r.position.set(0, 3.7, -1 - D / 2 + D * 0.16 - 0.4); r.castShadow = true; gr.add(r);
+    const pig = (x, z, ry) => { const p = new T.Group(); p.position.set(x, 0, z); p.rotation.y = ry; gr.add(p);
+      const b = new T.Mesh(new T.SphereGeometry(0.5, 12, 10), pink); b.scale.set(1.5, 0.85, 0.9); b.position.y = 0.6; b.castShadow = true; p.add(b);
+      const hd = new T.Mesh(new T.SphereGeometry(0.3, 10, 8), pink); hd.position.set(0.78, 0.68, 0); p.add(hd);
+      const sn = new T.Mesh(new T.CylinderGeometry(0.12, 0.12, 0.1, 10), snout); sn.rotation.z = Math.PI / 2; sn.position.set(1.07, 0.64, 0); p.add(sn);
+      [[-0.4, 0.22], [0.4, 0.22], [-0.4, -0.22], [0.4, -0.22]].forEach(q => { const l = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 0.35, 6), snout); l.position.set(q[0], 0.18, q[1]); p.add(l); }); };
+    let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) for (let k = 0; k < 3; k++) pig(-L / 2 + i * pw + 1.6 + rnd() * (pw - 3.2), -1 - D / 2 + j * pd + 1.4 + rnd() * (pd - 2.8), rnd() * 6.28);
+  }
+  back_cancha(g, sp) {
+    const T = this.T, a = this.backArea(sp), Lf = Math.min(a.L * 0.85, 68), Wf = Math.min(a.D - 6, Lf * 0.6);
+    const gr = new T.Group(); gr.position.set(0, 0, a.z1 - 4 - Wf / 2); g.add(gr); this.grows.push(gr);
+    const grass = this.std(0x4f9a46, { roughness: 0.95 }), line = this.std(0xffffff, { roughness: 0.6 }), metal = this.std(0xf2f2f2, { metalness: 0.4, roughness: 0.4 });
+    this.vol(gr, Lf + 6, 0.08, Wf + 6, this.std(0xb4483a, { roughness: 0.95 }), 0, 0, 0, false);
+    this.vol(gr, Lf, 0.1, Wf, grass, 0, 0.02, 0, false);
+    for (let i = 0; i < 8; i++) if (i % 2) this.part(gr, Lf / 8, 0.005, Wf, this.std(0x5aa850, { roughness: 0.95 }), -Lf / 2 + Lf / 16 + i * Lf / 8, 0.125, 0);
+    const y = 0.14, t = 0.15;
+    [[Lf, t, 0, Wf / 2], [Lf, t, 0, -Wf / 2], [t, Wf, Lf / 2, 0], [t, Wf, -Lf / 2, 0], [t, Wf, 0, 0]].forEach(q => this.part(gr, q[0], 0.02, q[1], line, q[2], y, q[3]));
+    const ring = new T.Mesh(new T.RingGeometry(Wf * 0.14, Wf * 0.14 + t, 40), line); ring.rotation.x = -Math.PI / 2; ring.position.y = y + 0.01; gr.add(ring);
+    [-1, 1].forEach(sd => {
+      const bx = sd * (Lf / 2 - Lf * 0.08);
+      [[t, Wf * 0.5, bx, 0], [Lf * 0.16, t, sd * (Lf / 2 - Lf * 0.08), Wf * 0.25], [Lf * 0.16, t, sd * (Lf / 2 - Lf * 0.08), -Wf * 0.25]].forEach((q, k) => this.part(gr, k ? q[0] : t, 0.02, k ? t : q[1], line, k ? q[2] : bx, y, q[3]));
+      const gx = sd * (Lf / 2 + 0.6);
+      [-3.6, 3.6].forEach(zz => this.part(gr, 0.15, 2.44, 0.15, metal, gx, 1.22, zz));
+      this.part(gr, 0.15, 0.15, 7.4, metal, gx, 2.44, 0);
+    });
+    for (let i = 0; i < 4; i++) this.part(gr, 0.18, 6, 0.18, this.std(0x6d7076, { metalness: 0.5 }), (i - 1.5) * (Lf + 6) / 3, 3, -Wf / 2 - 3);
+  }
+  back_invernaderos(g, sp) {
+    const T = this.T, a = this.backArea(sp), film = new T.MeshStandardMaterial({ color: 0xf4f6f4, transparent: true, opacity: 0.62, roughness: 0.25, side: T.DoubleSide });
+    const L = Math.min(a.L * 0.85, 100), r = 3.6, n = Math.max(3, Math.floor((a.D - 4) / (r * 2 + 0.6)));
+    const gr = new T.Group(); gr.position.set(0, 0, a.z1 - 2); g.add(gr); this.grows.push(gr);
+    for (let i = 0; i < n; i++) { const m = new T.Mesh(new T.CylinderGeometry(r, r, L, 20, 1, true, 0, Math.PI), film); m.rotation.z = Math.PI / 2; m.position.set(0, 0.2, -r - i * (r * 2 + 0.6)); gr.add(m);
+      this.part(gr, L, 0.2, r * 2, this.std(0x6f8f4f, { roughness: 1 }), 0, 0.1, -r - i * (r * 2 + 0.6)); }
+  }
+  back_silos(g, sp) {
+    const T = this.T, a = this.backArea(sp), met = this.std(0xc7cad0, { metalness: 0.6, roughness: 0.4 }), gr = new T.Group(); gr.position.set(0, 0, a.z1 - 10); g.add(gr); this.grows.push(gr);
+    for (let i = 0; i < 5; i++) { const s = this.cyl(gr, 3.2, 3.2, 16, met, -14 + i * 7.2, 0, 0, 20); const cone = new T.Mesh(new T.ConeGeometry(3.3, 2.4, 20), met); cone.position.y = 17.2; s.add(cone); }
+    this.part(gr, 40, 0.8, 1.2, this.std(0x5c6068), 0, 18.5, 0);
+    const pile = new T.Mesh(new T.ConeGeometry(9, 6, 24), this.std(0x9a8f80, { roughness: 1 })); pile.position.set(26, 3, -6); pile.castShadow = true; gr.add(pile);
+  }
+  back_tanques(g, sp) {
+    const T = this.T, a = this.backArea(sp), met = this.std(0xe6e8eb, { metalness: 0.5, roughness: 0.35 }), gr = new T.Group(); gr.position.set(0, 0, a.z1 - 12); g.add(gr); this.grows.push(gr);
+    this.vol(gr, 50, 0.3, 22, this.std(0xbdb7ab), 0, 0, 0, false);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) { const t = this.cyl(gr, 3.4, 3.4, 9, met, -18 + i * 12, 0.3, -5 + j * 10, 22); const top = new T.Mesh(new T.SphereGeometry(3.4, 22, 8, 0, Math.PI * 2, 0, Math.PI / 2), met); top.scale.y = 0.35; top.position.y = 9; t.add(top); }
+    [-5, 5].forEach(z => this.part(gr, 46, 0.25, 0.25, this.std(0x8a8f97, { metalness: 0.6 }), 0, 6, z));
+  }
+  buildEquip(c, animate, delay) {
+    const T = this.T, sp = this.spec; if (!sp || !c) return;
+    this.dispose(this.equip); this.clearCables();
+    const eq = new T.Group(); this.equip = eq; this.root.add(eq);
+    const prevGrows = this.grows; this.grows = [];
+    const units = c.visUnits, inv = c.inv, grid = !c.aislado;
+    const white = this.std(0xefefec, { roughness: 0.45 }), dark = this.std(0x2a2b30, { roughness: 0.6 });
+    this.socBars = []; const items = [];
+    const P = a => new T.Vector3().fromArray(a);
+    const bar = (parent, w, h, x, y, z) => { const geo = new T.BoxGeometry(0.04, h, w); geo.translate(0, h / 2, 0); const b = new T.Mesh(geo, this.socMat); b.position.set(x, y, z); parent.add(b); this.socBars.push(b); };
+    let gridLbl = null;
+    if (sp.tipo === 'hogar') {
+      const X = sp.W / 2 + 0.14, invZ = -sp.D * 0.08, mz = sp.D * 0.3;
+      for (let i = 0; i < inv; i++) { const iv = this.part(eq, 0.24, 0.9, 0.62, white, X, 1.75, invZ - i * 0.85); this.part(iv, 0.03, 0.06, 0.3, this.ledMat, 0.13, 0.3, 0); this.part(iv, 0.03, 0.22, 0.34, dark, 0.13, 0.05, 0); items.push(iv); }
+      const zb = invZ - inv * 0.85 - 0.25, bz = [];
+      for (let i = 0; i < units; i++) {
+        const row = Math.floor(i / 4), z = zb - (i % 4) * 0.78, y = row ? 1.9 : 0.62;
+        const b = this.part(eq, 0.2, 1.0, 0.64, white, X, y, z); bar(b, 0.1, 0.8, 0.11, -0.4, 0.22); items.push(b); bz.push(z);
+      }
+      this.part(eq, 0.16, 0.5, 0.36, white, X, 1.3, mz);
+      const roofC = this.slotCentroid(c), ry = sp.top + 0.45, lx = sp.ux + sp.W2 / 2 + 0.25;
+      this.paths = {
+        A: [roofC, [lx, ry, roofC[2]], [lx, sp.H1 + 0.62, roofC[2]], [X, sp.H1 + 0.62, roofC[2]], [X, sp.H1 + 0.62, invZ], [X, 2.25, invZ]].map(P),
+        C: [[X, 1.55, invZ + 0.32], [X, 1.55, mz], [X, 1.0, mz], [sp.W / 2 - 0.3, 1.0, mz]].map(P),
+        B: units ? [[X, 1.28, invZ], [X, 0.16, invZ], [X, 0.16, bz[Math.min(3, units - 1)]], [X, 0.3, bz[Math.min(3, units - 1)]]].map(P) : null
+      };
+      this.lblPos.inv = [X + 0.5, 2.8, invZ];
+      this.lblPos.bat = units ? [X + 0.5, units > 4 ? 2.9 : 1.7, zb - Math.min(3, units - 1) * 0.39] : null;
+      if (grid) {
+        const px = sp.x1 - 1.6, pz = mz;
+        const pole = this.cyl(eq, 0.12, 0.16, 8, this.std(0x8a8378), px, 0, pz, 8);
+        this.part(pole, 0.12, 0.12, 1.6, this.std(0x5a554e), 0, 7.6, 0); this.poleTx(pole, 5.4, 0.3, 0.85, 0.42); items.push(pole);
+        const pts = []; for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push(new T.Vector3(px + (X + 0.1 - px) * t, 7.6 + (1.5 - 7.6) * t - Math.sin(Math.PI * t) * 0.6, pz)); }
+        eq.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x222222 })));
+        this.lblPos.grid = [px, 8.8, pz]; gridLbl = 'Red eléctrica';
+      }
+    } else {
+      const X = sp.w / 2 + 4, z0 = sp.d / 2 - 18;
+      this.vol(eq, 3, 0.2, inv * 2.2 + 1.2, this.mat('concrete', 1, inv), X, 0, z0 - (inv - 1) * 1.1);
+      for (let i = 0; i < inv; i++) { const iv = this.vol(eq, 1.3, 2.2, 1.7, white, X, 0.2, z0 - i * 2.2); this.part(iv, 0.06, 0.14, 0.9, this.ledMat, 0.67, 1.85, 0); items.push(iv); }
+      const cols = [sp.w / 2 + 10.5, sp.w / 2 + 14.5], bz = [];
+      for (let i = 0; i < units; i++) {
+        const bx = cols[i % 2], z = z0 - 2 - Math.floor(i / 2) * 7.2;
+        const b = this.vol(eq, 2.5, 2.7, 6.1, this.mat('container', 4, 1, { roughness: 0.6 }), bx, 0, z); bar(b, 0.5, 2.0, 1.27, 0.35, 2.1); items.push(b); bz.push([bx, z]);
+      }
+      const roofC = this.slotCentroid(c), wx = sp.w / 2 + 0.5, y = sp.h + 1.6, lastInv = z0 - (inv - 1) * 2.2;
+      this.paths = {
+        A: [roofC, [wx, y, roofC[2]], [wx, y, z0 + 1.6], [wx, 0.5, z0 + 1.6], [X, 0.5, z0 + 1.6], [X, 0.5, z0 + 0.9]].map(P),
+        C: [[X - 0.7, 0.5, lastInv], [wx, 0.5, lastInv], [wx, 2.4, lastInv], [sp.w / 2 - 0.3, 2.4, lastInv]].map(P),
+        B: units ? [[X + 0.7, 0.5, z0], [cols[0] - 2, 0.5, z0], [cols[0] - 2, 0.5, bz[units - 1][1]], [bz[units - 1][0] - 1.3, 0.5, bz[units - 1][1]]].map(P) : null
+      };
+      this.lblPos.inv = [X, 3.8, z0 - (inv - 1) * 1.1];
+      this.lblPos.bat = units ? [cols[0] + 2, 4.4, z0 - 2 - Math.floor((units - 1) / 2) * 3.6] : null;
+      if (grid) {
+        const tx = sp.w / 2 + 9, tz = z0 + 4;
+        const tr = this.vol(eq, 2.4, 2.2, 2, this.std(0x6f7d72, { roughness: 0.6 }), tx, 0, tz); items.push(tr);
+        const px = sp.x1 - 2, pole = this.cyl(eq, 0.18, 0.24, 11, this.std(0x8a8378), px, 0, tz, 8);
+        this.part(pole, 0.16, 0.16, 2.4, this.std(0x5a554e), 0, 10.6, 0); this.poleTx(pole, 7.6, 0.48, 1.3, 0.66); items.push(pole);
+        const pts = []; for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push(new T.Vector3(px + (tx - px) * t, 10.6 + (2.2 - 10.6) * t - Math.sin(Math.PI * t) * 0.9, tz)); }
+        eq.add(new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x222222 })));
+        this.lblPos.grid = [px, 12, tz]; gridLbl = 'Red eléctrica · transformador';
+      }
+    }
+    if (!grid) this.lblPos.grid = null;
+    const now = performance.now();
+    if (!this.rm) items.forEach((mm, i) => { mm.scale.setScalar(0.001); this.anims.push({ t0: now + (delay || 0) + (animate ? 200 : 0) + i * 60, dur: 420, fn: p => mm.scale.setScalar(Math.max(0.001, p)) }); });
+    this.grows = prevGrows;
+    const tipo = sp.tipo;
+    this.setState({ lbl: Object.assign({}, this.state.lbl, {
+      inv: inv + (inv > 1 ? ' inversores' : ' inversor') + (units && tipo === 'hogar' ? ' híbrido' + (inv > 1 ? 's' : '') : ''),
+      bat: units ? nf(c.bkwh) + ' kWh · ' + c.units + (tipo === 'hogar' ? ' módulos' : ' contenedores BESS') : '',
+      grid: gridLbl || ''
+    }) });
+    this.dirty = true;
+  }
+  slotCentroid(c) {
+    const sl = this.spec.slots, n = Math.max(1, Math.min(c.mods, sl.length));
+    let x = 0, z = 0, y = 0;
+    for (let i = 0; i < n; i++) { x += sl[i][0]; y = Math.max(y, sl[i][1]); z += sl[i][2]; }
+    return [x / n, y + 0.3, z / n];
+  }
+  setPanels(n, delay, instant) {
+    if (!this.panelMesh) return;
+    n = Math.min(n, this.spec.slots.length);
+    const now = performance.now() + (delay || 0), add = n - this.shown;
+    const step = this.rm || instant ? 0 : Math.min(26, 1400 / Math.max(1, add));
+    for (let i = this.shown; i < n; i++) this.panelAt[i] = instant || this.rm ? 0 : now + (i - this.shown) * step;
+    this.shown = n; this.panelMesh.count = n; this.legMesh.count = n; this.panelDirty = true;
+    this.panelUntil = instant ? 0 : now + Math.max(0, add) * step + 600;
+  }
+  updatePanels(now) {
+    if (!this.panelMesh || (!this.panelDirty && now > (this.panelUntil || 0) + 60)) return;
+    const o = this._o || (this._o = new this.T.Object3D()), sl = this.spec.slots, tilt = this.spec.tilt * Math.PI / 180;
+    const drop = this.spec.tipo === 'hogar' ? 4 : 10;
+    for (let i = 0; i < this.shown; i++) {
+      const p = Math.min(1, Math.max(0, (now - this.panelAt[i]) / 520)), e = ease(p), k = p <= 0 ? 0.0001 : 1;
+      o.position.set(sl[i][0], sl[i][1] + (1 - e) * drop, sl[i][2]); o.rotation.set(-tilt, 0, 0); o.scale.set(k, k, k); o.updateMatrix();
+      this.panelMesh.setMatrixAt(i, o.matrix); this.legMesh.setMatrixAt(i, o.matrix);
+    }
+    this.panelMesh.instanceMatrix.needsUpdate = true; this.legMesh.instanceMatrix.needsUpdate = true; this.panelDirty = false;
+  }
+  makeCables() {
+    const T = this.T; this.clearCables(); this.cables = {};
+    const hogar = this.spec.tipo === 'hogar', r = hogar ? 0.05 : 0.2, dg = new T.SphereGeometry(hogar ? 0.12 : 0.42, 10, 8);
+    Object.keys(this.paths).forEach(k => {
+      const pts = this.paths[k]; if (!pts) return;
+      const path = new T.CurvePath();
+      for (let i = 0; i < pts.length - 1; i++) path.add(new T.LineCurve3(pts[i], pts[i + 1]));
+      const geo = new T.TubeGeometry(path, 160, r, 6, false); geo.setDrawRange(0, 0);
+      const mesh = new T.Mesh(geo, this.cableMat); this.root.add(mesh);
+      const dots = []; for (let j = 0; j < 7; j++) { const d = new T.Mesh(dg, this.dotMat); d.visible = false; this.root.add(d); dots.push(d); }
+      this.cables[k] = { path, mesh, dots, total: geo.index.count, ph: Math.random() };
+    });
+  }
+  drawCable(k, p) { const c = this.cables && this.cables[k]; if (c) c.mesh.geometry.setDrawRange(0, Math.floor(p * c.total / 36) * 36); }
+  clearCables() {
+    if (this.cables) Object.values(this.cables).forEach(c => { this.root.remove(c.mesh); c.mesh.geometry.dispose(); c.dots.forEach(d => this.root.remove(d)); });
+    this.cables = null; if (this.ledMat) this.ledMat.emissiveIntensity = 0;
+  }
+  prof(c) { const key = [c.tipo, c.kwp, c.C, c.bkwh].join('|'); if (this._pk !== key) { this._pk = key; this._pr = profile(c); } return this._pr; }
+
+  updateSim(now, dt) {
+    const s = this.state, on = s.connected, sp = this.spec;
+    const h = on ? this.simH : 10.5;
+    const ang = Math.PI * (h - 6) / 12, day = clamp(Math.sin(ang), 0, 1);
+    const R = sp ? Math.max(sp.x1 - sp.x0, sp.z1 - sp.z0) : 60, cc = this.camCenter;
+    const el = Math.max(0.1, Math.sin(clamp(ang, 0.12, Math.PI - 0.12)));
+    this.sun.position.set(cc.x + Math.cos(clamp(ang, 0.12, Math.PI - 0.12)) * R * 1.3, el * R * 1.5 + 6, cc.z + R * 0.5);
+    this.sun.target.position.copy(cc);
+    const sc = this.sun.shadow.camera; sc.left = -R * 0.8; sc.right = R * 0.8; sc.top = R * 0.8; sc.bottom = -R * 0.8; sc.near = 1; sc.far = R * 6; sc.updateProjectionMatrix();
+    const low = 1 - Math.min(1, day * 2.2);
+    this.sun.color.setRGB(1, 0.93 - low * 0.28, 0.84 - low * 0.45);
+    this.sun.intensity = 0.05 + 2.6 * day;
+    this.hemi.color.setRGB(0.55 + 0.4 * day, 0.62 + 0.33 * day, 0.85 + 0.1 * day);
+    this.hemi.intensity = 0.28 + 0.62 * day;
+    const glow = day < 0.35 ? (0.35 - day) / 0.35 : 0;
+    this.glassMats.forEach(m => { m.emissiveIntensity = glow * 1.6; });
+    this.panelMat.emissiveIntensity = on ? 0.3 * day : 0;
+    if (!this.cables || !on) {
+      if (this.cables) Object.values(this.cables).forEach(c => c.dots.forEach(d => { d.visible = false; }));
+      if (this.socBars) this.socBars.forEach(b => { b.scale.y = 0.55; });
+      return;
+    }
+    const c = calc(s); if (!c) return;
+    const pr = this.prof(c), i = clamp(Math.round(h * 10), 0, 240);
+    const pv = pr.pv[i], load = pr.load[i], bat = pr.bat[i], soc = pr.soc[i];
+    this.ledMat.emissiveIntensity = 1.5 + Math.sin(now / 320) * 0.3;
+    if (this.socBars) this.socBars.forEach(b => { b.scale.y = Math.max(0.03, soc); });
+    const peak = Math.max(pr.peak, pr.lpeak);
+    const flows = { A: [pv, 1], C: [load, 1], B: [Math.abs(bat), bat >= 0 ? 1 : -1] };
+    Object.keys(this.cables).forEach(k => {
+      const cb = this.cables[k], f = flows[k], act = f[0] > peak * 0.02 && !this.rm;
+      cb.ph = (cb.ph + dt * (0.1 + 0.45 * f[0] / peak) * f[1] + 10) % 1;
+      cb.dots.forEach((d, j) => { d.visible = act; if (act) d.position.copy(cb.path.getPointAt((cb.ph + j / cb.dots.length) % 1)); });
+    });
+  }
+
+  /* Pide algo a js/cotizador.js (que habla con /api/cotizador) y espera su respuesta. */
+  pedir(evento, detalle) {
+    const pid = Math.random().toString(36).slice(2);
+    return new Promise(resolve => {
+      const fin = e => { if (!e.detail || e.detail.pid !== pid) return; window.removeEventListener(evento + '-resultado', fin); clearTimeout(t); resolve(e.detail); };
+      const t = setTimeout(() => { window.removeEventListener(evento + '-resultado', fin); resolve({ ok: false, mensaje: 'No hubo respuesta. Revisa tu conexión e intenta de nuevo.' }); }, 30000);
+      window.addEventListener(evento + '-resultado', fin);
+      window.dispatchEvent(new CustomEvent(evento, { detail: Object.assign({ pid }, detalle) }));
+    });
+  }
+  datosContacto() {
+    const s = this.state, emp = s.segmento !== 'residencial', pc = paisTelefono(s.pais);
+    return Object.assign(emp ? { empresa: s.empresa.trim(), contacto: s.contacto.trim(), subsector: s.subsector } : { nombre: s.nombre.trim() },
+      { telefono: '+' + pc.dial + s.telefono.replace(/\D/g, ''), correo: s.correo.trim(), ciudad: s.ciudad });
+  }
+  /* «Conectar al inversor»: primero se guarda la simulación (datos + resultados, recalculados en el servidor) y, si quedó
+     guardada, se anima la conexión. Sin modelo 3D el resultado se muestra igual. */
+  async connect() {
+    const s = this.state;
+    if (s.connecting) return;
+    const errC = errorDeConsumo(s);
+    if (errC) return this.setState({ connErr: errC + ' Corrígelo en el paso 3.' });
+    if (!s.autoriza) return this.setState({ autErr: true, connErr: 'Marca la autorización de tratamiento de datos para continuar.' });
+    const n = (this.nPedido = (this.nPedido || 0) + 1);
+    this.setState({ connecting: true, connErr: null, autErr: false });
+    const r = await this.pedir('ads:cotizador-simular', { segmento: s.segmento, datos: this.datosContacto(), unidad: s.unidad, valor: s.valor, aislado: !!s.aislado, bateria: s.bateria, autoriza: true });
+    if (this.dead || n !== this.nPedido) return;
+    if (!r.ok) return this.setState({ connecting: false, connErr: r.mensaje || 'No pudimos guardar el diseño. Intenta de nuevo.' });
+    this.setState({ simId: r.id });
+    if (!this.three || !this.paths) return this.setState({ connecting: false, connected: true });
+    this.makeCables();
+    const now = performance.now(), m = this.rm ? 0 : 1, hasB = !!this.paths.B;
+    if (this.rm) ['A', 'B', 'C'].forEach(k => this.drawCable(k, 1));
+    else {
+      this.anims.push({ t0: now, dur: 1000, fn: p => this.drawCable('A', p) });
+      this.anims.push({ t0: now + 1100, dur: 600, fn: p => this.drawCable('C', p) });
+      if (hasB) this.anims.push({ t0: now + 1700, dur: 600, fn: p => this.drawCable('B', p) });
+    }
+    this.later(() => { this.ledMat.emissiveIntensity = 1.6; this.dirty = true; }, 1050 * m);
+    this.later(() => { this.simH = 9; this.setState({ connecting: false, connected: true, simH: 9, playing: !this.rm }); }, (hasB ? 2400 : 1800) * m);
+  }
+  reset(extra) { this.nPedido = (this.nPedido || 0) + 1; return Object.assign({ connected: false, connecting: false, playing: false, leadSent: false, leadSending: false, leadErr: null, connErr: null, simId: null }, extra); }
+  async solicitar() {
+    const s = this.state;
+    if (s.leadSending || !s.simId) return;
+    const n = this.nPedido;
+    this.setState({ leadSending: true, leadErr: null });
+    const r = await this.pedir('ads:cotizador-propuesta', { segmento: s.segmento, id: s.simId });
+    if (this.dead || n !== this.nPedido) return;
+    this.setState(r.ok ? { leadSending: false, leadSent: true } : { leadSending: false, leadErr: r.mensaje || 'No pudimos enviar la solicitud. Intenta de nuevo.' });
+  }
+  renderVals() {
+    const goBack = () => { if (this.props.onBack) this.props.onBack(); };
+    if (!this.state.listo || !enlazar()) return { cargando: true, listo: false, goBack, themeAttr: this.isDark() ? 'dark' : 'light', stageRef: this.stageRef };
+    const s = this.state, c = calc(s), dark = this.isDark(s), vw = s.vw, wide = vw >= 1100;
+    const doneN = s.connected ? 5 : s.maxStep - 1;
+    const step = (n, summary) => {
+      const done = n === 5 ? s.connected : s.maxStep > n, open = s.step === n, locked = n > s.maxStep;
+      return {
+        open: () => { if (!locked) this.setState({ step: n }); }, locked, isOpen: open,
+        showSummary: !open && done && !!summary, summary: summary || '', showEdit: !open && done,
+        badge: done && !open ? '✓' : '0' + n,
+        badgeBg: locked ? 'var(--ads-field)' : open ? 'var(--ads-cta)' : 'var(--ads-chip-bg)',
+        badgeInk: locked ? 'var(--ads-muted)' : open ? 'var(--ads-cta-ink)' : 'var(--ads-chip-ink)',
+        titleInk: locked ? 'var(--ads-muted)' : 'var(--ads-ink)'
+      };
+    };
+    const sel = on => ({ border: on ? 'var(--ads-accent)' : 'var(--ads-line)', bg: on ? 'var(--ads-chip-bg)' : 'var(--ads-surface)', shadow: on ? '0 10px 30px -18px var(--ads-glow)' : 'none' });
+    const tipo = s.tipo, kwh = kwhOf(s), pesos = pesosOf(s), city = cityOf(s.ciudad), seg = SEGMENTOS.find(o => o.id === s.segmento), isEmp = !!seg && s.segmento !== 'residencial';
+    const prof = c && s.connected && c.C ? this.prof(c) : null, hi = clamp(Math.round(s.simH * 10), 0, 240);
+    const dec = tipo === 'hogar' ? 1 : 0, kw = v => nf(Math.abs(v), dec) + ' kW';
+    const hh = Math.floor(s.simH % 24), mi = Math.round((s.simH - Math.floor(s.simH)) * 60) % 60;
+    const gridV = prof ? prof.grid[hi] : 0;
+    const list = s.aislado ? BATS.aislado : BATS.red;
+    const batOpts = list.map(o => {
+      const units = c && c.C && o.f[tipo || 'hogar'] && c.maxF ? Math.max(1, Math.ceil(c.daily * Math.min(o.f[tipo], c.maxF) / c.unit)) : 0;
+      return Object.assign({ title: o.t, sub: o.sub, kwh: o.id === 'none' ? '—' : (units ? nf(units * c.unit) + ' kWh' : '—'), on: s.bateria === o.id, disabled: !!o.off, cursor: o.off ? 'not-allowed' : 'pointer', opacity: o.off ? 0.5 : 1,
+        pick: () => { if (!o.off) this.setState(this.reset({ bateria: o.id, step: 5, maxStep: 5 })); } }, sel(s.bateria === o.id));
+    });
+    const valErr = s.valorErr, unitCop = s.unidad === 'cop';
+    const stats = c && c.C ? [
+      { v: nf(c.kwp, 1) + ' kWp', k: 'Potencia instalada' }, { v: nf(c.need), k: 'Módulos de 615 Wp' },
+      { v: nf(c.gen) + ' kWh', k: 'Generación al mes' }, { v: nf(Math.min(1.2, c.cobertura) * 100) + '%', k: 'Cobertura del consumo' }
+    ].concat(c.aislado ? [] : [{ v: nf(c.payback, 1) + ' años', k: 'Retorno de la inversión' }])
+     .concat([{ v: nf(c.co2, c.co2 < 10 ? 1 : 0) + ' t', k: 'CO₂ evitado al año' }])
+     .concat(c.units ? [{ v: nf(c.bkwh) + ' kWh', k: 'Almacenamiento' }] : [])
+     .concat([{ v: nf(c.areaMin) + ' m²', k: 'Área mínima requerida' }]) : [];
+    const montaje = [
+      { label: 'Terreno y edificación', done: !!tipo }, { label: c && c.mods ? c.mods + ' módulos en cubierta' : 'Módulos en cubierta', done: !!(c && c.mods) },
+      { label: s.bateria === 'none' ? 'Sin almacenamiento' : c && c.units ? nf(c.bkwh) + ' kWh en baterías' : 'Almacenamiento', done: !!s.bateria },
+      { label: s.aislado ? 'Sistema aislado' : 'Conexión a la red', done: !!(c && c.C) }, { label: s.connected ? 'Inversor en operación' : 'Inversor', done: s.connected }
+    ].map(m => ({ label: m.label, bar: m.done ? 'var(--ads-accent)' : 'var(--ads-line)', ink: m.done ? 'var(--ads-ink)' : 'var(--ads-muted)' }));
+    const showGen = !!(c && c.mods);
+    const gen = !showGen ? { title: '', big: '', unit: '', pct: '0%', sub: '' } : prof
+      ? { title: 'Generando', big: nf(prof.pv[hi], dec), unit: 'kW ahora', pct: Math.round(100 * prof.pv[hi] / Math.max(0.01, prof.peak)) + '%', sub: nf(c.gen) + ' kWh/mes estimados' }
+      : { title: 'Diseño', big: nf(c.kwp, 1), unit: 'kWp', pct: Math.round(100 * c.mods / Math.max(1, c.spec.slots.length)) + '%', sub: nf(c.gen) + ' kWh/mes estimados' };
+    return {
+      stageRef: this.stageRef, lblW: this.lblRefs.w, lblD: this.lblRefs.d, lblInv: this.lblRefs.inv, lblBat: this.lblRefs.bat, lblGrid: this.lblRefs.grid, lbl: s.lbl,
+      themeAttr: dark ? 'dark' : 'light', wideNav: vw >= 1280,
+      stagePos: wide ? 'sticky' : 'relative', stageTop: wide ? (Number(this.props.headerOffset ?? 72) + 24) + 'px' : 'auto', stageH: wide ? 'min(780px, calc(100dvh - ' + (Number(this.props.headerOffset ?? 72) + 48) + 'px))' : '64vh',
+      cargando: false, listo: true, goBack,
+      invDot: s.connected ? 'var(--ads-ok)' : 'var(--ads-muted)',
+      projectName: s.empresa.trim() || (tipo === 'hogar' ? 'Residencia' : 'Sin nombre'),
+      showHud: !!(c && c.mods), hud: c ? { kwp: nf(c.kwp, 1), mods: nf(c.need) } : { kwp: '', mods: '' },
+      overlayBottom: s.connected ? (vw >= 900 ? '96px' : '150px') : '20px',
+      showGen, gen, webglFail: s.webglFail,
+      connected: s.connected, simH: s.simH, playLabel: s.playing ? 'Pausar' : 'Simular día',
+      togglePlay: () => { if (s.playing) this.setState({ playing: false }); else { if (this.simH >= 24) this.simH = 0; this.setState({ playing: true }); } },
+      setHour: e => { this.simH = +e.target.value; this.setState({ simH: this.simH, playing: false }); },
+      hasBat: !!(c && c.units),
+      sim: { clock: String(hh).padStart(2, '0') + ':' + String(mi).padStart(2, '0'), pv: prof ? kw(prof.pv[hi]) : '', load: prof ? kw(prof.load[hi]) : '',
+        soc: prof ? nf(prof.soc[hi] * 100) + '%' + (prof.bat[hi] > 0.01 ? ' ↑' : prof.bat[hi] < -0.01 ? ' ↓' : '') : '',
+        gridLabel: s.aislado ? (gridV > 0.01 ? 'Déficit' : 'Excedente') : (gridV < -0.01 ? 'A la red' : 'Desde la red'), grid: prof ? kw(gridV) : '' },
+      pasoTxt: 'Paso ' + Math.min(5, s.step) + ' de 5',
+      progress: [0, 1, 2, 3, 4].map(i => ({ bg: i < doneN ? 'var(--ads-accent)' : i === doneN ? 'var(--ads-eyebrow)' : 'var(--ads-line)' })),
+      s1: step(1, seg ? seg.title : ''),
+      s2: step(2, isEmp ? [s.empresa.trim(), city ? city.name : '', s.subsector].filter(Boolean).join(' · ') : s.nombre.trim()),
+      isEmp, isRes: s.segmento === 'residencial',
+      f: { empresa: s.empresa, contacto: s.contacto, telefono: s.telefono, correo: s.correo, ciudad: s.ciudad, subsector: s.subsector, nombre: s.nombre, pais: s.pais },
+      /* Cambiar un dato después de conectar obliga a conectar de nuevo: la simulación guardada lleva los datos de ese momento. */
+      set: ['empresa', 'contacto', 'telefono', 'correo', 'ciudad', 'subsector', 'nombre'].reduce((o, k) => { o[k] = e => { const v = k === 'telefono' ? fmtTelefono(e.target.value, s.pais) : e.target.value; this.setState(this.reset({ [k]: v, formErr: null, errKey: null })); }; return o; }, {}),
+      setPais: e => { const p = e.target.value; this.setState(this.reset({ pais: p, telefono: fmtTelefono(s.telefono, p), formErr: null, errKey: null })); },
+      paises: PAISES_TELEFONO.map(c => ({ id: c.id, label: c.id + ' +' + c.dial + ' · ' + c.name })),
+      telPh: fmtTelefono('3001234567890', s.pais).replace(/\d/g, '0'),
+      autoriza: s.autoriza, autBorder: s.autErr ? '#E5484D' : 'var(--ads-line)', politicaUrl: POLITICA_URL,
+      toggleAutoriza: () => this.setState({ autoriza: !s.autoriza, autErr: false, connErr: null }),
+      hasConnErr: !!s.connErr, connErr: s.connErr || '',
+      bd: ['empresa', 'contacto', 'telefono', 'correo', 'ciudad', 'subsector', 'nombre'].reduce((o, k) => { o[k] = s.errKey === k ? '#E5484D' : 'var(--ads-line)'; return o; }, {}),
+      hasFormErr: !!s.formErr, formErr: s.formErr || '', next2: () => this.next2(),
+      cityOptions: CITIES.map(ct => React.createElement('option', { key: ct.id, value: ct.id }, ct.label)),
+      subOptions: SUBSECTORES.map(n => React.createElement('option', { key: n, value: n }, n)),
+      batReview: !!(c && c.batReview),
+      tipoOpts: SEGMENTOS.map(o => Object.assign({}, o, sel(s.segmento === o.id), { on: s.segmento === o.id, pick: () => this.pickSeg(o.id) })),
+      s3: step(3, c && c.C ? nf(c.C) + ' kWh/mes' + (s.aislado ? ' · aislado' : '') : ''),
+      s4: step(4, s.bateria === 'none' ? 'Sin baterías' : c && c.units ? nf(c.bkwh) + ' kWh' : ''), s5: step(5, s.connected ? 'Sistema en operación' : ''),
+      unitOpts: [['kwh', 'kWh/mes'], ['cop', 'Pesos/mes (COP)']].map(([id, label]) => ({ label, on: s.unidad === id, bg: s.unidad === id ? 'var(--ads-surface)' : 'transparent', ink: s.unidad === id ? 'var(--ads-ink)' : 'var(--ads-muted)',
+        pick: () => { if (s.unidad !== id) { const k = kwhOf(s); const v = k == null ? '' : id === 'cop' ? nf(k * TARIFA[tipo]) : String(Math.round(k)); this.setState(this.reset({ unidad: id, valor: v, valorErr: null })); } } })),
+      consumoLabel: unitCop ? 'Valor de la factura mensual' : 'Consumo mensual', valor: s.valor, valorPh: unitCop ? (tipo === 'hogar' ? 'Ej. 400.000' : 'Ej. 3.500.000') : (tipo === 'hogar' ? 'Ej. 450' : 'Ej. 18.000'),
+      valorSuffix: unitCop ? 'COP/mes' : 'kWh/mes', valorBorder: valErr ? '#E5484D' : 'var(--ads-line)',
+      setValor: e => this.setState(this.reset({ valor: e.target.value.replace(/[^\d.,']/g, ''), valorErr: null })), enter3: e => { if (e.key === 'Enter') this.next3(); },
+      valorHint: valErr || (kwh != null && c && c.valid ? (unitCop ? '$' + nf(pesos) + ' al mes ≈ ' + nf(kwh) + ' kWh/mes' : '≈ ' + money(kwh * TARIFA[tipo]) + ' al mes en la factura') : unitCop ? 'Escribe el valor en pesos, por ejemplo 3.500.000. También puedes escribirlo en millones: 3,5.' : 'Lo encuentras en la factura de energía.'),
+      valorHintInk: valErr ? '#E5484D' : 'var(--ads-muted)',
+      aislado: s.aislado, toggleAislado: () => this.setState(this.reset({ aislado: !s.aislado, bateria: null, maxStep: Math.min(s.maxStep, 4) })),
+      aisladoBorder: s.aislado ? 'var(--ads-accent)' : 'var(--ads-line)', aisladoBg: s.aislado ? 'var(--ads-chip-bg)' : 'var(--ads-field)',
+      next3: () => this.next3(), batOpts,
+      connectSummary: c && c.C ? 'Tu diseño: ' + nf(c.need) + ' módulos, ' + nf(c.kwp, 1) + ' kWp, ' + (c.inv > 1 ? c.inv + ' inversores' : '1 inversor') + (c.units ? ' y ' + nf(c.bkwh) + ' kWh en baterías' : ' sin baterías') + (s.aislado ? ', sin conexión a la red' : '') + '. Conéctalo para verlo funcionar durante un día.' : '',
+      showConnectBtn: !s.connected, connecting: s.connecting, connectLabel: s.connecting ? 'Conectando…' : 'Conectar al inversor', connect: () => this.connect(),
+      res: c && c.C ? (c.aislado ? { lead: 'Generas', figure: nf(c.gen) + ' kWh', tail: 'al mes sin depender de la red.', stats } : { lead: 'Ahorras hasta', figure: money(c.ahorroMes * 12), tail: 'al año en energía.', stats }) : { lead: '', figure: '', tail: '', stats: [] },
+      total: c && c.C ? { v: moneyFull(c.capex), note: '+ IVA' } : { v: '', note: '' },
+      bankOpts: BANKS.map(b => Object.assign({}, b, sel(s.banco === b.id), { on: s.banco === b.id, pick: () => this.setState({ banco: b.id }) })),
+      showFin: isEmp, hasBank: !!s.banco, bank: BANKS.find(b => b.id === s.banco) || { name: '', line: '', desc: '', url: '#' },
+      leadOpen: !s.leadSent, leadSent: s.leadSent, hasLeadErr: !!s.leadErr, leadErr: s.leadErr || '',
+      leadSending: s.leadSending, leadLabel: s.leadSending ? 'Enviando…' : 'Solicitar propuesta',
+      submitLead: () => this.solicitar()
+    };
+  }
+  pickSeg(id) {
+    const s = this.state, tipo = id === 'residencial' ? 'hogar' : 'industria';
+    if (s.segmento === id) return this.setState({ step: 2, maxStep: Math.max(s.maxStep, 2) });
+    const same = s.tipo === tipo;
+    this.setState(this.reset(Object.assign({ segmento: id, tipo, step: 2, formErr: null, errKey: null },
+      same ? { maxStep: Math.max(s.maxStep, 2) } : { maxStep: 2, unidad: 'cop', valor: tipo === 'industria' ? '10.000.000' : '1.000.000', valorErr: null, bateria: null, aislado: false })));
+  }
+  next2() {
+    const s = this.state, emp = s.segmento !== 'residencial';
+    const req = emp ? [['empresa', 'el nombre de la empresa'], ['contacto', 'el nombre del contacto'], ['telefono', 'el teléfono'], ['correo', 'el correo'], ['ciudad', 'la ciudad'], ['subsector', 'el subsector']] : [['nombre', 'tu nombre'], ['telefono', 'tu teléfono'], ['correo', 'tu correo'], ['ciudad', 'tu ciudad']];
+    for (const [k, t] of req) if (!String(s[k] || '').trim()) return this.setState({ errKey: k, formErr: (k === 'ciudad' || k === 'subsector' ? 'Selecciona ' : 'Escribe ') + t + ' para continuar.' });
+    const errTel = errorDeTelefono(s.telefono, s.pais);
+    if (errTel) return this.setState({ errKey: 'telefono', formErr: errTel });
+    if (!CORREO_RE.test(s.correo.trim())) return this.setState({ errKey: 'correo', formErr: 'Escribe un correo válido.' });
+    this.setState({ step: Math.max(3, Math.min(s.maxStep, 3)), maxStep: Math.max(s.maxStep, 3), formErr: null, errKey: null });
+    const name = s.empresa.trim();
+    if (this.three && emp && name !== this.builtName) { this.builtName = name; this.later(() => this.buildSite(false), 0); }
+  }
+  next3() {
+    const s = this.state, c = calc(s);
+    const err = errorDeConsumo(s);
+    if (err || !c || !c.valid) return this.setState({ valorErr: err || 'Ingresa el consumo o el valor de la factura.' });
+    this.setState({ step: 4, maxStep: Math.max(s.maxStep, 4), valorErr: null });
+  }
+}
+</script>
+</body>
+</html>

@@ -1039,6 +1039,7 @@ Solo las usa el servidor (sin políticas RLS para el navegador). No tienen llave
   - `registrar_evento`: eventos.
   - `registrar_canje` y `consultar_canjes`: canjes por API.
   - `generar_qr_canje` y `estado_qr_canje` (aliado), `perfil_operador`, `consultar_qr_canje`, `canjear_qr` y `mis_canjes_registrados` (operador): canje con QR. Son las únicas que el navegador llama directamente con su sesión; cada una verifica quién la llama.
+  - `cotizador_registrar_simulacion`, `cotizador_solicitar_propuesta` y la cola `cotizador_reclamar_propuestas` / `cotizador_resultado_propuesta`: Cotizador Solar (las llama `/api/cotizador`; tablas `cotizador_residencial`, `cotizador_comercial` y `cotizador_industrial`, sin relación con las demás).
   - `admin_*`: acciones del panel.
   - `recalcular_aliado`, `calcular_nivel`, `calcular_puntos_nivel` y `calcular_puntos_disponibles`: cálculos.
 
@@ -1171,6 +1172,7 @@ Resumen agrupado. El detalle y la sección de cada una están en `CLAUDE.md` §1
 - **Canje con QR (fase 11):** QR dinámico de 5 minutos y un solo uso, renovado cada 60 s, con código corto de respaldo. Escanean operadores invitados por un admin y ligados a un proveedor (no son aliados); los admins también. La recompensa la elige el operador; una por escaneo; el aliado no aprueba en su celular, porque mostrar el QR es su consentimiento. El operador ve el nombre corto del aliado, su código, nivel y saldo, nunca su correo ni su celular. Un operador se elimina solo si no ha registrado canjes.
 - El Hub recarga los puntos solo al volver a la pestaña o a la app (y cada 2 minutos con la página abierta).
 - **Mapa de calor con Microsoft Clarity** (oct 2026): solo en Production, con el Hub y los formularios tapados, sesiones anónimas y enmascarado *Strict*; marketing lo consulta directo en Clarity (§8).
+- **Cotizador Solar** (oct 2026): en Herramientas, con y sin sesión, y aparte del programa de puntos (no usa el código del aliado ni da puntos). «Conectar al inversor» guarda la simulación en una de tres tablas separadas (residencial, comercial, industrial) que marketing descarga en CSV desde el panel cada 6 a 12 meses y luego puede borrar. «Solicitar propuesta» crea el contacto en Clientify con la etiqueta «Cotizador Hub», su Tipo (Off Grid u ON GRID) y los resultados, sin oportunidad ni avisos al equipo. La financiación se muestra pero no se guarda.
 
 ---
 
@@ -1412,6 +1414,7 @@ En producción no se agrega `PRUEBA HUB`, así que al terminar hay que marcar o 
 | 18 | Aviso a n8n de los referidos perfectos e imperfectos. | Flujo de imperfectos listo en n8n y sus variables en Vercel Production (oct 2026). Pendiente: lo mismo para el flujo de perfectos (`N8N_PERFECTOS_URL`, `N8N_PERFECTOS_TOKEN`; pasos en §5.2) y, si se quiere probar en Preview, flujos de prueba con sus variables. Mientras falten, esos avisos quedan en «Avisos a n8n no enviados». La Política de Tratamiento de Datos debe cubrir el envío de los datos del contacto a n8n (encargado del tratamiento). |
 | 20 | Microsoft Clarity. | Implementado (oct 2026, §8): proyecto creado, acceso compartido con marketing y enmascarado en *Strict*. `CLARITY_PROJECT_ID` ya está en Vercel Production (8 oct 2026). Pendiente: al desplegar, confirmar en Clarity que el sitio aparece instalado. Mencionar en la Política de Tratamiento de Datos la analítica con Microsoft Clarity (cookies, datos en EE. UU., sin datos personales). |
 | 19 | Catálogo de la Academy en producción. | Al desplegar, aplicar en orden las migraciones `academy_catalogo`, `academy_contenido` (es grande: se pega en el *SQL Editor*) y `academy_puntos`. Sin la segunda, la Academy se ve vacía. Pendiente: definir las masterclasses en vivo (se ocultaron) y si las rutas por tipo de aliado también se vuelven editables. |
+| 21 | Cotizador Solar. | Implementado en la rama `cotizador-solar` (oct 2026). Pendiente: confirmar en Preview, con un correo `+prueba`, que Clientify acepta el origen y los campos del contacto («Consumo (kWp/mes)», «Potencia», «Payback», «Importe»…); aplicar la migración `cotizador_solar` en producción al desplegar; y mencionar en la Política de Tratamiento de Datos el uso de las simulaciones para marketing. |
 
 ---
 

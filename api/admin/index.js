@@ -63,6 +63,17 @@ const objeto = (v) => {
   if (JSON.stringify(v).length > 200000) throw new ErrorHttp(413, 'El contenido es demasiado largo.');
   return v;
 };
+// Rango del borrado del Cotizador Solar (instantes ISO que arma el panel con los días de Bogotá).
+const instante = (v, campo) => {
+  const d = new Date(String(v || ''));
+  if (Number.isNaN(d.getTime())) throw new ErrorHttp(400, `Falta ${campo}.`);
+  return d.toISOString();
+};
+const SEGMENTOS_COTIZADOR = ['residencial', 'comercial', 'industrial'];
+const segmentoCotizador = (v) => {
+  if (!SEGMENTOS_COTIZADOR.includes(v)) throw new ErrorHttp(400, 'Tipo de proyecto inválido.');
+  return v;
+};
 const entero = (v) => {
   const n = Number(v);
   if (!Number.isInteger(n)) throw new ErrorHttp(422, 'Los puntos deben ser un número entero.');
@@ -93,6 +104,9 @@ const ACCIONES = {
   guardar_curso: ['admin_guardar_curso', (c, a) => ({ p_admin: a, p_datos: objeto(c.datos) })],
   guardar_certificacion: ['admin_guardar_certificacion', (c, a) => ({ p_admin: a, p_datos: objeto(c.datos) })],
   otorgar_meddpicc: ['admin_otorgar_meddpicc', (c, a) => ({ p_admin: a, p_empresa: uuid(c.empresa_id, 'el referido'), p_nota: texto(c.nota) || null })],
+  borrar_cotizaciones: ['admin_cotizador_borrar', (c, a) => ({
+    p_admin: a, p_segmento: segmentoCotizador(c.segmento), p_desde: instante(c.desde, 'la fecha inicial'), p_hasta: instante(c.hasta, 'la fecha final')
+  })],
   estado_operador: ['admin_estado_operador', (c, a) => ({
     p_admin: a, p_operador: uuid(c.operador_id, 'el operador'), p_activo: c.activo === true, p_motivo: texto(c.motivo) || null
   })]

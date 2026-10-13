@@ -27,6 +27,7 @@
 | Academy | 99 minicursos, 5 certificaciones y 15 herramientas, administrables desde el panel. Puntos: +5 por minicurso, +10 la masterclass, máximo 40 al mes, y +15 por certificación completa. | Migraciones (paso 3) |
 | Canje con QR | «Mi QR» del aliado y `canje.html` para los operadores. | Panel (paso 12) |
 | Panel de administración | `admin.html`: solicitudes, aliados, eventos, conflictos, canjes, recompensas con imagen, operadores, Academy, correos, avisos a n8n y auditoría. | Primer admin (paso 11) |
+| Cotizador Solar | Herramientas › Cotizador Solar, con y sin sesión; las simulaciones se guardan para marketing y «Solicitar propuesta» crea el contacto en Clientify con la etiqueta «Cotizador Hub». | Migraciones (paso 3) y Turnstile (paso 6) |
 | Microsoft Clarity | Mapas de calor y grabaciones con el Hub y los formularios tapados. | `CLARITY_PROJECT_ID` (ya guardado) |
 
 ---
@@ -39,14 +40,14 @@
 
 ---
 
-## 3. Esquema de `aliados-prod` (39 migraciones)
+## 3. Esquema de `aliados-prod` (41 migraciones)
 
 **Cómo** (recomendado: Supabase CLI desde un computador del equipo, con la rama `despliegue-prod`):
 
 ```bash
 npx supabase login
 npx supabase link --project-ref pysyxycrybayhrescplc
-npx supabase migration list   # muestra cuáles faltan; con la base vacía, faltan las 39
+npx supabase migration list   # muestra cuáles faltan; con la base vacía, faltan las 41
 npx supabase db push          # las aplica en orden
 ```
 
@@ -62,8 +63,8 @@ npx supabase db push          # las aplica en orden
 **Comprobar** en el *SQL Editor* de `aliados-prod` (solo lectura):
 
 ```sql
-select (select count(*) from pg_tables where schemaname = 'public') as tablas,                    -- 28
-       (select count(*) from pg_tables where schemaname = 'public' and rowsecurity) as con_rls,   -- 28
+select (select count(*) from pg_tables where schemaname = 'public') as tablas,                    -- 32
+       (select count(*) from pg_tables where schemaname = 'public' and rowsecurity) as con_rls,   -- 32
        (select count(*) from cron.job) as cron_jobs,                                              -- 7
        (select string_agg(id, ', ' order by id) from storage.buckets) as buckets,                 -- academy, eventos, facturas, recompensas
        (select count(*) from public.modulos where escuela is not null and activo) as minicursos,  -- 99
@@ -125,7 +126,7 @@ En Vercel → proyecto → *Settings → Environment Variables*, entorno **Produ
 | `CLARITY_PROJECT_ID` | Clarity → *Settings → Setup* | **Hecho** (8 oct 2026) |
 | `CANJES_API_KEYS` | Solo cuando un proveedor se integre por sistema | Opcional |
 
-Sin `TURNSTILE_SECRET_KEY` el formulario público responde 503. Sin `RESEND_API_KEY`, los correos de los referidos quedan en «Correos no enviados» del panel. Sin las `N8N_*`, los avisos quedan en «Avisos a n8n no enviados». Nada de esto hace fallar un registro.
+Sin `TURNSTILE_SECRET_KEY` el formulario público y el Cotizador Solar responden 503. Sin `RESEND_API_KEY`, los correos de los referidos quedan en «Correos no enviados» del panel. Sin las `N8N_*`, los avisos quedan en «Avisos a n8n no enviados». Nada de esto hace fallar un registro.
 
 ---
 

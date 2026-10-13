@@ -744,7 +744,7 @@
       <div style="display:flex;flex-direction:column;gap:9px;max-width:620px">
         <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Casos y proyectos</span>
         <h1 style="margin:0;font-size:clamp(28px,3.6vw,40px);line-height:1.08;font-weight:700;letter-spacing:-.025em;text-wrap:pretty">Proyectos que ya generan energía.</h1>
-        <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);line-height:1.5">Sistemas solares que GEENERA instaló en empresas de Colombia. Úsalos como referencia cuando hables con una empresa parecida.</p>
+        <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);line-height:1.5">Sistemas solares que GEENERA instaló en empresas y hogares de Colombia. Úsalos como referencia cuando hables con una empresa parecida.</p>
       </div>
       <sc-if value="{{ proyHayDatos }}" hint-placeholder-val="{{ true }}">
       <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px;max-width:340px">
@@ -753,6 +753,13 @@
       </label>
       </sc-if>
     </div>
+    <sc-if value="{{ proyHayTipos }}" hint-placeholder-val="{{ true }}">
+    <div role="group" aria-label="Tipo de proyecto" style="display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 22px">
+      <sc-for list="{{ proyTipos }}" as="t" hint-placeholder-count="3">
+        <button onClick="{{ t.act }}" aria-pressed="{{ t.on }}" style="padding:8px 14px;border-radius:99px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 160ms ease">{{ t.label }}</button>
+      </sc-for>
+    </div>
+    </sc-if>
     <sc-if value="{{ proyCargando }}" hint-placeholder-val="{{ false }}">
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px;padding-bottom:44px">
         <sc-for list="{{ proyEsqueleto }}" as="x" hint-placeholder-count="3"><div aria-hidden="true" style="height:330px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-03,rgba(255,255,255,.03));animation:fadeIn 900ms ease-in-out infinite alternate"></div></sc-for>
@@ -2379,7 +2386,7 @@
           <div style="display:flex;flex-direction:column;gap:9px;max-width:620px">
             <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Casos y proyectos</span>
             <h1 style="margin:0;font-size:clamp(28px,3.6vw,40px);line-height:1.08;font-weight:700;letter-spacing:-.025em;text-wrap:pretty">Proyectos que ya generan energía.</h1>
-            <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);line-height:1.5">Sistemas solares que GEENERA instaló en empresas de Colombia. Úsalos como referencia cuando hables con una empresa parecida.</p>
+            <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);line-height:1.5">Sistemas solares que GEENERA instaló en empresas y hogares de Colombia. Úsalos como referencia cuando hables con una empresa parecida.</p>
           </div>
           <sc-if value="{{ proyHayDatos }}" hint-placeholder-val="{{ true }}">
           <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px;max-width:340px">
@@ -2388,6 +2395,13 @@
           </label>
           </sc-if>
         </div>
+        <sc-if value="{{ proyHayTipos }}" hint-placeholder-val="{{ true }}">
+        <div role="group" aria-label="Tipo de proyecto" style="display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 22px">
+          <sc-for list="{{ proyTipos }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.act }}" aria-pressed="{{ t.on }}" style="padding:8px 14px;border-radius:99px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 160ms ease">{{ t.label }}</button>
+          </sc-for>
+        </div>
+        </sc-if>
         <sc-if value="{{ proyCargando }}" hint-placeholder-val="{{ false }}">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px;padding-bottom:44px">
             <sc-for list="{{ proyEsqueleto }}" as="x" hint-placeholder-count="3"><div aria-hidden="true" style="height:330px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-03,rgba(255,255,255,.03));animation:fadeIn 900ms ease-in-out infinite alternate"></div></sc-for>
@@ -3827,7 +3841,10 @@ class Component extends DCLogic {
     const q = (s.proyQuery || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const sinTilde = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const cifras = (p) => [['Tamaño del sistema', p.kwp != null ? nf(p.kwp, 2) + ' kWp' : ''], ['Ahorro anual', millones(p.ahorroCop)], ['CO₂ evitado', co2(p.co2Kg)]].filter(x => x[1]).map(x => ({ k: x[0], v: x[1] }));
-    const tarjetas = lista.filter(p => !q || sinTilde(p.titulo + ' ' + p.ubicacion).indexOf(q) >= 0).map(p => ({
+    const hayTipos = lista.some(p => p.residencial) && lista.some(p => !p.residencial);
+    const tipo = hayTipos ? (s.proyTipo || 'todos') : 'todos';
+    const delTipo = lista.filter(p => tipo === 'todos' || (tipo === 'res') === !!p.residencial);
+    const tarjetas = delTipo.filter(p => !q || sinTilde(p.titulo + ' ' + p.ubicacion).indexOf(q) >= 0).map(p => ({
       titulo: p.titulo, ubicacion: p.ubicacion || 'Colombia', foto: bg(p.portada), hasFoto: !!p.portada, noFoto: !p.portada,
       logo: bg(p.logo), hasLogo: !!p.logo, conQr: !!p.qr, cifras: cifras(p),
       abrir: () => { this.setState({ proySel: p.id }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
@@ -3841,7 +3858,7 @@ class Component extends DCLogic {
       fotos: sel.fotos.map((u, i) => ({ url: bg(u), alt: sel.titulo + ' · foto ' + (i + 1), span: i === 0 ? '1 / -1' : 'auto', alto: i === 0 ? '320px' : '200px' })),
       hasFotos: sel.fotos.length > 0,
       hasQr: !!sel.qr, qr: bg(sel.qr),
-      abrirMaps: () => window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(sel.ubicacion), '_blank', 'noopener'),
+      abrirMaps: () => window.open(sel.maps || 'https://maps.google.com/maps?t=k&q=' + encodeURIComponent(sel.ubicacion || sel.titulo), '_blank', 'noopener'),
       hasTestimonio: !!sel.testimonio, testimonio: sel.testimonio,
       hasVideo: !!sel.video, verVideo: () => window.open(sel.video, '_blank', 'noopener'),
       hasEnlace: !!sel.enlace, verWeb: () => window.open(sel.enlace, '_blank', 'noopener')
@@ -3850,8 +3867,15 @@ class Component extends DCLogic {
       proyLista: !sel, proyDetalle: !!sel, proy: det || {},
       proyCargando: !s.proyectos && !s.proyError, proyEsqueleto: [{ k: 1 }, { k: 2 }, { k: 3 }], proyError: !!s.proyError && !s.proyectos, proyErrorMsg: s.proyError || '',
       proyHayDatos: !!s.proyectos, proyTarjetas: tarjetas, proyVacio: !!s.proyectos && tarjetas.length === 0,
-      proyVacioMsg: q ? 'Ningún proyecto coincide con «' + (s.proyQuery || '').trim() + '».' : 'Aún no hay proyectos publicados.',
-      proyConteo: s.proyectos ? (q ? tarjetas.length + ' de ' + lista.length + ' proyectos' : lista.length + ' proyectos') : '',
+      proyVacioMsg: !q && tipo !== 'todos' ? 'No hay proyectos en esta categoría.' : q ? 'Ningún proyecto coincide con «' + (s.proyQuery || '').trim() + '».' : 'Aún no hay proyectos publicados.',
+      proyConteo: s.proyectos ? (q || tipo !== 'todos' ? tarjetas.length + ' de ' + lista.length + ' proyectos' : lista.length + ' proyectos') : '',
+      proyHayTipos: hayTipos,
+      proyTipos: [['todos', 'Todos'], ['res', 'Residenciales'], ['com', 'Industriales y comerciales']].map(([id, label]) => ({
+        id, label, on: tipo === id, act: () => this.setState({ proyTipo: id }),
+        bg: tipo === id ? 'rgba(255,202,5,.14)' : 'var(--w-03,rgba(255,255,255,.03))',
+        border: tipo === id ? 'rgba(255,202,5,.55)' : 'var(--w-11,rgba(255,255,255,.11))',
+        color: tipo === id ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)'
+      })),
       proyQuery: s.proyQuery || '', onProyQuery: (ev) => this.setState({ proyQuery: ev.target.value }),
       proyAtras: () => this.go(s.route === 'p-proyectos' ? 'p-herramientas' : 'herramientas'),
       proyVolver: () => this.setState({ proySel: null }), proyReintentar: () => this.cargarProyectos(true)

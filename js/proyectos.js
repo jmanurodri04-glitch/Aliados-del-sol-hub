@@ -3,12 +3,14 @@
 // (tipo de contenido `cpt-proyectos` de JetEngine, con sus campos publicados en la API) y no guarda nada.
 // La página pide los datos con `ads:proyectos-cargar` y los recibe en `ads:proyectos { ok, proyectos, mensaje? }`.
 // El QR para Maps solo se muestra en los proyectos que lo tienen cargado (el cliente lo autorizó); la dirección
-// se muestra siempre (decisión del equipo, oct 2026).
+// se muestra siempre (decisión del equipo, oct 2026). Maps abre en vista satélite: con el campo `c-coordenadas`
+// («lat, lng») el enlace centra el mapa en el proyecto, que también respeta el satélite en la app del celular; sin él,
+// busca la dirección. Un proyecto es residencial si su título tiene la palabra «Casa».
 
 export const WP_API = 'https://geenera.com/wp-json/wp/v2';
 const POR_PAGINA = 100;
 const MAX_PAGINAS = 10;
-const CACHE_CLAVE = 'ads-proyectos-v1';
+const CACHE_CLAVE = 'ads-proyectos-v2';
 const CACHE_MS = 10 * 60 * 1000;
 
 const ENTIDADES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', hellip: '…' };
@@ -53,6 +55,23 @@ function urlDe(media, tamano) {
   return (t && t.source_url) || media.source_url || null;
 }
 
+// «4.8133, -75.6961», «4,8133; -75,6961» o un enlace de Google Maps con «@lat,lng». Devuelve { lat, lng } o null.
+export function coordenadas(valor) {
+  const t = String(valor == null ? '' : valor).trim();
+  const m = t.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/) || t.match(/^(-?\d+(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d+(?:[.,]\d+)?)$/);
+  if (!m) return null;
+  const lat = Number(m[1].replace(',', '.')), lng = Number(m[2].replace(',', '.'));
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null;
+}
+
+export const esResidencial = (titulo) => /(^|[^a-z0-9áéíóúñü])casa([^a-z0-9áéíóúñü]|$)/i.test(String(titulo || ''));
+
+// Enlace de Google Maps en vista satélite.
+export function enlaceMaps(coords, ubicacion) {
+  if (coords) return 'https://www.google.com/maps/@?api=1&map_action=map&center=' + coords.lat + ',' + coords.lng + '&zoom=19&basemap=satellite';
+  return ubicacion ? 'https://maps.google.com/maps?t=k&q=' + encodeURIComponent(ubicacion) : null;
+}
+
 // Convierte un proyecto de la API y su biblioteca de medios (Map id → media) a la forma que usa la página.
 export function normalizarProyecto(p, medios = new Map()) {
   const m = p.meta || {};
@@ -62,13 +81,19 @@ export function normalizarProyecto(p, medios = new Map()) {
   const qrId = ids(m['c-codigo-qr'])[0];
   const video = String(m['c-video-testimonio'] || '').trim();
   const videoId = /^\d+$/.test(video) ? parseInt(video, 10) : 0;
+  const titulo = textoPlano(p.title && p.title.rendered);
+  const ubicacion = textoPlano(m['c-ubicacion-del-proyecto']).replace(/\s+/g, ' ');
+  const coords = coordenadas(m['c-coordenadas']);
   return {
     id: p.id,
-    titulo: textoPlano(p.title && p.title.rendered),
+    titulo,
+    residencial: esResidencial(titulo),
     enlace: p.link || null,
     fecha: p.date || null,
     descripcion: textoPlano(m['c-descripcion-del-proyecto']),
-    ubicacion: textoPlano(m['c-ubicacion-del-proyecto']).replace(/\s+/g, ' '),
+    ubicacion,
+    coordenadas: coords,
+    maps: enlaceMaps(coords, ubicacion),
     kwp: numero(m['c-tamano-del-sistema']),
     paneles: numero(m['c-paneles-instalados'], true),
     co2Kg: numero(m['c-c02-ahorrados']),

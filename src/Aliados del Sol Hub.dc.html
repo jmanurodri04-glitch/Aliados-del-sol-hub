@@ -735,6 +735,110 @@
   </section>
   </sc-if>
 
+  <sc-if value="{{ isPubProyectos }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Casos y proyectos público" style="padding:clamp(8px,2vh,24px) clamp(16px,3.4vw,44px) clamp(40px,6vh,80px);animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
+    <div style="max-width:1180px;margin:0 auto">
+    <sc-if value="{{ proyLista }}" hint-placeholder-val="{{ true }}">
+    <button onClick="{{ proyAtras }}" style="margin:36px 0 20px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Herramientas</button>
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;padding-bottom:28px">
+      <div style="display:flex;flex-direction:column;gap:9px;max-width:620px">
+        <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Casos y proyectos</span>
+        <h1 style="margin:0;font-size:clamp(28px,3.6vw,40px);line-height:1.08;font-weight:700;letter-spacing:-.025em;text-wrap:pretty">Proyectos que ya generan energía.</h1>
+        <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);line-height:1.5">Sistemas solares que GEENERA instaló en empresas de Colombia. Úsalos como referencia cuando hables con una empresa parecida.</p>
+      </div>
+      <sc-if value="{{ proyHayDatos }}" hint-placeholder-val="{{ true }}">
+      <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px;max-width:340px">
+        <span style="font-size:12px;color:var(--mut3,#7C7873)">{{ proyConteo }}</span>
+        <input type="search" value="{{ proyQuery }}" onChange="{{ onProyQuery }}" placeholder="Buscar por empresa o ciudad" aria-label="Buscar proyectos" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;transition:border-color 180ms ease" style-focus="border-color:rgba(255,202,5,.55)">
+      </label>
+      </sc-if>
+    </div>
+    <sc-if value="{{ proyCargando }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px;padding-bottom:44px">
+        <sc-for list="{{ proyEsqueleto }}" as="x" hint-placeholder-count="3"><div aria-hidden="true" style="height:330px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-03,rgba(255,255,255,.03));animation:fadeIn 900ms ease-in-out infinite alternate"></div></sc-for>
+      </div>
+      <span role="status" style="display:block;margin-bottom:44px;font-size:13.5px;color:var(--mut3,#7C7873)">Cargando proyectos…</span>
+    </sc-if>
+    <sc-if value="{{ proyError }}" hint-placeholder-val="{{ false }}">
+      <div role="alert" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:44px;padding:20px 22px;border:1px solid rgba(232,131,107,.35);border-radius:14px;background:rgba(232,131,107,.07)">
+        <span style="flex:1;min-width:220px;font-size:14px;color:var(--t2,#C9C5BE)">{{ proyErrorMsg }}</span>
+        <button onClick="{{ proyReintentar }}" style="padding:9px 16px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:9px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Reintentar</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ proyVacio }}" hint-placeholder-val="{{ false }}"><span style="display:block;margin-bottom:44px;font-size:14px;color:var(--mut3,#7C7873)">{{ proyVacioMsg }}</span></sc-if>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px;padding-bottom:44px">
+      <sc-for list="{{ proyTarjetas }}" as="p" hint-placeholder-count="6">
+        <button onClick="{{ p.abrir }}" style="display:flex;flex-direction:column;padding:0;overflow:hidden;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:linear-gradient(155deg,var(--w-04,rgba(255,255,255,.04)),var(--w-015,rgba(255,255,255,.015)));color:var(--fg,#F2F0EC);text-align:left;font-family:inherit;cursor:pointer;transition:transform 220ms cubic-bezier(.22,.61,.36,1),border-color 220ms ease" style-hover="transform:translateY(-3px);border-color:rgba(255,202,5,.3)">
+          <span style="position:relative;display:block;height:170px;background-color:var(--w-04,rgba(255,255,255,.04));background-size:cover;background-position:center;background-image:{{ p.foto }}">
+            <sc-if value="{{ p.noFoto }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;display:grid;place-items:center;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">GEENERA</span></sc-if>
+            <sc-if value="{{ p.hasLogo }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="Logo del cliente" style="position:absolute;left:14px;bottom:-22px;width:56px;height:56px;border-radius:12px;border:1px solid rgba(0,0,0,.08);background-color:#fff;background-size:76%;background-position:center;background-repeat:no-repeat;background-image:{{ p.logo }};box-shadow:0 6px 18px rgba(0,0,0,.25)"></span></sc-if>
+            <sc-if value="{{ p.conQr }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:12px;top:12px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.06em;background:rgba(12,12,14,.72);color:#FFCA05">Ver en Maps</span></sc-if>
+          </span>
+          <span style="display:flex;flex-direction:column;gap:6px;padding:32px 20px 0">
+            <b style="font-size:16.5px;font-weight:600;line-height:1.3;letter-spacing:-.01em">{{ p.titulo }}</b>
+            <span style="font-size:13px;color:var(--mut3,#7C7873)">{{ p.ubicacion }}</span>
+          </span>
+          <span style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto;padding:18px 20px 20px">
+            <sc-for list="{{ p.cifras }}" as="c" hint-placeholder-count="3">
+              <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px;font-weight:700;color:var(--y,#FFCA05);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.v }}</span><span style="font-size:11.5px;color:var(--mut4,#6B6762)">{{ c.k }}</span></span>
+            </sc-for>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ proyDetalle }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ proyVolver }}" style="margin:36px 0 20px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Casos y proyectos</button>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:26px">
+      <sc-if value="{{ proy.hasLogo }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="Logo del cliente" style="flex:none;width:72px;height:72px;border-radius:14px;background-color:#fff;background-size:76%;background-position:center;background-repeat:no-repeat;background-image:{{ proy.logo }}"></span></sc-if>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:240px">
+        <h1 style="margin:0;font-size:clamp(26px,3.4vw,38px);line-height:1.1;font-weight:700;letter-spacing:-.025em;text-wrap:pretty">{{ proy.titulo }}</h1>
+        <span style="font-size:14.5px;color:var(--mut2,#8E8B86)">{{ proy.ubicacion }}</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px;padding-bottom:28px">
+      <sc-for list="{{ proy.metricas }}" as="m" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:6px;padding:18px 20px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:14px;background:var(--w-022,rgba(255,255,255,.022))">
+          <span style="font-size:clamp(20px,2.2vw,26px);font-weight:700;letter-spacing:-.02em;color:var(--y,#FFCA05)">{{ m.v }}</span>
+          <span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ m.k }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px;align-items:start;padding-bottom:30px">
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <sc-if value="{{ proy.hasDescripcion }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-size:15.5px;line-height:1.65;color:var(--t3,#B4B0A9);white-space:pre-line">{{ proy.descripcion }}</p></sc-if>
+        <sc-if value="{{ proy.hasTestimonio }}" hint-placeholder-val="{{ false }}">
+          <blockquote style="margin:0;padding:16px 20px;border-left:2px solid var(--y,#FFCA05);font-size:15px;line-height:1.6;color:var(--t2,#C9C5BE)">«{{ proy.testimonio }}»</blockquote>
+        </sc-if>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <sc-if value="{{ proy.hasVideo }}" hint-placeholder-val="{{ false }}"><button onClick="{{ proy.verVideo }}" style="padding:10px 17px;border:none;border-radius:9px;background:var(--btn,#F2F0EC);color:var(--btnfg,#141210);font-size:13.5px;font-weight:700;cursor:pointer">Ver video testimonio</button></sc-if>
+          <sc-if value="{{ proy.hasEnlace }}" hint-placeholder-val="{{ true }}"><button onClick="{{ proy.verWeb }}" style="padding:10px 17px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:9px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Ver en geenera.com ↗</button></sc-if>
+        </div>
+      </div>
+      <sc-if value="{{ proy.hasQr }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:22px 24px;border:1px solid rgba(255,202,5,.24);border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
+        <span role="img" aria-label="Código QR del proyecto en Google Maps" style="flex:none;width:150px;height:150px;border-radius:12px;background-color:#fff;background-size:92%;background-position:center;background-repeat:no-repeat;background-image:{{ proy.qr }}"></span>
+        <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-width:180px">
+          <b style="font-size:16px;font-weight:600">Visítalo en Google Maps</b>
+          <span style="font-size:13.5px;line-height:1.5;color:var(--mut,#9A968F)">Escanea el código con la cámara del celular para ver el proyecto en el mapa.</span>
+          <button onClick="{{ proy.abrirMaps }}" style="align-self:flex-start;padding:9px 15px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:9px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">Abrir en Google Maps ↗</button>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ proy.hasFotos }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px;padding-bottom:52px">
+      <sc-for list="{{ proy.fotos }}" as="f" hint-placeholder-count="3">
+        <span role="img" aria-label="{{ f.alt }}" style="grid-column:{{ f.span }};height:{{ f.alto }};border-radius:14px;background-color:var(--w-04,rgba(255,255,255,.04));background-size:cover;background-position:center;background-image:{{ f.url }}"></span>
+      </sc-for>
+    </div>
+    </sc-if>
+    </sc-if>
+    </div>
+  </section>
+  </sc-if>
+
   <sc-if value="{{ isPubAcademy }}" hint-placeholder-val="{{ false }}">
   <section data-screen-label="Academy público" style="padding:0 clamp(16px,3.4vw,44px);animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
     <div style="max-width:1180px;margin:0 auto">
@@ -2267,6 +2371,108 @@
       </section>
       </sc-if>
 
+      <sc-if value="{{ isProyectos }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Casos y proyectos" style="animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
+        <sc-if value="{{ proyLista }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ proyAtras }}" style="margin:36px 0 20px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Herramientas</button>
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;padding-bottom:28px">
+          <div style="display:flex;flex-direction:column;gap:9px;max-width:620px">
+            <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Casos y proyectos</span>
+            <h1 style="margin:0;font-size:clamp(28px,3.6vw,40px);line-height:1.08;font-weight:700;letter-spacing:-.025em;text-wrap:pretty">Proyectos que ya generan energía.</h1>
+            <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);line-height:1.5">Sistemas solares que GEENERA instaló en empresas de Colombia. Úsalos como referencia cuando hables con una empresa parecida.</p>
+          </div>
+          <sc-if value="{{ proyHayDatos }}" hint-placeholder-val="{{ true }}">
+          <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px;max-width:340px">
+            <span style="font-size:12px;color:var(--mut3,#7C7873)">{{ proyConteo }}</span>
+            <input type="search" value="{{ proyQuery }}" onChange="{{ onProyQuery }}" placeholder="Buscar por empresa o ciudad" aria-label="Buscar proyectos" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--w-11,rgba(255,255,255,.11));border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg,#F2F0EC);font-size:14.5px;font-family:inherit;outline:none;transition:border-color 180ms ease" style-focus="border-color:rgba(255,202,5,.55)">
+          </label>
+          </sc-if>
+        </div>
+        <sc-if value="{{ proyCargando }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px;padding-bottom:44px">
+            <sc-for list="{{ proyEsqueleto }}" as="x" hint-placeholder-count="3"><div aria-hidden="true" style="height:330px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-03,rgba(255,255,255,.03));animation:fadeIn 900ms ease-in-out infinite alternate"></div></sc-for>
+          </div>
+          <span role="status" style="display:block;margin-bottom:44px;font-size:13.5px;color:var(--mut3,#7C7873)">Cargando proyectos…</span>
+        </sc-if>
+        <sc-if value="{{ proyError }}" hint-placeholder-val="{{ false }}">
+          <div role="alert" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:44px;padding:20px 22px;border:1px solid rgba(232,131,107,.35);border-radius:14px;background:rgba(232,131,107,.07)">
+            <span style="flex:1;min-width:220px;font-size:14px;color:var(--t2,#C9C5BE)">{{ proyErrorMsg }}</span>
+            <button onClick="{{ proyReintentar }}" style="padding:9px 16px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:9px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Reintentar</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ proyVacio }}" hint-placeholder-val="{{ false }}"><span style="display:block;margin-bottom:44px;font-size:14px;color:var(--mut3,#7C7873)">{{ proyVacioMsg }}</span></sc-if>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px;padding-bottom:44px">
+          <sc-for list="{{ proyTarjetas }}" as="p" hint-placeholder-count="6">
+            <button onClick="{{ p.abrir }}" style="display:flex;flex-direction:column;padding:0;overflow:hidden;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:linear-gradient(155deg,var(--w-04,rgba(255,255,255,.04)),var(--w-015,rgba(255,255,255,.015)));color:var(--fg,#F2F0EC);text-align:left;font-family:inherit;cursor:pointer;transition:transform 220ms cubic-bezier(.22,.61,.36,1),border-color 220ms ease" style-hover="transform:translateY(-3px);border-color:rgba(255,202,5,.3)">
+              <span style="position:relative;display:block;height:170px;background-color:var(--w-04,rgba(255,255,255,.04));background-size:cover;background-position:center;background-image:{{ p.foto }}">
+                <sc-if value="{{ p.noFoto }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;display:grid;place-items:center;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">GEENERA</span></sc-if>
+                <sc-if value="{{ p.hasLogo }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="Logo del cliente" style="position:absolute;left:14px;bottom:-22px;width:56px;height:56px;border-radius:12px;border:1px solid rgba(0,0,0,.08);background-color:#fff;background-size:76%;background-position:center;background-repeat:no-repeat;background-image:{{ p.logo }};box-shadow:0 6px 18px rgba(0,0,0,.25)"></span></sc-if>
+                <sc-if value="{{ p.conQr }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:12px;top:12px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.06em;background:rgba(12,12,14,.72);color:#FFCA05">Ver en Maps</span></sc-if>
+              </span>
+              <span style="display:flex;flex-direction:column;gap:6px;padding:32px 20px 0">
+                <b style="font-size:16.5px;font-weight:600;line-height:1.3;letter-spacing:-.01em">{{ p.titulo }}</b>
+                <span style="font-size:13px;color:var(--mut3,#7C7873)">{{ p.ubicacion }}</span>
+              </span>
+              <span style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto;padding:18px 20px 20px">
+                <sc-for list="{{ p.cifras }}" as="c" hint-placeholder-count="3">
+                  <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px;font-weight:700;color:var(--y,#FFCA05);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.v }}</span><span style="font-size:11.5px;color:var(--mut4,#6B6762)">{{ c.k }}</span></span>
+                </sc-for>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ proyDetalle }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ proyVolver }}" style="margin:36px 0 20px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Casos y proyectos</button>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:26px">
+          <sc-if value="{{ proy.hasLogo }}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="Logo del cliente" style="flex:none;width:72px;height:72px;border-radius:14px;background-color:#fff;background-size:76%;background-position:center;background-repeat:no-repeat;background-image:{{ proy.logo }}"></span></sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:240px">
+            <h1 style="margin:0;font-size:clamp(26px,3.4vw,38px);line-height:1.1;font-weight:700;letter-spacing:-.025em;text-wrap:pretty">{{ proy.titulo }}</h1>
+            <span style="font-size:14.5px;color:var(--mut2,#8E8B86)">{{ proy.ubicacion }}</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px;padding-bottom:28px">
+          <sc-for list="{{ proy.metricas }}" as="m" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:6px;padding:18px 20px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:14px;background:var(--w-022,rgba(255,255,255,.022))">
+              <span style="font-size:clamp(20px,2.2vw,26px);font-weight:700;letter-spacing:-.02em;color:var(--y,#FFCA05)">{{ m.v }}</span>
+              <span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ m.k }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px;align-items:start;padding-bottom:30px">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <sc-if value="{{ proy.hasDescripcion }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-size:15.5px;line-height:1.65;color:var(--t3,#B4B0A9);white-space:pre-line">{{ proy.descripcion }}</p></sc-if>
+            <sc-if value="{{ proy.hasTestimonio }}" hint-placeholder-val="{{ false }}">
+              <blockquote style="margin:0;padding:16px 20px;border-left:2px solid var(--y,#FFCA05);font-size:15px;line-height:1.6;color:var(--t2,#C9C5BE)">«{{ proy.testimonio }}»</blockquote>
+            </sc-if>
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+              <sc-if value="{{ proy.hasVideo }}" hint-placeholder-val="{{ false }}"><button onClick="{{ proy.verVideo }}" style="padding:10px 17px;border:none;border-radius:9px;background:var(--btn,#F2F0EC);color:var(--btnfg,#141210);font-size:13.5px;font-weight:700;cursor:pointer">Ver video testimonio</button></sc-if>
+              <sc-if value="{{ proy.hasEnlace }}" hint-placeholder-val="{{ true }}"><button onClick="{{ proy.verWeb }}" style="padding:10px 17px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:9px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13.5px;font-weight:600;cursor:pointer">Ver en geenera.com ↗</button></sc-if>
+            </div>
+          </div>
+          <sc-if value="{{ proy.hasQr }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:22px 24px;border:1px solid rgba(255,202,5,.24);border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
+            <span role="img" aria-label="Código QR del proyecto en Google Maps" style="flex:none;width:150px;height:150px;border-radius:12px;background-color:#fff;background-size:92%;background-position:center;background-repeat:no-repeat;background-image:{{ proy.qr }}"></span>
+            <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-width:180px">
+              <b style="font-size:16px;font-weight:600">Visítalo en Google Maps</b>
+              <span style="font-size:13.5px;line-height:1.5;color:var(--mut,#9A968F)">Escanea el código con la cámara del celular para ver el proyecto en el mapa.</span>
+              <button onClick="{{ proy.abrirMaps }}" style="align-self:flex-start;padding:9px 15px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:9px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:13px;font-weight:600;cursor:pointer">Abrir en Google Maps ↗</button>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ proy.hasFotos }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px;padding-bottom:52px">
+          <sc-for list="{{ proy.fotos }}" as="f" hint-placeholder-count="3">
+            <span role="img" aria-label="{{ f.alt }}" style="grid-column:{{ f.span }};height:{{ f.alto }};border-radius:14px;background-color:var(--w-04,rgba(255,255,255,.04));background-size:cover;background-position:center;background-image:{{ f.url }}"></span>
+          </sc-for>
+        </div>
+        </sc-if>
+        </sc-if>
+      </section>
+      </sc-if>
+
       <sc-if value="{{ isHerramientas }}" hint-placeholder-val="{{ false }}">
       <section data-screen-label="Herramientas" style="animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
         <div style="display:flex;flex-direction:column;gap:9px;padding:44px 0 30px">
@@ -2803,8 +3009,8 @@
 
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Juan Rodríguez&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;points&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts de nivel&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;pointsBalance&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts disponibles&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:82,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;qualitySample&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:14,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:200,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;streakWeeks&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:4,&quot;step&quot;:1,&quot;unit&quot;:&quot;semanas&quot;,&quot;section&quot;:&quot;Aliado demo&quot;}}">
-const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'puntos', 'mobile'];
-const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
+const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'proyectos', 'puntos', 'mobile'];
+const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-proyectos', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
 
 const OPPS = [
   { id: 'o1', empresa: 'Textiles Andinas S.A.S.', sector: 'Manufactura', ciudad: 'Medellín, Antioquia', ciudadCorta: 'Medellín', fecha: '12 ago 2026', etapa: 'Propuesta', step: 3, consumo: '42.000 kWh/mes', pts: 250, upd: 'hace 2 días',
@@ -3147,7 +3353,6 @@ const JOIN_CONFIG = {
   stepsWa: [['Datos básicos', 'Nombre, contacto, regional y tipo.'], ['Conversación por WhatsApp', 'Nuestro asistente continúa con tus datos.'], ['Validación GEENERA', 'El equipo de Alianzas revisa tu perfil.'], ['Activación', 'Recibes tu perfil, código y enlace único.'], ['Hub', 'Oportunidades, Puntos Sol, niveles y beneficios.']]
 };
 const waLink = (kind) => SUPPORT_CONFIG.base + SUPPORT_CONFIG.whatsapp + '&text=' + encodeURIComponent(SUPPORT_CONFIG.msgs[kind] || SUPPORT_CONFIG.msgs.programa);
-const EXTERNAL_LINKS = { proyectos: 'https://geenera.com/proyectos/' };
 const UI_CONFIG = { stickyHeaderOffset: 72 };
 const THEME_CONFIG = { storageKey: 'ads-theme', def: 'system', modes: [['dark', 'Oscuro'], ['light', 'Claro'], ['system', 'Auto']] };
 const MOTION_CONFIG = { poll: 40, revealAt: 0.88, stagger: 70, countMs: 1100, reveal: 'opacity 700ms cubic-bezier(.22,.61,.36,1),transform 820ms cubic-bezier(.22,.61,.36,1)' };
@@ -3611,6 +3816,52 @@ class Component extends DCLogic {
       evtOk: !!s.evtOk, misEventos, misEventosVacio: misEventos.length === 0
     };
   }
+  /* Casos y proyectos (Herramientas): los proyectos de geenera.com, leídos de WordPress por js/proyectos.js
+     (ads:proyectos-cargar → ads:proyectos). La dirección se ve siempre; el QR para Maps, solo si está cargado. */
+  proyectosVals(s) {
+    const lista = s.proyectos || [];
+    const nf = (v, dec) => v == null ? '' : Number(v).toLocaleString('es-CO', { maximumFractionDigits: dec || 0 });
+    const millones = (v) => v == null ? '' : v >= 1e6 ? '$ ' + nf(v / 1e6, 1) + ' M' : pesos(v);
+    const co2 = (kg) => kg == null ? '' : kg >= 1000 ? nf(kg / 1000, 1) + ' t' : nf(kg) + ' kg';
+    const bg = (u) => u ? 'url("' + String(u).replace(/["\\]/g, '') + '")' : 'none';
+    const q = (s.proyQuery || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const sinTilde = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const cifras = (p) => [['Tamaño del sistema', p.kwp != null ? nf(p.kwp, 2) + ' kWp' : ''], ['Ahorro anual', millones(p.ahorroCop)], ['CO₂ evitado', co2(p.co2Kg)]].filter(x => x[1]).map(x => ({ k: x[0], v: x[1] }));
+    const tarjetas = lista.filter(p => !q || sinTilde(p.titulo + ' ' + p.ubicacion).indexOf(q) >= 0).map(p => ({
+      titulo: p.titulo, ubicacion: p.ubicacion || 'Colombia', foto: bg(p.portada), hasFoto: !!p.portada, noFoto: !p.portada,
+      logo: bg(p.logo), hasLogo: !!p.logo, conQr: !!p.qr, cifras: cifras(p),
+      abrir: () => { this.setState({ proySel: p.id }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
+    }));
+    const sel = lista.find(p => p.id === s.proySel) || null;
+    const det = sel ? {
+      titulo: sel.titulo, ubicacion: sel.ubicacion || 'Colombia', descripcion: sel.descripcion, hasDescripcion: !!sel.descripcion,
+      logo: bg(sel.logo), hasLogo: !!sel.logo,
+      metricas: [['Tamaño del sistema', sel.kwp != null ? nf(sel.kwp, 2) + ' kWp' : ''], ['Paneles instalados', nf(sel.paneles)], ['Ahorro anual', millones(sel.ahorroCop)],
+        ['CO₂ evitado', co2(sel.co2Kg)], ['Árboles equivalentes', nf(sel.arboles)]].filter(x => x[1]).map(x => ({ k: x[0], v: x[1] })),
+      fotos: sel.fotos.map((u, i) => ({ url: bg(u), alt: sel.titulo + ' · foto ' + (i + 1), span: i === 0 ? '1 / -1' : 'auto', alto: i === 0 ? '320px' : '200px' })),
+      hasFotos: sel.fotos.length > 0,
+      hasQr: !!sel.qr, qr: bg(sel.qr),
+      abrirMaps: () => window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(sel.ubicacion), '_blank', 'noopener'),
+      hasTestimonio: !!sel.testimonio, testimonio: sel.testimonio,
+      hasVideo: !!sel.video, verVideo: () => window.open(sel.video, '_blank', 'noopener'),
+      hasEnlace: !!sel.enlace, verWeb: () => window.open(sel.enlace, '_blank', 'noopener')
+    } : null;
+    return {
+      proyLista: !sel, proyDetalle: !!sel, proy: det || {},
+      proyCargando: !s.proyectos && !s.proyError, proyEsqueleto: [{ k: 1 }, { k: 2 }, { k: 3 }], proyError: !!s.proyError && !s.proyectos, proyErrorMsg: s.proyError || '',
+      proyHayDatos: !!s.proyectos, proyTarjetas: tarjetas, proyVacio: !!s.proyectos && tarjetas.length === 0,
+      proyVacioMsg: q ? 'Ningún proyecto coincide con «' + (s.proyQuery || '').trim() + '».' : 'Aún no hay proyectos publicados.',
+      proyConteo: s.proyectos ? (q ? tarjetas.length + ' de ' + lista.length + ' proyectos' : lista.length + ' proyectos') : '',
+      proyQuery: s.proyQuery || '', onProyQuery: (ev) => this.setState({ proyQuery: ev.target.value }),
+      proyAtras: () => this.go(s.route === 'p-proyectos' ? 'p-herramientas' : 'herramientas'),
+      proyVolver: () => this.setState({ proySel: null }), proyReintentar: () => this.cargarProyectos(true)
+    };
+  }
+  cargarProyectos(forzar) {
+    if (typeof window === 'undefined' || (this.state.proyectos && !forzar)) return;
+    this.setState({ proyError: '' });
+    window.dispatchEvent(new CustomEvent('ads:proyectos-cargar'));
+  }
   refVals(s, pub) {
     const d = Object.assign({ country: 'CO' }, s.refData || {}); const step = s.step || 1; const tr = !!s.refTried;
     const pc = phoneCountry(d.country); const pd = (d.telefono || '').replace(/\D/g, ''); const pStart = !pc.start || pc.start.indexOf(pd[0]) >= 0;
@@ -3773,7 +4024,7 @@ class Component extends DCLogic {
         pubColor: m[2] ? 'var(--g2,#7FD3A6)' : 'var(--t4,#A8A49E)',
         pubCtaBg: m[2] ? 'var(--btn,#F2F0EC)' : 'var(--w-06,rgba(255,255,255,.06))',
         pubCtaColor: m[2] ? 'var(--btnfg,#141210)' : 'var(--fg,#F2F0EC)',
-        pubAct: m[2] ? t.act : () => this.go('login')
+        pubAct: t.pubAct || (m[2] ? t.act : () => this.go('login'))
       });
     });
   }
@@ -3835,9 +4086,10 @@ class Component extends DCLogic {
       else if (e.type === 'ads:modulo-resultado') this.avisarModulo(d);
       else if (e.type === 'ads:evento-resultado') this.setState(d.ok ? { evtEnviando: false, evtAbierto: false, evtOk: true, evtDatos: {} } : { evtEnviando: false, evtError: d.mensaje || 'No pudimos enviar el evento.' });
       else if (e.type === 'ads:referral-resultado' || e.type === 'ads:referral-publico-resultado') this.setState(d.ok ? { refSending: false, refError: '', refTried: false, refResult: d, done: true } : { refSending: false, refError: d.mensaje || '' });
+      else if (e.type === 'ads:proyectos') this.setState(d.ok ? { proyectos: d.proyectos || [], proyError: '' } : { proyError: d.mensaje || 'No pudimos cargar los proyectos.' });
       else if (e.type === 'ads:aviso') { this.setState({ loginMsg: d.mensaje || '', loginTono: d.tono || 'info', loginModo: d.modo || 'entrar', olvidoEnviado: false, olvidoMsg: '', claveMsg: '' }); if (d.ruta) this.go(d.ruta); }
     };
-    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:referral-publico-resultado', 'ads:dashboard', 'ads:modulo-resultado', 'ads:evento-resultado', 'ads:recuperar-resultado', 'ads:clave-nueva-resultado'];
+    this._adsEventos = ['ads:join-resultado', 'ads:login-resultado', 'ads:sesion', 'ads:aviso', 'ads:referral-resultado', 'ads:referral-publico-resultado', 'ads:dashboard', 'ads:modulo-resultado', 'ads:evento-resultado', 'ads:recuperar-resultado', 'ads:clave-nueva-resultado', 'ads:proyectos'];
     this._adsEventos.forEach(n => window.addEventListener(n, this._adsAuth));
     window.dispatchEvent(new CustomEvent('ads:consultar-sesion'));
   }
@@ -3952,7 +4204,7 @@ class Component extends DCLogic {
   }
   mm(v) { return '$ ' + this.n(v) + ' MM'; }
 
-  go(route) { if (route === 'financiacion' && this.sinFinanciacion()) route = 'herramientas'; this.setState({ route, newOpen: false, levelUp: false, menuOpen: false, appMenu: false, customize: false, acaRoute: route === 'academy' ? this.state.acaRoute : null, acaCourse: route === 'academy' ? this.state.acaCourse : null }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
+  go(route) { if (route === 'financiacion' && this.sinFinanciacion()) route = 'herramientas'; if (route === 'proyectos' || route === 'p-proyectos') this.cargarProyectos(); this.setState({ route, proySel: null, newOpen: false, levelUp: false, menuOpen: false, appMenu: false, customize: false, acaRoute: route === 'academy' ? this.state.acaRoute : null, acaCourse: route === 'academy' ? this.state.acaCourse : null }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
   ping(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
 
   /* Puntos de nivel (ventana móvil) y saldo disponible son conceptos distintos
@@ -4045,7 +4297,7 @@ class Component extends DCLogic {
     }));
 
     const nav = [['inicio', 'Inicio'], ['oportunidades', 'Oportunidades'], ['puntos', 'Puntos Sol'], ['beneficios', 'Beneficios'], ['herramientas', 'Herramientas'], ['academy', 'Academy']].filter(([id]) => id !== 'beneficios' || perms.seeBenefits).map(([id, label]) => {
-      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && route === 'financiacion');
+      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && (route === 'financiacion' || route === 'proyectos'));
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
     /* Fase 11: «Mi QR» abre el QR de canje (js/mi-qr.js) encima de la página; solo con sesión real. */
@@ -4621,6 +4873,7 @@ class Component extends DCLogic {
       impactGroups,
       histTabs, historyRows, histEmpty: historyRows.length === 0, histPeriodTabs,
       ...this.eventoVals(s, real),
+      ...this.proyectosVals(s),
       gainedLabel: '+' + this.n(gained), lostLabel: '−' + this.n(Math.abs(lost)),
       earnOpportunity: POINTS_CONFIG.opportunity.concat([POINTS_CONFIG.meddpicc]).map(m => ({ label: m.label, pts: '+' + m.pts, desc: m.desc })),
       perfectFields: POINTS_CONFIG.perfectFields.map(t => ({ t })),
@@ -4675,13 +4928,13 @@ class Component extends DCLogic {
       menuLabel: s.menuOpen ? 'Cerrar' : 'Menú', menuExpanded: s.menuOpen ? 'true' : 'false',
       toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
       isHome: route === 'home', isPubOportunidades: route === 'p-oportunidades', isPubBeneficios: route === 'p-beneficios',
-      isPubHerramientas: route === 'p-herramientas', isPubAcademy: route === 'p-academy',
+      isPubHerramientas: route === 'p-herramientas', isPubProyectos: route === 'p-proyectos', isPubAcademy: route === 'p-academy',
       isPubAliados: route === 'p-aliados', isPubSoporte: route === 'p-soporte',
       publicNav: [['home', 'Inicio'], ['p-oportunidades', 'Oportunidades'], ['p-beneficios', 'Beneficios'], ['p-herramientas', 'Herramientas'], ['p-academy', 'Academy'], ['p-aliados', 'Aliados'], ['p-soporte', 'Soporte']].map(([id, label]) => ({
         label, go: () => this.go(id),
-        bg: route === id ? 'rgba(255,202,5,.1)' : 'transparent',
-        color: route === id ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
-        fw: route === id ? 600 : 400
+        bg: route === id || (id === 'p-herramientas' && route === 'p-proyectos') ? 'rgba(255,202,5,.1)' : 'transparent',
+        color: route === id || (id === 'p-herramientas' && route === 'p-proyectos') ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
+        fw: route === id || (id === 'p-herramientas' && route === 'p-proyectos') ? 600 : 400
       })),
       goHome: () => this.go('home'), goPubBeneficios: () => this.go('p-beneficios'), goPubHerramientas: () => this.go('p-herramientas'),
       goPubAcademy: () => this.go('p-academy'), goPubAliados: () => this.go('p-aliados'), goPubSoporte: () => this.go('p-soporte'),
@@ -4748,7 +5001,7 @@ class Component extends DCLogic {
       isBeneficios: route === 'beneficios', isHerramientas: route === 'herramientas', isAcademy: route === 'academy',
       acaAllyType: this.role().id, acaUserKey: real ? real.aliado.codigo_aliado : '', acaGuest: !real,
       isPerfil: route === 'perfil', isComisiones: route === 'comisiones', isMobile: route === 'mobile',
-      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isPuntos: route === 'puntos',
+      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isProyectos: route === 'proyectos', isPuntos: route === 'puntos',
       goFinanciacion: () => this.go('financiacion'), goPuntos: () => this.go('puntos'),
       userName, firstName: userName.split(' ')[0], greeting,
       todayLabel: real ? (() => { const d = enBogota(new Date()); return DIAS_SEMANA[d.getUTCDay()] + ', ' + d.getUTCDate() + ' de ' + MESES_LARGOS[d.getUTCMonth()]; })() : 'Viernes, 28 de agosto',
@@ -4821,7 +5074,7 @@ class Component extends DCLogic {
       ledger: historyRows,
       tools: this.withPublic([
         { name: 'Cotizador Solar', desc: 'Estima potencia, ahorro mensual y retorno con el consumo de la empresa. Genera un resumen que puedes compartir.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir cotizador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Usado 12 veces este mes', iconBg: 'rgba(255,202,5,.14)', iconColor: 'var(--y,#FFCA05)', iconShape: '50%', act: () => this.ping('Cotizador Solar: pendiente de conectar el motor de cálculo.') },
-        { name: 'Casos y proyectos', desc: 'Explora proyectos ejecutados por GEENERA y encuentra referencias para diferentes tipos de empresas.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Explorar proyectos', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'geenera.com/proyectos · se abre en una pestaña nueva', iconBg: 'rgba(249,165,26,.14)', iconColor: 'var(--o,#F9A51A)', iconShape: '3px', act: () => window.open(EXTERNAL_LINKS.proyectos, '_blank', 'noopener') },
+        { name: 'Casos y proyectos', desc: 'Explora proyectos ejecutados por GEENERA y encuentra referencias para diferentes tipos de empresas.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Explorar proyectos', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Kilovatios, ahorro y CO₂ de cada proyecto', iconBg: 'rgba(249,165,26,.14)', iconColor: 'var(--o,#F9A51A)', iconShape: '3px', act: () => this.go('proyectos'), pubAct: () => this.go(this.state.sesion ? 'proyectos' : 'p-proyectos') },
         { name: 'Financiación Solar', desc: 'Conoce los aliados financieros que pueden acompañar la inversión en tu proyecto solar. No es un comparador: las condiciones las define cada entidad.', state: 'Informativo', stBg: 'rgba(249,165,26,.16)', stColor: 'var(--o,#F9A51A)', cta: 'Ver aliados financieros', ctaBg: 'var(--w-06,rgba(255,255,255,.06))', ctaColor: 'var(--fg,#F2F0EC)', meta: '5 entidades aliadas', iconBg: 'rgba(243,121,32,.14)', iconColor: '#F37920', iconShape: '2px 10px 2px 10px', act: () => this.go('financiacion') },
         { name: 'Recursos comerciales', desc: 'Presentaciones, brochures, guiones y piezas listas para compartir con una empresa o por WhatsApp.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Ver biblioteca', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: '18 piezas actualizadas', iconBg: 'var(--w-08,rgba(255,255,255,.08))', iconColor: 'var(--t2,#C9C5BE)', iconShape: '50% 50% 50% 2px', act: () => this.ping('Abriendo la biblioteca de recursos.') }
       ].filter(t => t.name !== 'Financiación Solar' || !this.sinFinanciacion())),

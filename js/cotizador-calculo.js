@@ -117,14 +117,12 @@ export function siteSpec(tipo, kwh, need, sub) {
   return { tipo, key: 'i' + w + 'x' + d + (sub || ''), sub: sub || '', back, w, d, h, m2: w * d, slots, tilt: 12, x0: -w / 2 - 10, x1: w / 2 + 28, z0: -d / 2 - bd, z1: d / 2 + 30 };
 }
 
-/** Un valor en pesos menor a 1.000 se lee en millones («3,5» = $3.500.000), como en el diseño. */
-export function copOf(n) { return n < 1000 ? n * 1e6 : n; }
 export function kwhOf(st) {
   const n = parseNum(st.valor); if (n == null || n <= 0 || !st.tipo) return null;
-  return st.unidad === 'cop' ? copOf(n) / TARIFA[st.tipo] : n;
+  return st.unidad === 'cop' ? n / TARIFA[st.tipo] : n;
 }
 export function pesosOf(st) {
-  const n = parseNum(st.valor); return n == null || n <= 0 ? null : copOf(n);
+  const n = parseNum(st.valor); return n == null || n <= 0 ? null : n;
 }
 
 /**
@@ -135,7 +133,8 @@ export function errorDeConsumo(st) {
   const n = parseNum(st.valor);
   if (n == null || n <= 0) return 'Ingresa el consumo o el valor de la factura.';
   if (st.unidad === 'cop') {
-    const cop = copOf(n);
+    // El valor se toma tal cual en pesos: «200» son $200, no 200 millones (decisión del equipo, 14 oct 2026).
+    const cop = n;
     if (cop < MINIMO_COP) return 'El valor mínimo de la factura es $27.600 al mes.';
     if (cop > MAXIMO_COP) return 'Revisa el valor de la factura.';
     return null;

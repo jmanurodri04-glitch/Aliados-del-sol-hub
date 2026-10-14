@@ -232,6 +232,20 @@
       <div class="tarjeta" id="aca-editor" hidden></div>
     </section>
 
+    <section data-pestana="cotizador" hidden>
+      <h1>Cotizador Solar</h1>
+      <p class="nota">Las simulaciones que la gente guarda al «Conectar al inversor» en Herramientas › Cotizador Solar (con o sin sesión), una tabla por tipo de proyecto. Son para el análisis de marketing: descárgalas cada 6 a 12 meses y, cuando el archivo esté guardado, bórralas. No tienen relación con los aliados ni con los Puntos Sol. Las propuestas que la gente pidió llegan a Clientify con la etiqueta «Cotizador Hub»; las que aún no llegan no se borran.</p>
+      <div class="tarjeta tabla" id="cot-resumen"></div>
+      <div class="barra" style="margin-top:16px">
+        <select id="cot-segmento" aria-label="Tipo de proyecto"><option value="industrial">Industrial</option><option value="comercial">Comercial</option><option value="residencial">Residencial</option></select>
+        <label>Desde <input type="date" id="cot-desde" style="min-width:0"></label>
+        <label>Hasta <input type="date" id="cot-hasta" style="min-width:0"></label>
+        <button class="btn primario" data-accion="cot_descargar">Descargar CSV</button>
+        <button class="btn peligro" data-accion="cot_borrar" id="cot-borrar" disabled>Borrar lo descargado</button>
+      </div>
+      <p class="nota" id="cot-borrar-nota"></p>
+    </section>
+
     <section data-pestana="auditoria" hidden>
       <h1>Auditoría</h1>
       <p class="nota">Últimas 200 acciones del panel. No se pueden editar ni borrar.</p>

@@ -22,6 +22,8 @@
 <script type="module" src="./js/captcha.js"></script>
 <!-- Casos y proyectos: lee los proyectos de WordPress (ver js/proyectos.js) -->
 <script type="module" src="./js/proyectos.js"></script>
+<!-- Cotizador Solar: motor de cálculo y envío a /api/cotizador (ver js/cotizador.js) -->
+<script type="module" src="./js/cotizador.js"></script>
 <!-- Microsoft Clarity: mapas de calor y grabaciones con los datos tapados, solo en Production (ver js/clarity.js) -->
 <script type="module" src="./js/clarity.js"></script>
 <template id="__bundler_thumbnail">
@@ -862,6 +864,14 @@
     </div>
     </sc-if>
     </sc-if>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isPubCotizador }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Cotizador Solar público" style="padding:0 clamp(16px,3.4vw,44px);animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
+    <div style="max-width:1320px;margin:0 auto">
+      <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
     </div>
   </section>
   </sc-if>
@@ -2551,6 +2561,12 @@
       </section>
       </sc-if>
 
+      <sc-if value="{{ isCotizador }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Cotizador Solar" style="animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
+        <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
+      </section>
+      </sc-if>
+
       <sc-if value="{{ isAcademy }}" hint-placeholder-val="{{ false }}">
       <section data-screen-label="Academy" style="animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
         <dc-import name="ADSAcademy" ally-type="{{ acaAllyType }}" user-name="{{ userName }}" user-key="{{ acaUserKey }}" guest="{{ acaGuest }}" on-login="{{ goLogin }}" on-join="{{ goJoin }}" hint-size="100%,900px"></dc-import>
@@ -2901,6 +2917,10 @@
       <p role="alert" style="margin:0;padding:11px 14px;border:1px solid {{ loginMsgBorder }};border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:{{ loginMsgColor }};font-size:13.5px;line-height:1.5">{{ loginMsg }}</p>
       </sc-if>
       <button onClick="{{ loginSubmit }}" style="margin-top:6px;padding:14px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:700;cursor:{{ loginCursor }};transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ loginSendLabel }}</button>
+      <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 10px;padding:12px 14px;border:1px dashed rgba(255,202,5,.35);border-radius:11px;background:rgba(255,202,5,.05)">
+        <span style="font-size:14px;color:var(--mut,#9A968F)">¿Aún no eres aliado?</span>
+        <button onClick="{{ goJoin }}" style="padding:0;border:none;background:transparent;color:var(--y,#FFCA05);font-size:14px;font-weight:700;cursor:pointer">Quiero ser aliado →</button>
+      </div>
       <button onClick="{{ goHome }}" style="align-self:flex-start;margin-top:2px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Volver al sitio público</button>
     </div>
     </div>
@@ -3043,8 +3063,8 @@
 
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Juan Rodríguez&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;points&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts de nivel&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;pointsBalance&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts disponibles&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:82,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;qualitySample&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:14,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:200,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;streakWeeks&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:4,&quot;step&quot;:1,&quot;unit&quot;:&quot;semanas&quot;,&quot;section&quot;:&quot;Aliado demo&quot;}}">
-const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'proyectos', 'puntos', 'mobile'];
-const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-proyectos', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
+const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'proyectos', 'cotizador', 'puntos', 'mobile'];
+const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-proyectos', 'p-cotizador', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
 
 const OPPS = [
   { id: 'o1', empresa: 'Textiles Andinas S.A.S.', sector: 'Manufactura', ciudad: 'Medellín, Antioquia', ciudadCorta: 'Medellín', fecha: '12 ago 2026', etapa: 'Propuesta', step: 3, consumo: '42.000 kWh/mes', pts: 250, upd: 'hace 2 días',
@@ -3899,6 +3919,7 @@ class Component extends DCLogic {
       })),
       proyQuery: s.proyQuery || '', onProyQuery: (ev) => this.setState({ proyQuery: ev.target.value }),
       proyAtras: () => this.go(s.route === 'p-proyectos' ? 'p-herramientas' : 'herramientas'),
+      cotizadorAtras: () => this.go(s.route === 'p-cotizador' ? 'p-herramientas' : 'herramientas'),
       proyVolver: () => this.setState({ proySel: null }), proyReintentar: () => this.cargarProyectos(true)
     };
   }
@@ -4342,7 +4363,7 @@ class Component extends DCLogic {
     }));
 
     const nav = [['inicio', 'Inicio'], ['oportunidades', 'Oportunidades'], ['puntos', 'Puntos Sol'], ['beneficios', 'Beneficios'], ['herramientas', 'Herramientas'], ['academy', 'Academy']].filter(([id]) => id !== 'beneficios' || perms.seeBenefits).map(([id, label]) => {
-      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && (route === 'financiacion' || route === 'proyectos'));
+      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && (route === 'financiacion' || route === 'proyectos' || route === 'cotizador'));
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
     /* Fase 11: «Mi QR» abre el QR de canje (js/mi-qr.js) encima de la página; solo con sesión real. */
@@ -4973,13 +4994,13 @@ class Component extends DCLogic {
       menuLabel: s.menuOpen ? 'Cerrar' : 'Menú', menuExpanded: s.menuOpen ? 'true' : 'false',
       toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
       isHome: route === 'home', isPubOportunidades: route === 'p-oportunidades', isPubBeneficios: route === 'p-beneficios',
-      isPubHerramientas: route === 'p-herramientas', isPubProyectos: route === 'p-proyectos', isPubAcademy: route === 'p-academy',
+      isPubHerramientas: route === 'p-herramientas', isPubProyectos: route === 'p-proyectos', isPubCotizador: route === 'p-cotizador', isPubAcademy: route === 'p-academy',
       isPubAliados: route === 'p-aliados', isPubSoporte: route === 'p-soporte',
       publicNav: [['home', 'Inicio'], ['p-oportunidades', 'Oportunidades'], ['p-beneficios', 'Beneficios'], ['p-herramientas', 'Herramientas'], ['p-academy', 'Academy'], ['p-aliados', 'Aliados'], ['p-soporte', 'Soporte']].map(([id, label]) => ({
         label, go: () => this.go(id),
-        bg: route === id || (id === 'p-herramientas' && route === 'p-proyectos') ? 'rgba(255,202,5,.1)' : 'transparent',
-        color: route === id || (id === 'p-herramientas' && route === 'p-proyectos') ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
-        fw: route === id || (id === 'p-herramientas' && route === 'p-proyectos') ? 600 : 400
+        bg: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 'rgba(255,202,5,.1)' : 'transparent',
+        color: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
+        fw: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 600 : 400
       })),
       goHome: () => this.go('home'), goPubBeneficios: () => this.go('p-beneficios'), goPubHerramientas: () => this.go('p-herramientas'),
       goPubAcademy: () => this.go('p-academy'), goPubAliados: () => this.go('p-aliados'), goPubSoporte: () => this.go('p-soporte'),
@@ -5046,7 +5067,7 @@ class Component extends DCLogic {
       isBeneficios: route === 'beneficios', isHerramientas: route === 'herramientas', isAcademy: route === 'academy',
       acaAllyType: this.role().id, acaUserKey: real ? real.aliado.codigo_aliado : '', acaGuest: !real,
       isPerfil: route === 'perfil', isComisiones: route === 'comisiones', isMobile: route === 'mobile',
-      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isProyectos: route === 'proyectos', isPuntos: route === 'puntos',
+      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isProyectos: route === 'proyectos', isCotizador: route === 'cotizador', isPuntos: route === 'puntos',
       goFinanciacion: () => this.go('financiacion'), goPuntos: () => this.go('puntos'),
       userName, firstName: userName.split(' ')[0], greeting,
       todayLabel: real ? (() => { const d = enBogota(new Date()); return DIAS_SEMANA[d.getUTCDay()] + ', ' + d.getUTCDate() + ' de ' + MESES_LARGOS[d.getUTCMonth()]; })() : 'Viernes, 28 de agosto',
@@ -5118,7 +5139,7 @@ class Component extends DCLogic {
       }),
       ledger: historyRows,
       tools: this.withPublic([
-        { name: 'Cotizador Solar', desc: 'Estima potencia, ahorro mensual y retorno con el consumo de la empresa. Genera un resumen que puedes compartir.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir cotizador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Usado 12 veces este mes', iconBg: 'rgba(255,202,5,.14)', iconColor: 'var(--y,#FFCA05)', iconShape: '50%', act: () => this.ping('Cotizador Solar: pendiente de conectar el motor de cálculo.') },
+        { name: 'Cotizador Solar', desc: 'Estima potencia, ahorro mensual y retorno con el consumo de la empresa. Genera un resumen que puedes compartir.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir cotizador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Diseño, ahorro e inversión aproximados', iconBg: 'rgba(255,202,5,.14)', iconColor: 'var(--y,#FFCA05)', iconShape: '50%', act: () => this.go('cotizador'), pubAct: () => this.go(this.state.sesion ? 'cotizador' : 'p-cotizador') },
         { name: 'Casos y proyectos', desc: 'Explora proyectos ejecutados por GEENERA y encuentra referencias para diferentes tipos de empresas.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Explorar proyectos', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Kilovatios, ahorro y CO₂ de cada proyecto', iconBg: 'rgba(249,165,26,.14)', iconColor: 'var(--o,#F9A51A)', iconShape: '3px', act: () => this.go('proyectos'), pubAct: () => this.go(this.state.sesion ? 'proyectos' : 'p-proyectos') },
         { name: 'Financiación Solar', desc: 'Conoce los aliados financieros que pueden acompañar la inversión en tu proyecto solar. No es un comparador: las condiciones las define cada entidad.', state: 'Informativo', stBg: 'rgba(249,165,26,.16)', stColor: 'var(--o,#F9A51A)', cta: 'Ver aliados financieros', ctaBg: 'var(--w-06,rgba(255,255,255,.06))', ctaColor: 'var(--fg,#F2F0EC)', meta: '5 entidades aliadas', iconBg: 'rgba(243,121,32,.14)', iconColor: '#F37920', iconShape: '2px 10px 2px 10px', act: () => this.go('financiacion') },
         { name: 'Recursos comerciales', desc: 'Presentaciones, brochures, guiones y piezas listas para compartir con una empresa o por WhatsApp.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Ver biblioteca', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: '18 piezas actualizadas', iconBg: 'var(--w-08,rgba(255,255,255,.08))', iconColor: 'var(--t2,#C9C5BE)', iconShape: '50% 50% 50% 2px', act: () => this.ping('Abriendo la biblioteca de recursos.') }

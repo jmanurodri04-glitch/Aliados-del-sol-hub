@@ -332,6 +332,14 @@
    mismo archivo para recalcular). Hasta que llegue, el componente muestra un recuadro vacío. */
 let HSP, PANEL_WP, PR, MOD_W, MOD_D, TARIFA, CITIES = [], cityOf, SEGMENTOS = [], SUBSECTORES = [], BATS, calc, kwhOf, pesosOf,
   errorDeConsumo, PAISES_TELEFONO = [], paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, MENSAJE_CORREO_ALIADO, POLITICA_URL;
+// three.js se descarga una sola vez para toda la página; si falla, se puede volver a intentar.
+function cargarThree() {
+  if (window.THREE || window.__adsThree) return;
+  window.__adsThree = true;
+  const s = document.createElement('script'); s.type = 'module';
+  s.textContent = 'import("https://unpkg.com/three@0.155.0/build/three.module.js").then(function (T) { window.THREE = T; }).catch(function () { window.__adsThree = false; });';
+  document.head.appendChild(s);
+}
 function enlazar() {
   const M = window.ADS_COTIZADOR;
   if (!M || calc) return !!calc;
@@ -404,23 +412,30 @@ class Component extends DCLogic {
     window.addEventListener('ads:cotizador-sesion', this.onSesion);
     this.setState({ sysDark: this.mq.matches, listo: enlazar(), sesion: !!(window.ADS_COTIZADOR && window.ADS_COTIZADOR.sesionActiva) });
     if (!enlazar()) this._poll = setInterval(() => { if (enlazar()) { clearInterval(this._poll); this.setState({ listo: true }); } }, 80);
-    if (!window.THREE && !window.__adsThree) {
-      window.__adsThree = true;
-      const s = document.createElement('script'); s.type = 'module';
-      s.textContent = 'import * as T from "https://unpkg.com/three@0.155.0/build/three.module.js"; window.THREE = T;';
-      document.head.appendChild(s);
-    }
+    this.dead = false;
+    cargarThree();
     this.waitThree(0);
   }
   componentWillUnmount() {
-    this.dead = true; cancelAnimationFrame(this.raf); this.timers.forEach(clearTimeout); clearInterval(this._poll); this.pedidos = null;
+    this.dead = true; cancelAnimationFrame(this.raf); this.timers.forEach(clearTimeout); clearInterval(this._poll); clearTimeout(this.rebuildT); this.pedidos = null;
     this.mq.removeEventListener('change', this.onMq); window.removeEventListener('resize', this.onResize); window.removeEventListener('ads:cotizador-sesion', this.onSesion);
-    if (this.ro) this.ro.disconnect(); if (this.renderer) this.renderer.dispose();
+    if (this.onMove) window.removeEventListener('pointermove', this.onMove);
+    if (this.onUp) window.removeEventListener('pointerup', this.onUp);
+    if (this.ro) this.ro.disconnect();
+    // Libera el contexto WebGL: el navegador admite pocos a la vez y, si se acumulan, deja de dibujar el modelo.
+    if (this.renderer) {
+      try { this.renderer.dispose(); this.renderer.forceContextLoss(); } catch (e) {}
+      const cv = this.renderer.domElement; if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
+    }
+    this.renderer = null; this.three = false; this.ro = null;
   }
   waitThree(n) {
     if (this.dead) return;
-    if (window.THREE && enlazar()) { try { this.build(window.THREE); } catch (e) { console.warn('3D', e); this.setState({ webglFail: true }); } return; }
-    if (n > 120) { this.setState({ webglFail: true }); return; }
+    // El escenario solo existe cuando el formulario ya se pintó (listo): al volver a abrir el cotizador three.js ya está
+    // cargado y hay que esperar al escenario en vez de rendirse.
+    if (window.THREE && enlazar() && this.stageRef.current) { try { this.build(window.THREE); } catch (e) { console.warn('3D', e); this.setState({ webglFail: true }); } return; }
+    if (n === 100) cargarThree(); // si la descarga falló, se intenta otra vez
+    if (n > 200) { this.setState({ webglFail: true }); return; }
     setTimeout(() => this.waitThree(n + 1), 100);
   }
   isDark(s) { s = s || this.state; const t = this.props.theme; if (t === 'dark' || t === 'light') return t === 'dark'; return s.mode === 'dark' || (s.mode === 'auto' && s.sysDark); }

@@ -143,17 +143,19 @@ test('cola: registra el éxito y el error sin datos personales', async () => {
   assert.ok(!JSON.stringify(r).includes('@'), 'el resumen no lleva correos');
 });
 
-test('flujo C: un contacto del cotizador con ID_aliado no se registra como referido (sin puntos)', async () => {
+test('flujo C: un contacto del cotizador con ID_aliado se registra como referido del aliado (con puntos)', async () => {
   const { procesarContacto } = await import('../../lib/clientify/webhook.js');
   const rpcs = [];
   const supabase = {
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
-    rpc: async (n) => { rpcs.push(n); return { data: { empresa_id: 'e1' }, error: null }; }
+    rpc: async (n, a) => { rpcs.push([n, a]); return { data: n === 'clientify_registrar_lead' ? { empresa_id: 'e1' } : {}, error: null }; }
   };
   const ficha = { id: 1, email: 'ana+prueba@empresa.test', tags: [{ name: 'cotizador hub' }], custom_fields: [{ field: 'ID_aliado', value: 'EMABCD2345XY' }] };
   const r = await procesarContacto('1', { supabase, clientify: { obtenerContacto: async () => ficha }, entorno: 'preview' });
-  assert.equal(r.resultado, 'ignorado');
-  assert.ok(!rpcs.includes('clientify_registrar_lead'));
+  assert.notEqual(r.resultado, 'ignorado');
+  const lead = rpcs.find(([n]) => n === 'clientify_registrar_lead');
+  assert.ok(lead, 'se registra como lead del aliado');
+  assert.equal(lead[1].p_codigo_aliado, 'EMABCD2345XY');
 });
 
 test('precotización en PDF: los valores salen del mismo cálculo del servidor', async () => {

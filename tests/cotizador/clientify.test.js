@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ErrorClientify } from '../../lib/clientify/cliente.js';
 import {
-  CAMPOS_COTIZADOR, ETIQUETA_COTIZADOR, ORIGEN_COTIZADOR, TIPO_OFF_GRID, TIPO_ON_GRID, construirContactoCotizacion, enviarCotizacion, procesarCotizaciones
+  CAMPOS_COTIZADOR, ETIQUETA_COTIZADOR, ORIGEN_COTIZADOR, TIPO_OFF_GRID, TIPO_ON_GRID, actualizacionDeExistente, construirContactoCotizacion, enviarCotizacion, procesarCotizaciones
 } from '../../lib/clientify/cotizador.js';
 
 const IND = {
@@ -31,7 +31,7 @@ test('contacto industrial: empresa, sector, origen, Tipo ON GRID y campos acorda
   assert.equal(valor(c, CAMPOS_COTIZADOR.valorFactura), '10000000');
   assert.equal(valor(c, CAMPOS_COTIZADOR.potencia), '110.7');
   assert.equal(valor(c, CAMPOS_COTIZADOR.paneles), '180');
-  assert.equal(valor(c, CAMPOS_COTIZADOR.payback), '3.9');
+  assert.equal(valor(c, CAMPOS_COTIZADOR.payback), '4', 'Payback es entero en Clientify');
   assert.equal(valor(c, CAMPOS_COTIZADOR.inversion), '377266000');
   assert.equal(valor(c, 'Subsector Economico'), 'Plásticos');
   assert.ok(!c.custom_fields.some((f) => f.field === 'ID_aliado'), 'sin ID_aliado');
@@ -51,17 +51,22 @@ test('contacto residencial aislado: Tipo Off Grid, sin empresa ni ahorro, con PR
   assert.match(c.description, /No conectado a la red/);
 });
 
-function clientifyFalso({ existente = null, rechazar = 0 } = {}) {
+function clientifyFalso({ existente = null, rechazar = 0, ficha = {}, rechazarActualizar = 0 } = {}) {
   const llamadas = [];
   return {
     llamadas,
     buscarContactoPorCorreo: async () => existente,
+    obtenerContacto: async (id) => ({ id, ...ficha }),
     crearContacto: async (d) => {
       llamadas.push(['crear', d]);
       if (llamadas.filter((l) => l[0] === 'crear').length <= rechazar) throw new ErrorClientify('400', { status: 400, reintentable: false });
       return { id: 77 };
     },
-    actualizarContacto: async (id, d) => { llamadas.push(['actualizar', id, d]); return {}; },
+    actualizarContacto: async (id, d) => {
+      llamadas.push(['actualizar', id, d]);
+      if (llamadas.filter((l) => l[0] === 'actualizar').length <= rechazarActualizar) throw new ErrorClientify('400', { status: 400, reintentable: false });
+      return {};
+    },
     agregarEtiqueta: async (id, e) => { llamadas.push(['etiqueta', id, e]); return {}; }
   };
 }
@@ -72,12 +77,48 @@ test('envío: crea el contacto nuevo con sus etiquetas', async () => {
   assert.deepEqual(cl.llamadas[0][1].tags, [ETIQUETA_COTIZADOR, 'PRUEBA HUB']);
 });
 
-test('envío: un contacto existente no cambia de nombre, Tipo ni origen', async () => {
-  const cl = clientifyFalso({ existente: { id: 5 } });
+test('envío: un contacto existente recibe los datos del cotizador y llena los vacíos', async () => {
+  const cl = clientifyFalso({ existente: { id: 5 }, ficha: { email: IND.correo, description: 'Nota previa', contact_type: 'Prospecto Autoconsumo ON GRID' } });
   assert.deepEqual(await enviarCotizacion(IND, { clientify: cl, entorno: 'production' }), { contactId: '5', accion: 'actualizado' });
-  const act = cl.llamadas.find((l) => l[0] === 'actualizar');
-  assert.deepEqual(Object.keys(act[2]), ['custom_fields']);
+  const act = cl.llamadas.find((l) => l[0] === 'actualizar')[2];
+  assert.deepEqual([act.first_name, act.last_name, act.phone, act.company], ['Ana María', 'Pérez Gómez', '+573001234567', 'Plásticos del Caribe']);
+  assert.deepEqual([act.contact_type, act.contact_source, act.contact_sector], [TIPO_ON_GRID, ORIGEN_COTIZADOR, 'Industrial']);
+  assert.deepEqual(act.addresses, [{ city: 'Barranquilla', country: 'co' }]);
+  assert.match(act.description, /^Nota previa\n\nCotizador Solar/);
+  assert.equal(valor(act, CAMPOS_COTIZADOR.payback), '4');
   assert.deepEqual(cl.llamadas.filter((l) => l[0] === 'etiqueta').map((l) => l[2]), [ETIQUETA_COTIZADOR]);
+});
+
+test('envío: no pisa nombre, teléfono, empresa ni ciudad que ya tiene, ni repite el resumen', () => {
+  const datos = construirContactoCotizacion(IND, 'production');
+  const ficha = { first_name: 'Ana', phone: '+573009999999', company_name: 'Otra', addresses: [{ city: 'Cali' }], description: datos.description, contact_source: 'Contacto Directo' };
+  const { cambios, protegido } = actualizacionDeExistente(ficha, datos);
+  assert.equal(protegido, false);
+  for (const k of ['first_name', 'phone', 'company', 'addresses', 'description']) assert.equal(k in cambios, false, k);
+  assert.equal(cambios.contact_source, ORIGEN_COTIZADOR, 'un prospecto pasa al origen del cotizador');
+});
+
+test('envío: el contacto de un aliado o referido conserva su Tipo, origen y sector', async () => {
+  const datos = construirContactoCotizacion(IND, 'production');
+  const aliado = { first_name: 'Ana', contact_type: 'Aliados Estratégicos', contact_source: 'AdS EMI', contact_sector: 'Energía' };
+  const referido = { first_name: 'Ana', custom_fields: [{ field: 'ID_aliado', value: 'EMABCD2345' }], contact_source: 'Formulario' };
+  for (const ficha of [aliado, referido]) {
+    const { cambios, protegido } = actualizacionDeExistente(ficha, datos);
+    assert.equal(protegido, true);
+    assert.equal('contact_type' in cambios && ficha.contact_type != null, false);
+    assert.equal('contact_source' in cambios, false);
+    assert.ok(cambios.custom_fields.length > 0 && cambios.description);
+  }
+  assert.equal(actualizacionDeExistente(referido, datos).cambios.contact_type, TIPO_ON_GRID, 'un Tipo vacío sí se llena');
+  const cl = clientifyFalso({ existente: { id: 9 }, ficha: aliado });
+  assert.equal((await enviarCotizacion(IND, { clientify: cl, entorno: 'production' })).accion, 'actualizado_contacto_programa');
+});
+
+test('envío: si Clientify rechaza la actualización completa, reintenta sin los opcionales', async () => {
+  const cl = clientifyFalso({ existente: { id: 5 }, rechazarActualizar: 1 });
+  assert.equal((await enviarCotizacion(IND, { clientify: cl, entorno: 'production' })).accion, 'actualizado_parcial');
+  const [primera, segunda] = cl.llamadas.filter((l) => l[0] === 'actualizar').map((l) => l[2]);
+  assert.ok(primera.addresses && !segunda.addresses && segunda.custom_fields && segunda.contact_type);
 });
 
 test('envío: si Clientify rechaza los campos, el contacto se crea sin ellos (quedan en la descripción)', async () => {

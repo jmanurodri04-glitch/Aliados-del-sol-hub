@@ -3,16 +3,19 @@
 //   { accion: 'simular', captcha, segmento, datos, unidad, valor, aislado, bateria, autoriza }  → 201 { id }
 //     «Conectar al inversor»: valida, recalcula el diseño en el servidor y lo guarda en la tabla de su tipo
 //     (cotizador_residencial | cotizador_comercial | cotizador_industrial).
-//   { accion: 'propuesta', segmento, id }  → 200 { ok: true, clientify: 'ok' | 'pendiente' }
+//   { accion: 'correo', correo }  → 200 { aliado }
+//     Paso 2: avisa si el correo es de un aliado (no se acepta: escribe otro).
+//   { accion: 'propuesta', segmento, id, correo_referente? }  → 200 { ok: true, clientify: 'ok' | 'pendiente' }
 //     «Solicitar propuesta»: la pone en la cola de Clientify y la intenta enviar enseguida; si Clientify falla,
-//     la reintenta el cron (/api/cron/clientify). Nunca hace fallar la solicitud.
-// No lee la sesión ni el aliado: el cotizador no da puntos ni lleva ID_aliado (decisión del equipo).
+//     la reintenta el cron (/api/cron/clientify). Nunca hace fallar la solicitud. Lleva a Clientify el ID_aliado de
+//     quien refiere: el de la sesión (encabezado Authorization, opcional) o el de `correo_referente`.
+// El cotizador no da puntos (decisión del equipo).
 
 import { crearClienteServidor } from '../lib/supabase-servidor.js';
 import { crearClienteClientify } from '../lib/clientify/cliente.js';
 import { procesarCotizaciones } from '../lib/clientify/cotizador.js';
 import { cuerpoJson, ErrorHttp, responderError } from '../lib/sesion.js';
-import { simular, solicitarPropuesta } from '../lib/cotizador.js';
+import { revisarCorreo, simular, solicitarPropuesta } from '../lib/cotizador.js';
 
 // Envío inmediato a Clientify (mejor esfuerzo).
 async function enviarAhora(supabase, segmento, id, entorno) {
@@ -43,6 +46,9 @@ export default async function handler(req, res, inyectado = {}) {
 
     if (cuerpo.accion === 'simular') {
       return res.status(201).json(await simular(req, cuerpo, { supabase, entorno, fetchImpl: inyectado.fetch }));
+    }
+    if (cuerpo.accion === 'correo') {
+      return res.status(200).json(await revisarCorreo(req, cuerpo, { supabase, entorno }));
     }
     if (cuerpo.accion === 'propuesta') {
       const { segmento, id, estado } = await solicitarPropuesta(req, cuerpo, { supabase, entorno });

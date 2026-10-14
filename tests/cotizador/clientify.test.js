@@ -77,8 +77,9 @@ test('envío: crea el contacto nuevo con sus etiquetas', async () => {
   assert.deepEqual(cl.llamadas[0][1].tags, [ETIQUETA_COTIZADOR, 'PRUEBA HUB']);
 });
 
-test('envío: un contacto existente recibe los datos del cotizador y llena los vacíos', async () => {
-  const cl = clientifyFalso({ existente: { id: 5 }, ficha: { email: IND.correo, description: 'Nota previa', contact_type: 'Prospecto Autoconsumo ON GRID' } });
+test('envío: un contacto existente se actualiza con los datos del cotizador', async () => {
+  const cl = clientifyFalso({ existente: { id: 5 }, ficha: { first_name: 'Otro', phone: '+573009999999', company_name: 'Otra', addresses: [{ city: 'Cali' }],
+    email: IND.correo, description: 'Nota previa', contact_type: 'Prospecto Autoconsumo ON GRID', contact_source: 'Contacto Directo' } });
   assert.deepEqual(await enviarCotizacion(IND, { clientify: cl, entorno: 'production' }), { contactId: '5', accion: 'actualizado' });
   const act = cl.llamadas.find((l) => l[0] === 'actualizar')[2];
   assert.deepEqual([act.first_name, act.last_name, act.phone, act.company], ['Ana María', 'Pérez Gómez', '+573001234567', 'Plásticos del Caribe']);
@@ -89,29 +90,27 @@ test('envío: un contacto existente recibe los datos del cotizador y llena los v
   assert.deepEqual(cl.llamadas.filter((l) => l[0] === 'etiqueta').map((l) => l[2]), [ETIQUETA_COTIZADOR]);
 });
 
-test('envío: no pisa nombre, teléfono, empresa ni ciudad que ya tiene, ni repite el resumen', () => {
+test('envío: no repite el resumen en la descripción', () => {
   const datos = construirContactoCotizacion(IND, 'production');
-  const ficha = { first_name: 'Ana', phone: '+573009999999', company_name: 'Otra', addresses: [{ city: 'Cali' }], description: datos.description, contact_source: 'Contacto Directo' };
-  const { cambios, protegido } = actualizacionDeExistente(ficha, datos);
-  assert.equal(protegido, false);
-  for (const k of ['first_name', 'phone', 'company', 'addresses', 'description']) assert.equal(k in cambios, false, k);
-  assert.equal(cambios.contact_source, ORIGEN_COTIZADOR, 'un prospecto pasa al origen del cotizador');
+  assert.equal('description' in actualizacionDeExistente({ description: 'x\n\n' + datos.description }, datos).cambios, false);
 });
 
-test('envío: el contacto de un aliado o referido conserva su Tipo, origen y sector', async () => {
+test('ID_aliado de quien refiere: va al contacto nuevo; uno que ya tenía el contacto no se cambia', () => {
+  const datos = construirContactoCotizacion({ ...IND, referente_codigo: 'EMABCD2345XY' }, 'production');
+  assert.equal(valor(datos, 'ID_aliado'), 'EMABCD2345XY');
+  assert.equal(valor(construirContactoCotizacion(IND, 'production'), 'ID_aliado'), undefined, 'sin quien refiere, vacío');
+  const conId = actualizacionDeExistente({ custom_fields: [{ field: 'ID_aliado', value: 'FIPRIMERO2345' }] }, datos).cambios;
+  assert.equal(valor(conId, 'ID_aliado'), undefined, 'la atribución es del primer aliado');
+  assert.equal(valor(actualizacionDeExistente({}, datos).cambios, 'ID_aliado'), 'EMABCD2345XY');
+});
+
+test('envío: el contacto de un aliado (Tipo Aliados Estratégicos) solo recibe los campos y el resumen', async () => {
   const datos = construirContactoCotizacion(IND, 'production');
-  const aliado = { first_name: 'Ana', contact_type: 'Aliados Estratégicos', contact_source: 'AdS EMI', contact_sector: 'Energía' };
-  const referido = { first_name: 'Ana', custom_fields: [{ field: 'ID_aliado', value: 'EMABCD2345' }], contact_source: 'Formulario' };
-  for (const ficha of [aliado, referido]) {
-    const { cambios, protegido } = actualizacionDeExistente(ficha, datos);
-    assert.equal(protegido, true);
-    assert.equal('contact_type' in cambios && ficha.contact_type != null, false);
-    assert.equal('contact_source' in cambios, false);
-    assert.ok(cambios.custom_fields.length > 0 && cambios.description);
-  }
-  assert.equal(actualizacionDeExistente(referido, datos).cambios.contact_type, TIPO_ON_GRID, 'un Tipo vacío sí se llena');
-  const cl = clientifyFalso({ existente: { id: 9 }, ficha: aliado });
-  assert.equal((await enviarCotizacion(IND, { clientify: cl, entorno: 'production' })).accion, 'actualizado_contacto_programa');
+  const { cambios, protegido } = actualizacionDeExistente({ first_name: 'Ana', contact_type: 'Aliados Estratégicos', contact_source: 'AdS EMI' }, datos);
+  assert.equal(protegido, true);
+  assert.deepEqual(Object.keys(cambios).sort(), ['custom_fields', 'description']);
+  const cl = clientifyFalso({ existente: { id: 9 }, ficha: { contact_type: 'Aliados Estratégicos' } });
+  assert.equal((await enviarCotizacion(IND, { clientify: cl, entorno: 'production' })).accion, 'actualizado_contacto_aliado');
 });
 
 test('envío: si Clientify rechaza la actualización completa, reintenta sin los opcionales', async () => {
@@ -142,4 +141,30 @@ test('cola: registra el éxito y el error sin datos personales', async () => {
   assert.deepEqual(resultados[0], { p_segmento: 'industrial', p_id: 'c1', p_contact_id: '77', p_error: null });
   assert.equal(resultados[1].p_contact_id, null);
   assert.ok(!JSON.stringify(r).includes('@'), 'el resumen no lleva correos');
+});
+
+test('flujo C: un contacto del cotizador con ID_aliado no se registra como referido (sin puntos)', async () => {
+  const { procesarContacto } = await import('../../lib/clientify/webhook.js');
+  const rpcs = [];
+  const supabase = {
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
+    rpc: async (n) => { rpcs.push(n); return { data: { empresa_id: 'e1' }, error: null }; }
+  };
+  const ficha = { id: 1, email: 'ana+prueba@empresa.test', tags: [{ name: 'cotizador hub' }], custom_fields: [{ field: 'ID_aliado', value: 'EMABCD2345XY' }] };
+  const r = await procesarContacto('1', { supabase, clientify: { obtenerContacto: async () => ficha }, entorno: 'preview' });
+  assert.equal(r.resultado, 'ignorado');
+  assert.ok(!rpcs.includes('clientify_registrar_lead'));
+});
+
+test('precotización en PDF: los valores salen del mismo cálculo del servidor', async () => {
+  const { infoPrecotizacion } = await import('../../js/cotizador-pdf.js');
+  const info = infoPrecotizacion({ segmento: 'industrial', datos: { empresa: 'Plásticos del Caribe', contacto: 'Ana', subsector: 'Plásticos', ciudad: 'Barranquilla|Atlántico' },
+    unidad: 'cop', valor: '10.000.000', aislado: false, bateria: 'none' }, new Date('2026-10-14T15:00:00Z'));
+  assert.equal(info.archivo, 'precotizacion-solar-geenera-2026-10-14.pdf');
+  assert.deepEqual(info.diseno[0], ['Potencia instalada', '110,7 kWp']);
+  assert.equal(info.inversion, '$377.266.000 + IVA');
+  assert.ok(info.beneficios.some(([k]) => k === 'Retorno de la inversión'));
+  const aislado = infoPrecotizacion({ segmento: 'residencial', datos: { nombre: 'Juan', ciudad: 'Medellín|Antioquia' }, unidad: 'kwh', valor: '450', aislado: true, bateria: 'autonomia' });
+  assert.ok(!aislado.beneficios.some(([k]) => k === 'Ahorro estimado'), 'un sistema aislado no tiene ahorro ni retorno');
+  assert.equal(infoPrecotizacion({ segmento: 'industrial', datos: {}, unidad: 'kwh', valor: '' }), null);
 });

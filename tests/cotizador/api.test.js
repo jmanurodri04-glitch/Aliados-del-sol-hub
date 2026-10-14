@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import cotizador from '../../api/cotizador.js';
-import { MENSAJE_CAPTCHA, MENSAJE_LIMITE, huellaCotizador, validarSimulacion } from '../../lib/cotizador.js';
+import { MENSAJE_ALIADO, MENSAJE_CAPTCHA, MENSAJE_LIMITE, huellaCotizador, validarSimulacion } from '../../lib/cotizador.js';
 
 const ENTORNO = { SUPABASE_SECRET_KEY: 'clave-servidor', TURNSTILE_SECRET_KEY: 'secreto-turnstile', VERCEL_ENV: 'preview' };
 const ID = '7b1c2d3e-4f50-4a61-8b72-9c8d7e6f5a40';
@@ -103,7 +103,61 @@ test('propuesta: la pone en la cola y responde aunque Clientify no esté configu
   await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID }), res, { supabase: sb, entorno: ENTORNO });
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.cuerpo, { ok: true, clientify: 'pendiente' });
-  assert.deepEqual(sb.llamadas.find((l) => l.nombre === 'cotizador_solicitar_propuesta').args, { p_segmento: 'industrial', p_id: ID });
+  assert.deepEqual(sb.llamadas.find((l) => l.nombre === 'cotizador_solicitar_propuesta').args, { p_segmento: 'industrial', p_id: ID, p_referente: null });
+});
+
+const colaOk = { cotizador_intento: { data: true, error: null }, cotizador_solicitar_propuesta: { data: { estado: 'pendiente' }, error: null } };
+
+test('paso 2: avisa si el correo es de un aliado', async () => {
+  const sb = supabaseFalso({ cotizador_intento: { data: true, error: null },
+    cotizador_correo_es_aliado: ({ p_correo }) => ({ data: p_correo === 'aliado@correo.test', error: null }) });
+  let res = respuesta();
+  await cotizador(pedido({ accion: 'correo', correo: ' Aliado@Correo.test ' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.deepEqual([res.statusCode, res.cuerpo], [200, { aliado: true }]);
+  res = respuesta();
+  await cotizador(pedido({ accion: 'correo', correo: 'empresa@correo.test' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.deepEqual(res.cuerpo, { aliado: false });
+  res = respuesta();
+  await cotizador(pedido({ accion: 'correo', correo: 'no-es-correo' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.equal(res.statusCode, 422);
+  assert.equal(sb.llamadas.filter((l) => l.nombre === 'cotizador_intento').length, 3, 'cada revisión cuenta como intento');
+});
+
+test('simular: no guarda si el correo es de un aliado', async () => {
+  const sb = supabaseFalso({ ...ok, cotizador_correo_es_aliado: { data: true, error: null } });
+  const res = respuesta();
+  await cotizador(pedido(INDUSTRIAL), res, { supabase: sb, entorno: ENTORNO, fetch: captchaOk });
+  assert.equal(res.statusCode, 422);
+  assert.equal(res.cuerpo.error, MENSAJE_ALIADO);
+  assert.ok(!sb.llamadas.some((l) => l.nombre === 'cotizador_registrar_simulacion'));
+});
+
+test('propuesta sin sesión: el correo de quien refiere da el ID_aliado; uno desconocido se ignora', async () => {
+  const sb = supabaseFalso({ ...colaOk,
+    cotizador_codigo_referente: ({ p_correo }) => ({ data: p_correo === 'aliado@correo.test' ? 'EMABCD2345XY' : null, error: null }) });
+  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: ' Aliado@Correo.test ' }), respuesta(), { supabase: sb, entorno: ENTORNO });
+  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: 'otro@correo.test' }), respuesta(), { supabase: sb, entorno: ENTORNO });
+  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: 'no-es-correo' }), respuesta(), { supabase: sb, entorno: ENTORNO });
+  const referentes = sb.llamadas.filter((l) => l.nombre === 'cotizador_solicitar_propuesta').map((l) => l.args.p_referente);
+  assert.deepEqual(referentes, ['EMABCD2345XY', null, null]);
+  assert.equal(sb.llamadas.filter((l) => l.nombre === 'cotizador_codigo_referente').length, 2, 'un correo inválido ni se consulta');
+});
+
+test('propuesta con sesión: usa el aliado de la sesión e ignora el correo escrito; una sesión vencida no falla', async () => {
+  const aliados = { 'u-1': { id: 'u-1', codigo_aliado: 'FIJJPL7K4MQ9TX', estado: 'activo', rol: 'aliado' } };
+  const sb = supabaseFalso({ ...colaOk, cotizador_codigo_referente: { data: 'OTRO', error: null } });
+  sb.auth = { getUser: async (t) => (t === 'bueno' ? { data: { user: { id: 'u-1' } }, error: null } : { data: null, error: { message: 'jwt' } }) };
+  sb.from = () => ({ select: () => ({ eq: (_c, id) => ({ maybeSingle: async () => ({ data: aliados[id] || null, error: null }) }) }) });
+  const conToken = (t, cuerpo) => ({ ...pedido(cuerpo), headers: { 'x-forwarded-for': '190.0.0.1', authorization: 'Bearer ' + t } });
+  let res = respuesta();
+  await cotizador(conToken('bueno', { accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: 'aliado@correo.test' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.equal(res.statusCode, 200);
+  res = respuesta();
+  await cotizador(conToken('vencido', { accion: 'propuesta', segmento: 'industrial', id: ID }), res, { supabase: sb, entorno: ENTORNO });
+  assert.equal(res.statusCode, 200);
+  const referentes = sb.llamadas.filter((l) => l.nombre === 'cotizador_solicitar_propuesta').map((l) => l.args.p_referente);
+  assert.deepEqual(referentes, ['FIJJPL7K4MQ9TX', null]);
+  assert.ok(!sb.llamadas.some((l) => l.nombre === 'cotizador_codigo_referente'), 'con sesión no se usa el correo escrito');
 });
 
 test('propuesta: simulación vencida o datos inválidos', async () => {

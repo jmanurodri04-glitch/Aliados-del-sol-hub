@@ -27,7 +27,7 @@
 | Academy | 99 minicursos, 5 certificaciones y 15 herramientas, administrables desde el panel. Puntos: +5 por minicurso, +10 la masterclass, máximo 40 al mes, y +15 por certificación completa. | Migraciones (paso 3) |
 | Canje con QR | «Mi QR» del aliado y `canje.html` para los operadores. | Panel (paso 12) |
 | Panel de administración | `admin.html`: solicitudes, aliados, eventos, conflictos, canjes, recompensas con imagen, operadores, Academy, correos, avisos a n8n y auditoría. | Primer admin (paso 11) |
-| Cotizador Solar | Herramientas › Cotizador Solar, con y sin sesión; las simulaciones se guardan para marketing y «Solicitar propuesta» crea el contacto en Clientify con la etiqueta «Cotizador Hub». | Migraciones (paso 3) y Turnstile (paso 6) |
+| Cotizador Solar | Herramientas › Cotizador Solar, con y sin sesión; las simulaciones se guardan para marketing y «Solicitar propuesta» crea el contacto en Clientify con la etiqueta «Cotizador Hub» y el ID_aliado de quien refiere; los correos de aliados no se aceptan. | Migraciones (paso 3) y Turnstile (paso 6) |
 | Microsoft Clarity | Mapas de calor y grabaciones con el Hub y los formularios tapados. | `CLARITY_PROJECT_ID` (ya guardado) |
 
 ---
@@ -40,14 +40,14 @@
 
 ---
 
-## 3. Esquema de `aliados-prod` (41 migraciones)
+## 3. Esquema de `aliados-prod` (42 migraciones)
 
 **Cómo** (recomendado: Supabase CLI desde un computador del equipo, con la rama `despliegue-prod`):
 
 ```bash
 npx supabase login
 npx supabase link --project-ref pysyxycrybayhrescplc
-npx supabase migration list   # muestra cuáles faltan; con la base vacía, faltan las 41
+npx supabase migration list   # muestra cuáles faltan; con la base vacía, faltan las 42
 npx supabase db push          # las aplica en orden
 ```
 

@@ -2895,6 +2895,10 @@
       <p role="alert" style="margin:0;padding:11px 14px;border:1px solid {{ loginMsgBorder }};border-radius:10px;background:var(--w-03,rgba(255,255,255,.03));color:{{ loginMsgColor }};font-size:13.5px;line-height:1.5">{{ loginMsg }}</p>
       </sc-if>
       <button onClick="{{ loginSubmit }}" style="margin-top:6px;padding:14px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15.5px;font-weight:700;cursor:{{ loginCursor }};transition:transform 160ms ease" style-hover="transform:translateY(-1px)">{{ loginSendLabel }}</button>
+      <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 10px;padding:12px 14px;border:1px dashed rgba(255,202,5,.35);border-radius:11px;background:rgba(255,202,5,.05)">
+        <span style="font-size:14px;color:var(--mut,#9A968F)">¿Aún no eres aliado?</span>
+        <button onClick="{{ goJoin }}" style="padding:0;border:none;background:transparent;color:var(--y,#FFCA05);font-size:14px;font-weight:700;cursor:pointer">Quiero ser aliado →</button>
+      </div>
       <button onClick="{{ goHome }}" style="align-self:flex-start;margin-top:2px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Volver al sitio público</button>
     </div>
     </div>

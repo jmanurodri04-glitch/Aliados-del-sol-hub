@@ -256,3 +256,5 @@ export function telefonoE164(raw, pais) {
   return '+' + paisTelefono(pais).dial + String(raw || '').replace(/\D/g, '');
 }
 export const CORREO_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Paso 2: el correo de un aliado no se acepta (lo dicen el navegador y el servidor). */
+export const MENSAJE_CORREO_ALIADO = 'Este correo es de un aliado del programa. Escribe el correo de la empresa o de la persona que cotiza.';

@@ -277,6 +277,8 @@
             </sc-for>
           </div>
           <span style="font-size:13px; line-height:1.5; color:var(--ads-muted)">El equipo GEENERA valida el diseño con la factura real.</span>
+          <button type="button" onClick="{{ descargarPdf }}" disabled="{{ pdfBusy }}" style="align-self:flex-start; min-height:46px; padding:0 18px; border-radius:10px; border:1px solid var(--ads-line); background:var(--ads-field); color:var(--ads-ink); cursor:pointer; font:600 15px/1 'Titillium Web',sans-serif" style-hover="border-color:var(--ads-accent)">{{ pdfLabel }}</button>
+          <sc-if value="{{ hasPdfErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ pdfErr }}</span></sc-if>
           <div style="display:flex; flex-direction:column; gap:6px; padding:18px 20px; border-radius:16px; background:var(--ads-chip-bg); border:1px solid var(--ads-accent)">
             <span style="font-weight:600; font-size:11px; letter-spacing:.26em; text-transform:uppercase; color:var(--ads-chip-ink)">Inversión total</span>
             <span style="font-weight:700; font-size:clamp(28px,2.6vw,38px); line-height:1; letter-spacing:-.01em; font-variant-numeric:tabular-nums; color:var(--ads-ink)">{{ total.v }}</span>
@@ -304,6 +306,13 @@
           <sc-if value="{{ leadOpen }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex; flex-direction:column; gap:10px; padding-top:6px; border-top:1px solid var(--ads-line)">
               <span style="font-weight:700; font-size:18px; padding-top:12px">Recibe la propuesta técnica y financiera</span>
+              <sc-if value="{{ showReferente }}" hint-placeholder-val="{{ true }}">
+                <label style="display:flex; flex-direction:column; gap:8px">
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Email de quien refiere (opcional)</span>
+                  <input type="email" value="{{ referente }}" onChange="{{ setReferente }}" placeholder="correo del aliado que te refirió" autocomplete="off" maxlength="200" style="min-height:50px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ referenteBorder }}">
+                  <span style="font-size:13px; line-height:1.4; color:var(--ads-muted)">Si un aliado de Aliados del Sol te recomendó GEENERA, escribe su correo.</span>
+                </label>
+              </sc-if>
               <sc-if value="{{ hasLeadErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ leadErr }}</span></sc-if>
               <button type="button" onClick="{{ submitLead }}" disabled="{{ leadSending }}" style="min-height:52px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 16px/1 'Titillium Web',sans-serif; box-shadow:0 10px 28px -12px var(--ads-glow)" style-active="transform:translateY(1px) scale(.99)">{{ leadLabel }}</button>
             </div>
@@ -322,12 +331,12 @@
 /* Fórmulas, listas y teléfono: js/cotizador-calculo.js, que js/cotizador.js publica en window.ADS_COTIZADOR (el servidor usa el
    mismo archivo para recalcular). Hasta que llegue, el componente muestra un recuadro vacío. */
 let HSP, PANEL_WP, PR, MOD_W, MOD_D, TARIFA, CITIES = [], cityOf, SEGMENTOS = [], SUBSECTORES = [], BATS, calc, kwhOf, pesosOf,
-  errorDeConsumo, PAISES_TELEFONO = [], paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, POLITICA_URL;
+  errorDeConsumo, PAISES_TELEFONO = [], paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, MENSAJE_CORREO_ALIADO, POLITICA_URL;
 function enlazar() {
   const M = window.ADS_COTIZADOR;
   if (!M || calc) return !!calc;
   ({ HSP, PANEL_WP, PR, MOD_W, MOD_D, TARIFA, CITIES, cityOf, SEGMENTOS, SUBSECTORES, BATS, calc, kwhOf, pesosOf, errorDeConsumo,
-    PAISES_TELEFONO, paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE } = M);
+    PAISES_TELEFONO, paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, MENSAJE_CORREO_ALIADO } = M);
   POLITICA_URL = M.POLITICA_URL;
   return true;
 }
@@ -379,7 +388,8 @@ class Component extends DCLogic {
     step: 1, maxStep: 1, connecting: false, connected: false, simH: 11, playing: false,
     mode: 'auto', sysDark: false, vw: typeof window !== 'undefined' ? window.innerWidth : 1440,
     lbl: { w: '', d: '', inv: '', bat: '', grid: '' }, leadErr: null, leadSent: false, leadSending: false, webglFail: false,
-    listo: false, pais: 'CO', autoriza: false, autErr: false, connErr: null, simId: null
+    listo: false, pais: 'CO', autoriza: false, autErr: false, connErr: null, simId: null,
+    sesion: false, referente: '', referenteErr: false, revisandoCorreo: false, pdfBusy: false, pdfErr: null
   };
 
   componentDidMount() {
@@ -390,7 +400,9 @@ class Component extends DCLogic {
     this.rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.onResize = () => this.setState({ vw: window.innerWidth });
     window.addEventListener('resize', this.onResize);
-    this.setState({ sysDark: this.mq.matches, listo: enlazar() });
+    this.onSesion = e => this.setState({ sesion: !!(e.detail && e.detail.activa) });
+    window.addEventListener('ads:cotizador-sesion', this.onSesion);
+    this.setState({ sysDark: this.mq.matches, listo: enlazar(), sesion: !!(window.ADS_COTIZADOR && window.ADS_COTIZADOR.sesionActiva) });
     if (!enlazar()) this._poll = setInterval(() => { if (enlazar()) { clearInterval(this._poll); this.setState({ listo: true }); } }, 80);
     if (!window.THREE && !window.__adsThree) {
       window.__adsThree = true;
@@ -402,7 +414,7 @@ class Component extends DCLogic {
   }
   componentWillUnmount() {
     this.dead = true; cancelAnimationFrame(this.raf); this.timers.forEach(clearTimeout); clearInterval(this._poll); this.pedidos = null;
-    this.mq.removeEventListener('change', this.onMq); window.removeEventListener('resize', this.onResize);
+    this.mq.removeEventListener('change', this.onMq); window.removeEventListener('resize', this.onResize); window.removeEventListener('ads:cotizador-sesion', this.onSesion);
     if (this.ro) this.ro.disconnect(); if (this.renderer) this.renderer.dispose();
   }
   waitThree(n) {
@@ -1136,11 +1148,22 @@ class Component extends DCLogic {
   async solicitar() {
     const s = this.state;
     if (s.leadSending || !s.simId) return;
+    const referente = s.sesion ? '' : s.referente.trim();
+    if (referente && !CORREO_RE.test(referente)) return this.setState({ referenteErr: true, leadErr: 'Revisa el correo de quien refiere o déjalo vacío.' });
     const n = this.nPedido;
-    this.setState({ leadSending: true, leadErr: null });
-    const r = await this.pedir('ads:cotizador-propuesta', { segmento: s.segmento, id: s.simId });
+    this.setState({ leadSending: true, leadErr: null, referenteErr: false });
+    const r = await this.pedir('ads:cotizador-propuesta', { segmento: s.segmento, id: s.simId, correo_referente: referente || undefined });
     if (this.dead || n !== this.nPedido) return;
     this.setState(r.ok ? { leadSending: false, leadSent: true } : { leadSending: false, leadErr: r.mensaje || 'No pudimos enviar la solicitud. Intenta de nuevo.' });
+  }
+  /* «Descargar precotización (PDF)»: lo arma js/cotizador.js en el navegador con los mismos datos de la simulación. */
+  async descargarPdf() {
+    const s = this.state;
+    if (s.pdfBusy) return;
+    this.setState({ pdfBusy: true, pdfErr: null });
+    const r = await this.pedir('ads:cotizador-pdf', { segmento: s.segmento, datos: this.datosContacto(), unidad: s.unidad, valor: s.valor, aislado: !!s.aislado, bateria: s.bateria });
+    if (this.dead) return;
+    this.setState({ pdfBusy: false, pdfErr: r.ok ? null : (r.mensaje || 'No pudimos preparar el PDF. Intenta de nuevo.') });
   }
   renderVals() {
     const goBack = () => { if (this.props.onBack) this.props.onBack(); };
@@ -1244,7 +1267,11 @@ class Component extends DCLogic {
       showFin: isEmp, hasBank: !!s.banco, bank: BANKS.find(b => b.id === s.banco) || { name: '', line: '', desc: '', url: '#' },
       leadOpen: !s.leadSent, leadSent: s.leadSent, hasLeadErr: !!s.leadErr, leadErr: s.leadErr || '',
       leadSending: s.leadSending, leadLabel: s.leadSending ? 'Enviando…' : 'Solicitar propuesta',
-      submitLead: () => this.solicitar()
+      submitLead: () => this.solicitar(),
+      showReferente: !s.sesion, referente: s.referente, referenteBorder: s.referenteErr ? '#E5484D' : 'var(--ads-line)',
+      setReferente: e => this.setState({ referente: e.target.value, referenteErr: false, leadErr: null }),
+      descargarPdf: () => this.descargarPdf(), pdfBusy: s.pdfBusy, pdfLabel: s.pdfBusy ? 'Preparando PDF…' : 'Descargar precotización (PDF)',
+      hasPdfErr: !!s.pdfErr, pdfErr: s.pdfErr || ''
     };
   }
   pickSeg(id) {
@@ -1254,13 +1281,26 @@ class Component extends DCLogic {
     this.setState(this.reset(Object.assign({ segmento: id, tipo, step: 2, formErr: null, errKey: null },
       same ? { maxStep: Math.max(s.maxStep, 2) } : { maxStep: 2, unidad: 'cop', valor: tipo === 'industria' ? '10.000.000' : '1.000.000', valorErr: null, bateria: null, aislado: false })));
   }
-  next2() {
+  async next2() {
     const s = this.state, emp = s.segmento !== 'residencial';
     const req = emp ? [['empresa', 'el nombre de la empresa'], ['contacto', 'el nombre del contacto'], ['telefono', 'el teléfono'], ['correo', 'el correo'], ['ciudad', 'la ciudad'], ['subsector', 'el subsector']] : [['nombre', 'tu nombre'], ['telefono', 'tu teléfono'], ['correo', 'tu correo'], ['ciudad', 'tu ciudad']];
     for (const [k, t] of req) if (!String(s[k] || '').trim()) return this.setState({ errKey: k, formErr: (k === 'ciudad' || k === 'subsector' ? 'Selecciona ' : 'Escribe ') + t + ' para continuar.' });
     const errTel = errorDeTelefono(s.telefono, s.pais);
     if (errTel) return this.setState({ errKey: 'telefono', formErr: errTel });
     if (!CORREO_RE.test(s.correo.trim())) return this.setState({ errKey: 'correo', formErr: 'Escribe un correo válido.' });
+    // Un correo de aliado no se acepta (su contacto en Clientify dejaría de ser de aliado). Si no hay conexión se
+    // sigue: el servidor lo vuelve a revisar al conectar el inversor.
+    const correo = s.correo.trim().toLowerCase();
+    if (this.correoRevisado !== correo) {
+      if (s.revisandoCorreo) return;
+      this.setState({ revisandoCorreo: true });
+      const r = await this.pedir('ads:cotizador-correo', { correo });
+      if (this.dead) return;
+      this.setState({ revisandoCorreo: false });
+      if (this.state.correo.trim().toLowerCase() !== correo) return;
+      if (r.ok && r.aliado) return this.setState({ errKey: 'correo', formErr: MENSAJE_CORREO_ALIADO });
+      if (r.ok) this.correoRevisado = correo;
+    }
     this.setState({ step: Math.max(3, Math.min(s.maxStep, 3)), maxStep: Math.max(s.maxStep, 3), formErr: null, errKey: null });
     const name = s.empresa.trim();
     if (this.three && emp && name !== this.builtName) { this.builtName = name; this.later(() => this.buildSite(false), 0); }

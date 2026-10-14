@@ -4,16 +4,28 @@
 // ADSCotizador.dc.html y le da el puente con el servidor. El componente emite y este módulo responde:
 //   ads:cotizador-simular  { pid, segmento, datos, unidad, valor, aislado, bateria, autoriza }
 //     → ads:cotizador-simular-resultado  { pid, ok, id?, mensaje? }     (guarda la simulación: «Conectar al inversor»)
-//   ads:cotizador-propuesta { pid, segmento, id }
+//   ads:cotizador-correo { pid, correo }
+//     → ads:cotizador-correo-resultado { pid, ok, aliado?, mensaje? }   (paso 2: un correo de aliado no se acepta)
+//   ads:cotizador-propuesta { pid, segmento, id, correo_referente? }
 //     → ads:cotizador-propuesta-resultado { pid, ok, mensaje? }         («Solicitar propuesta»: la envía a Clientify)
-// No usa la sesión ni el código del aliado: el cotizador está aparte del programa de puntos (decisión del equipo).
+//   ads:cotizador-sesion { activa }  (al cambiar la sesión; también en window.ADS_COTIZADOR.sesionActiva)
+// Con sesión de aliado, «Solicitar propuesta» lleva su token (window.adsSesionCotizador, js/supabase.js) para que el
+// servidor ponga su ID_aliado en Clientify; sin sesión, el «Email de quien refiere» opcional. No da puntos.
 // El navegador nunca habla con Clientify; todo pasa por POST /api/cotizador.
 
 import * as calculo from './cotizador-calculo.js';
 
 const POLITICA_URL = 'assets/legal/politica-tratamiento-datos-2026-09-25.pdf';
 
-window.ADS_COTIZADOR = Object.assign({}, calculo, { POLITICA_URL });
+window.ADS_COTIZADOR = Object.assign({}, calculo, { POLITICA_URL, sesionActiva: false });
+function marcarSesion(activa) {
+  if (window.ADS_COTIZADOR.sesionActiva === activa) return;
+  window.ADS_COTIZADOR.sesionActiva = activa;
+  emitir('ads:cotizador-sesion', { activa });
+}
+window.addEventListener('ads:sesion', (e) => marcarSesion(!!(e.detail && e.detail.activa)));
+// Por si la sesión ya se anunció antes de cargar este módulo.
+if (window.adsSesionCotizador) window.adsSesionCotizador().then((s) => marcarSesion(!!s.activa)).catch(() => {});
 window.dispatchEvent(new CustomEvent('ads:cotizador-listo'));
 
 const MENSAJES = {
@@ -27,10 +39,12 @@ function emitir(evento, detalle) {
   window.dispatchEvent(new CustomEvent(evento, { detail: detalle }));
 }
 
-async function post(cuerpo) {
+async function post(cuerpo, token) {
+  const headers = { 'content-type': 'application/json', accept: 'application/json' };
+  if (token) headers.authorization = 'Bearer ' + token;
   const r = await fetch('/api/cotizador', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    headers,
     body: JSON.stringify(cuerpo)
   });
   let datos = {};
@@ -74,14 +88,62 @@ window.addEventListener('ads:cotizador-simular', async (e) => {
   }
 });
 
+window.addEventListener('ads:cotizador-correo', async (e) => {
+  const d = e.detail || {};
+  const responder = (r) => emitir('ads:cotizador-correo-resultado', Object.assign({ pid: d.pid }, r));
+  try {
+    const { status, datos } = await post({ accion: 'correo', correo: d.correo });
+    if (status === 200) return responder({ ok: true, aliado: datos.aliado === true });
+    responder({ ok: false, mensaje: mensajeDe(status, datos, 'No pudimos revisar el correo. Intenta de nuevo.') });
+  } catch {
+    responder({ ok: false, mensaje: MENSAJES.red });
+  }
+});
+
 window.addEventListener('ads:cotizador-propuesta', async (e) => {
   const d = e.detail || {};
   const responder = (r) => emitir('ads:cotizador-propuesta-resultado', Object.assign({ pid: d.pid }, r));
   try {
-    const { status, datos } = await post({ accion: 'propuesta', segmento: d.segmento, id: d.id });
+    const sesion = window.adsSesionCotizador ? await window.adsSesionCotizador() : { activa: false };
+    const cuerpo = { accion: 'propuesta', segmento: d.segmento, id: d.id };
+    if (!sesion.activa && d.correo_referente) cuerpo.correo_referente = d.correo_referente;
+    const { status, datos } = await post(cuerpo, sesion.token);
     if (status === 200 && datos.ok) return responder({ ok: true });
     responder({ ok: false, mensaje: mensajeDe(status, datos, 'No pudimos enviar la solicitud. Intenta de nuevo en unos minutos.') });
   } catch {
     responder({ ok: false, mensaje: MENSAJES.red });
+  }
+});
+
+// «Descargar precotización (PDF)»: se arma en el navegador con jsPDF (js/cotizador-pdf.js); no pasa por el servidor.
+//   ads:cotizador-pdf { pid, segmento, datos, unidad, valor, aislado, bateria } → ads:cotizador-pdf-resultado { pid, ok, mensaje? }
+const LIB_PDF = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+let jsPdfPromesa = null;
+function cargarJsPdf() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  if (!jsPdfPromesa) {
+    jsPdfPromesa = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = LIB_PDF;
+      s.async = true;
+      s.onload = () => (window.jspdf && window.jspdf.jsPDF ? resolve(window.jspdf.jsPDF) : reject(new Error('jsPDF')));
+      s.onerror = () => { jsPdfPromesa = null; reject(new Error('jsPDF')); };
+      document.head.appendChild(s);
+    });
+  }
+  return jsPdfPromesa;
+}
+
+window.addEventListener('ads:cotizador-pdf', async (e) => {
+  const d = e.detail || {};
+  const responder = (r) => emitir('ads:cotizador-pdf-resultado', Object.assign({ pid: d.pid }, r));
+  try {
+    const [JsPDF, pdf] = await Promise.all([cargarJsPdf(), import('./cotizador-pdf.js')]);
+    const info = pdf.infoPrecotizacion(d);
+    if (!info) return responder({ ok: false, mensaje: 'Completa el diseño para descargar la precotización.' });
+    pdf.construirPrecotizacion(JsPDF, info).save(info.archivo);
+    responder({ ok: true });
+  } catch {
+    responder({ ok: false, mensaje: 'No pudimos preparar el PDF. Revisa tu conexión e intenta de nuevo.' });
   }
 });

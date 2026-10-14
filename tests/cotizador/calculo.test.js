@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CITIES, SUBSECTORES, bateriaDe, calc, cityOf, errorDeConsumo, errorDeTelefono, fmtTelefono, kwhOf, resultadosDe, telefonoE164, tipoDeSegmento
+  CITIES, SUBSECTORES, bateriaDe, calc, cityOf, errorDeConsumo, errorDeTelefono, fmtTelefono, kwhOf, pesosOf, resultadosDe, telefonoE164, tipoDeSegmento
 } from '../../js/cotizador-calculo.js';
 
 const IND = { tipo: 'industria', unidad: 'cop', valor: '10.000.000', aislado: false, bateria: 'none', ciudad: 'Barranquilla|Atlántico', subsector: 'Plásticos' };
@@ -13,7 +13,10 @@ test('consumo: mínimo 40 kWh/mes o $27.600/mes según la unidad', () => {
   assert.equal(errorDeConsumo({ unidad: 'kwh', valor: '40' }), null);
   assert.equal(errorDeConsumo({ unidad: 'cop', valor: '27.599' }), 'El valor mínimo de la factura es $27.600 al mes.');
   assert.equal(errorDeConsumo({ unidad: 'cop', valor: '27.600' }), null);
-  assert.equal(errorDeConsumo({ unidad: 'cop', valor: '0,5' }), null, 'en pesos, menos de 1.000 se lee en millones (como el diseño)');
+  assert.equal(errorDeConsumo({ unidad: 'cop', valor: '200' }), 'El valor mínimo de la factura es $27.600 al mes.', '«200» son $200, no 200 millones');
+  assert.equal(errorDeConsumo({ unidad: 'cop', valor: '1' }), 'El valor mínimo de la factura es $27.600 al mes.');
+  assert.equal(errorDeConsumo({ unidad: 'cop', valor: '27.600' }), null);
+  assert.equal(pesosOf({ unidad: 'cop', valor: '3.500.000' }), 3500000);
   assert.equal(errorDeConsumo({ unidad: 'kwh', valor: '' }), 'Ingresa el consumo o el valor de la factura.');
   assert.equal(errorDeConsumo({ unidad: 'kwh', valor: 'abc' }), 'Ingresa el consumo o el valor de la factura.');
 });

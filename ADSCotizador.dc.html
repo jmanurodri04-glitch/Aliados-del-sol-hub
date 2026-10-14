@@ -1269,7 +1269,7 @@ class Component extends DCLogic {
       consumoLabel: unitCop ? 'Valor de la factura mensual' : 'Consumo mensual', valor: s.valor, valorPh: unitCop ? (tipo === 'hogar' ? 'Ej. 400.000' : 'Ej. 3.500.000') : (tipo === 'hogar' ? 'Ej. 450' : 'Ej. 18.000'),
       valorSuffix: unitCop ? 'COP/mes' : 'kWh/mes', valorBorder: valErr ? '#E5484D' : 'var(--ads-line)',
       setValor: e => this.setState(this.reset({ valor: e.target.value.replace(/[^\d.,']/g, ''), valorErr: null })), enter3: e => { if (e.key === 'Enter') this.next3(); },
-      valorHint: valErr || (kwh != null && c && c.valid ? (unitCop ? '$' + nf(pesos) + ' al mes ≈ ' + nf(kwh) + ' kWh/mes' : '≈ ' + money(kwh * TARIFA[tipo]) + ' al mes en la factura') : unitCop ? 'Escribe el valor en pesos, por ejemplo 3.500.000. También puedes escribirlo en millones: 3,5.' : 'Lo encuentras en la factura de energía.'),
+      valorHint: valErr || (kwh != null && c && c.valid ? (unitCop ? '$' + nf(pesos) + ' al mes ≈ ' + nf(kwh) + ' kWh/mes' : '≈ ' + money(kwh * TARIFA[tipo]) + ' al mes en la factura') : unitCop ? 'Escribe el valor en pesos, por ejemplo 3.500.000.' : 'Lo encuentras en la factura de energía.'),
       valorHintInk: valErr ? '#E5484D' : 'var(--ads-muted)',
       aislado: s.aislado, toggleAislado: () => this.setState(this.reset({ aislado: !s.aislado, bateria: null, maxStep: Math.min(s.maxStep, 4) })),
       aisladoBorder: s.aislado ? 'var(--ads-accent)' : 'var(--ads-line)', aisladoBg: s.aislado ? 'var(--ads-chip-bg)' : 'var(--ads-field)',

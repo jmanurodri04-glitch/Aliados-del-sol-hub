@@ -20,14 +20,14 @@
         { h: 'Cómo pedir la factura sin incomodar', type: 'script', items: [
           ['En persona', '“Para que te den una cifra real de ahorro, y no un estimado genérico, el equipo necesita una factura reciente. ¿Me la compartes y yo se la hago llegar?”'],
           ['Por WhatsApp', '“Hola, [nombre]. Como hablamos, te conecto con el equipo de GEENERA. Si me envías una foto de la última factura de energía, en la primera llamada ya te muestran cuánto podrías ahorrar.”'],
-          ['Si duda', '“La factura solo se usa para dimensionar el sistema; no compromete nada. Si prefieres, envíala directamente a la consultora cuando te llame.”']] },
+          ['Si duda', '“La factura solo se usa para dimensionar el sistema; no compromete nada. Si prefieres, envíala directamente al equipo GEENERA cuando te contacte.”']] },
         { h: 'Errores que restan puntos', type: 'list', items: [
           ['Datos sin verificar', 'Un teléfono equivocado o un correo genérico hace perder días. Confirma con el contacto antes de enviar.'],
           ['Referir sin permiso', 'Nunca registres a alguien que no sabe que será contactado. Afecta tu reputación y la del programa.'],
           ['Duplicados', 'Revisa en el Hub si la empresa ya fue referida por otro aliado; el sistema reconoce al primero con datos completos.'],
           ['Empresas no candidatas', 'Operación exclusivamente nocturna, factura muy baja o sede sin posibilidad de obra reducen la probabilidad de cierre.']] }
       ],
-      close: 'Cuando tengas los cuatro bloques completos, registra el referido en el Hub y adjunta la factura. Tu consultora te avisará cada cambio de etapa.'
+      close: 'Cuando tengas los cuatro bloques completos, registra el referido en el Hub y adjunta la factura. El equipo GEENERA te avisará cada cambio de etapa.'
     },
 
     't-solar': {
@@ -381,7 +381,7 @@
         { h: 'Errores que empeoran la objeción', type: 'check', items: ['Responder antes de que la persona termine', 'Discutir o corregir con tono de superioridad', 'Prometer cifras exactas para cerrar la discusión', 'Hablar mal de otros proveedores', 'Ignorar la objeción y seguir con la presentación'] },
         { h: 'Registro de objeciones', type: 'fields', items: ['Objeción textual · Cliente · Fecha', 'Interés que descubrí', 'Respuesta que funcionó (o no)', 'Siguiente paso acordado'] }
       ],
-      close: 'Comparte las objeciones nuevas con tu consultora de GEENERA: así el equipo prepara mejores respuestas para todos los aliados.'
+      close: 'Comparte las objeciones nuevas con el equipo GEENERA: así el equipo prepara mejores respuestas para todos los aliados.'
     },
 
     't-automatiza': {

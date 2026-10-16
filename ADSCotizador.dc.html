@@ -21,7 +21,9 @@
 </helmet>
 <!-- Cotizador Solar (diseño «Cotizador Aliados del Sol v5»). Va dentro del Hub (rutas cotizador y p-cotizador): sin encabezado ni pie
      propios y con el tema del Hub. Las fórmulas y las listas viven en js/cotizador-calculo.js (window.ADS_COTIZADOR). Los datos se
-     guardan con js/cotizador.js → /api/cotizador; el texto con datos personales queda tapado para Clarity. -->
+     guardan con js/cotizador.js → /api/cotizador; el texto con datos personales queda tapado para Clarity.
+     Solo para aliados con sesión (CLAUDE.md §7.5): la cotización queda a su nombre, el nombre de la empresa o del cliente no se
+     repite entre sus cotizaciones, el PDF pide antes las 7 preguntas comerciales y «Solicitar propuesta» da +5 Puntos Sol. -->
 <div data-ads-theme="{{ themeAttr }}" data-clarity-mask="true" style="color:var(--ads-ink); font-family:'Titillium Web',system-ui,sans-serif; transition:background-color 220ms cubic-bezier(.2,0,0,1), color 220ms cubic-bezier(.2,0,0,1)">
 
 
@@ -31,7 +33,7 @@
       <span style="font-weight:600; font-size:13px; letter-spacing:.3em; text-transform:uppercase; color:var(--ads-eyebrow)">Cotizador solar</span>
       <h1 style="margin:0; font-weight:700; font-size:clamp(36px,4.6vw,64px); line-height:1; letter-spacing:-.02em; text-wrap:balance">Diseña el sistema solar <span style="color:var(--ads-accent)">mientras respondes.</span></h1>
     </div>
-    <p style="margin:0; max-width:460px; font-weight:300; font-size:18px; line-height:1.55; color:var(--ads-muted); text-wrap:pretty">Cinco datos y el modelo se arma solo: edificación, módulos, almacenamiento e inversor. Al final lo conectas y lo ves funcionar un día completo.</p>
+    <p style="margin:0; max-width:460px; font-weight:300; font-size:18px; line-height:1.55; color:var(--ads-muted); text-wrap:pretty">Cinco datos de tu cliente y el modelo se arma solo: edificación, módulos, almacenamiento e inversor. Al final lo conectas y lo ves funcionar un día completo.</p>
   </section>
 
   <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
@@ -158,7 +160,7 @@
               </sc-if>
               <sc-if value="{{ isRes }}" hint-placeholder-val="{{ false }}">
                 <label style="display:flex; flex-direction:column; gap:8px">
-                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Nombre</span>
+                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Nombre del cliente</span>
                   <input type="text" value="{{ f.nombre }}" onChange="{{ set.nombre }}" placeholder="Nombre y apellido" autocomplete="name" maxlength="200" style="min-height:54px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ bd.nombre }}">
                 </label>
                 <label style="display:flex; flex-direction:column; gap:8px">
@@ -183,7 +185,7 @@
                 </label>
               </sc-if>
               <sc-if value="{{ hasFormErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ formErr }}</span></sc-if>
-              <button type="button" onClick="{{ next2 }}" style="align-self:flex-start; min-height:46px; padding:0 22px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 15px/1 'Titillium Web',sans-serif" style-active="transform:translateY(1px) scale(.99)">Continuar</button>
+              <button type="button" onClick="{{ next2 }}" disabled="{{ revisando }}" style="align-self:flex-start; min-height:46px; padding:0 22px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 15px/1 'Titillium Web',sans-serif" style-active="transform:translateY(1px) scale(.99)">{{ next2Label }}</button>
             </div>
           </sc-if>
         </div>
@@ -253,9 +255,8 @@
               <sc-if value="{{ showConnectBtn }}" hint-placeholder-val="{{ true }}">
                 <label style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-radius:12px; border:1px solid {{ autBorder }}; background:var(--ads-field); cursor:pointer">
                   <input type="checkbox" checked="{{ autoriza }}" onChange="{{ toggleAutoriza }}" style="flex:none; width:20px; height:20px; margin:2px 0 0">
-                  <span style="font-size:13px; line-height:1.45; color:var(--ads-muted)">Autorizo a GEENERA a tratar mis datos para calcular este diseño y, si lo pido, contactarme con la propuesta, según la <a href="{{ politicaUrl }}" target="_blank" rel="noopener">Política de Tratamiento de Datos</a>.</span>
+                  <span style="font-size:13px; line-height:1.45; color:var(--ads-muted)">Declaro que cuento con autorización del contacto para compartir sus datos con GEENERA, que los usará para calcular este diseño y, si lo pido, contactarlo con la propuesta, según la <a href="{{ politicaUrl }}" target="_blank" rel="noopener">Política de Tratamiento de Datos</a> (Ley 1581 de 2012).</span>
                 </label>
-                <div data-captcha="cotizador"></div>
                 <sc-if value="{{ hasConnErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ connErr }}</span></sc-if>
                 <button type="button" onClick="{{ connect }}" disabled="{{ connecting }}" style="width:100%; min-height:56px; border-radius:12px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 17px/1 'Titillium Web',sans-serif; box-shadow:0 12px 32px -12px var(--ads-glow)" style-active="transform:translateY(1px) scale(.99)">{{ connectLabel }}</button>
               </sc-if>
@@ -277,7 +278,13 @@
             </sc-for>
           </div>
           <span style="font-size:13px; line-height:1.5; color:var(--ads-muted)">El equipo GEENERA valida el diseño con la factura real.</span>
-          <button type="button" onClick="{{ descargarPdf }}" disabled="{{ pdfBusy }}" style="align-self:flex-start; min-height:46px; padding:0 18px; border-radius:10px; border:1px solid var(--ads-line); background:var(--ads-field); color:var(--ads-ink); cursor:pointer; font:600 15px/1 'Titillium Web',sans-serif" style-hover="border-color:var(--ads-accent)">{{ pdfLabel }}</button>
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px">
+            <button type="button" onClick="{{ descargarPdf }}" disabled="{{ pdfBusy }}" style="min-height:46px; padding:0 18px; border-radius:10px; border:1px solid var(--ads-line); background:var(--ads-field); color:var(--ads-ink); cursor:pointer; font:600 15px/1 'Titillium Web',sans-serif" style-hover="border-color:var(--ads-accent)">{{ pdfLabel }}</button>
+            <sc-if value="{{ mRespondidas }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ mEditar }}" style="min-height:44px; padding:0 4px; border:none; background:transparent; cursor:pointer; color:var(--ads-accent-ink); font:600 14px/1 'Titillium Web',sans-serif">Actualizar respuestas</button>
+            </sc-if>
+          </div>
+          <sc-if value="{{ mAviso }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px; line-height:1.5; color:var(--ads-muted)">Antes de descargar te haremos 7 preguntas rápidas sobre el cliente. Nos ayudan a preparar una mejor propuesta.</span></sc-if>
           <sc-if value="{{ hasPdfErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ pdfErr }}</span></sc-if>
           <div style="display:flex; flex-direction:column; gap:6px; padding:18px 20px; border-radius:16px; background:var(--ads-chip-bg); border:1px solid var(--ads-accent)">
             <span style="font-weight:600; font-size:11px; letter-spacing:.26em; text-transform:uppercase; color:var(--ads-chip-ink)">Inversión total</span>
@@ -306,32 +313,63 @@
           <sc-if value="{{ leadOpen }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex; flex-direction:column; gap:10px; padding-top:6px; border-top:1px solid var(--ads-line)">
               <span style="font-weight:700; font-size:18px; padding-top:12px">Recibe la propuesta técnica y financiera</span>
-              <sc-if value="{{ showReferente }}" hint-placeholder-val="{{ true }}">
-                <label style="display:flex; flex-direction:column; gap:8px">
-                  <span style="font-weight:600; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--ads-muted)">Email de quien refiere (opcional)</span>
-                  <input type="email" value="{{ referente }}" onChange="{{ setReferente }}" placeholder="correo del aliado que te refirió" autocomplete="off" maxlength="200" style="min-height:50px; padding:0 16px; border-radius:10px; background:var(--ads-field); color:var(--ads-ink); font:400 16px/1 'Titillium Web',sans-serif; box-sizing:border-box; border:1px solid {{ referenteBorder }}">
-                  <span style="font-size:13px; line-height:1.4; color:var(--ads-muted)">Si un aliado de Aliados del Sol te recomendó GEENERA, escribe su correo.</span>
-                </label>
-              </sc-if>
+              <span style="font-size:14px; line-height:1.5; color:var(--ads-muted)">GEENERA prepara la propuesta para tu cliente y ganas <b style="color:var(--ads-ink)">+5 Puntos Sol</b> por solicitarla.</span>
               <sc-if value="{{ hasLeadErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ leadErr }}</span></sc-if>
               <button type="button" onClick="{{ submitLead }}" disabled="{{ leadSending }}" style="min-height:52px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 16px/1 'Titillium Web',sans-serif; box-shadow:0 10px 28px -12px var(--ads-glow)" style-active="transform:translateY(1px) scale(.99)">{{ leadLabel }}</button>
             </div>
           </sc-if>
           <sc-if value="{{ leadSent }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex; flex-direction:column; gap:6px; padding:16px; border-radius:14px; background:var(--ads-chip-bg); color:var(--ads-chip-ink)"><span style="font-weight:700; font-size:18px">Solicitud recibida</span><span style="font-size:14px; line-height:1.5; color:var(--ads-ink)">Una consultora de GEENERA te contactará con la propuesta de este diseño.</span></div>
+            <div style="display:flex; flex-direction:column; gap:6px; padding:16px; border-radius:14px; background:var(--ads-chip-bg); color:var(--ads-chip-ink)"><span style="font-weight:700; font-size:18px">{{ leadTitulo }}</span><span style="font-size:14px; line-height:1.5; color:var(--ads-ink)">Una consultora de GEENERA contactará a tu cliente con la propuesta de este diseño.</span></div>
+            <div style="display:flex; flex-direction:column; gap:10px; padding:16px; border-radius:14px; border:1px dashed var(--ads-accent)">
+              <span style="font-weight:700; font-size:16px">¿Esta empresa puede avanzar? Refiérela.</span>
+              <span style="font-size:14px; line-height:1.5; color:var(--ads-muted)">Si la registras en «Referir empresa», sumas Puntos Sol en cada fase del negocio: visita, propuesta, cierre e instalación. La cotización sola no suma esos puntos.</span>
+              <button type="button" onClick="{{ referir }}" style="align-self:flex-start; min-height:46px; padding:0 20px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 15px/1 'Titillium Web',sans-serif">Referir esta empresa</button>
+            </div>
           </sc-if>
         </div>
       </sc-if>
     </aside>
   </section>
   </sc-if>
+
+  <!-- Preguntas comerciales antes del PDF (js/cotizador-meddpicc.js). Se guardan con la cotización. -->
+  <sc-if value="{{ mOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="Preguntas sobre el cliente" style="position:fixed; inset:0; z-index:200; display:flex; align-items:flex-start; justify-content:center; padding:24px 16px; background:rgba(0,0,0,.6); overflow-y:auto; box-sizing:border-box">
+      <div style="width:100%; max-width:640px; padding:24px; border-radius:20px; border:1px solid var(--ads-line); background:var(--ads-surface); display:flex; flex-direction:column; gap:20px; box-sizing:border-box; animation:ads-rise 220ms cubic-bezier(.2,0,0,1)">
+        <div style="display:flex; flex-direction:column; gap:6px">
+          <span style="font-weight:600; font-size:12px; letter-spacing:.26em; text-transform:uppercase; color:var(--ads-eyebrow)">Antes de descargar</span>
+          <span style="font-weight:700; font-size:24px; line-height:1.15">7 preguntas rápidas sobre tu cliente</span>
+          <span style="font-size:14px; line-height:1.5; color:var(--ads-muted)">Marca lo que sepas. Si aún no lo sabes, elige «Aún no lo sé». Puedes actualizarlas después.</span>
+        </div>
+        <sc-for list="{{ mPreguntas }}" as="q" hint-placeholder-count="7">
+          <fieldset style="margin:0; padding:0; border:none; display:flex; flex-direction:column; gap:10px">
+            <legend style="padding:0 0 10px; font-weight:700; font-size:16px; line-height:1.35; color:var(--ads-ink)">{{ q.n }}. {{ q.t }} <span style="font-weight:400; font-size:13px; color:var(--ads-muted)">{{ q.ayuda }}</span></legend>
+            <div style="display:flex; flex-wrap:wrap; gap:8px">
+              <sc-for list="{{ q.opciones }}" as="o" hint-placeholder-count="5">
+                <button type="button" role="{{ q.rol }}" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height:44px; padding:8px 14px; border-radius:999px; border:1px solid {{ o.border }}; background:{{ o.bg }}; color:var(--ads-ink); cursor:pointer; font:600 14px/1.25 'Titillium Web',sans-serif; text-align:left">{{ o.t }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ q.conOtro }}" hint-placeholder-val="{{ false }}">
+              <input type="text" value="{{ q.otro }}" onChange="{{ q.setOtro }}" placeholder="Escribe cuál (opcional)" maxlength="100" aria-label="{{ q.t }} Otra respuesta" style="min-height:46px; padding:0 14px; border-radius:10px; border:1px solid var(--ads-line); background:var(--ads-field); color:var(--ads-ink); font:400 15px/1 'Titillium Web',sans-serif; box-sizing:border-box">
+            </sc-if>
+            <sc-if value="{{ q.hasErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ q.err }}</span></sc-if>
+          </fieldset>
+        </sc-for>
+        <sc-if value="{{ hasMErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size:13px; color:#E5484D">{{ mErr }}</span></sc-if>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end">
+          <button type="button" onClick="{{ mCerrar }}" style="min-height:48px; padding:0 18px; border-radius:10px; border:1px solid var(--ads-line); background:transparent; color:var(--ads-ink); cursor:pointer; font:600 15px/1 'Titillium Web',sans-serif">Cancelar</button>
+          <button type="button" onClick="{{ mGuardar }}" disabled="{{ mBusy }}" style="min-height:48px; padding:0 22px; border-radius:10px; border:none; background:var(--ads-cta); color:var(--ads-cta-ink); cursor:pointer; font:700 15px/1 'Titillium Web',sans-serif">{{ mGuardarLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark'|'light'&quot;,&quot;section&quot;:&quot;Cotizador&quot;},&quot;headerOffset&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:72,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:140,&quot;unit&quot;:&quot;px&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;simSeconds&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:8,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;s&quot;,&quot;default&quot;:24,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulación&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;alta&quot;,&quot;ligera&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'alta'|'ligera'&quot;,&quot;section&quot;:&quot;Modelo 3D&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark'|'light'&quot;,&quot;section&quot;:&quot;Cotizador&quot;},&quot;headerOffset&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:72,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:140,&quot;unit&quot;:&quot;px&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onRefer&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;(datos: object) =&gt; void&quot;},&quot;simSeconds&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:8,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;s&quot;,&quot;default&quot;:24,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulación&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;alta&quot;,&quot;ligera&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'alta'|'ligera'&quot;,&quot;section&quot;:&quot;Modelo 3D&quot;}}">
 /* Fórmulas, listas y teléfono: js/cotizador-calculo.js, que js/cotizador.js publica en window.ADS_COTIZADOR (el servidor usa el
    mismo archivo para recalcular). Hasta que llegue, el componente muestra un recuadro vacío. */
 let HSP, PANEL_WP, PR, MOD_W, MOD_D, TARIFA, CITIES = [], cityOf, SEGMENTOS = [], SUBSECTORES = [], BATS, calc, kwhOf, pesosOf,
-  errorDeConsumo, PAISES_TELEFONO = [], paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, MENSAJE_CORREO_ALIADO, POLITICA_URL;
+  errorDeConsumo, PAISES_TELEFONO = [], paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, MENSAJE_CORREO_ALIADO, POLITICA_URL, MEDDPICC;
 // three.js se descarga una sola vez para toda la página; si falla, se puede volver a intentar.
 function cargarThree() {
   if (window.THREE || window.__adsThree) return;
@@ -346,6 +384,7 @@ function enlazar() {
   ({ HSP, PANEL_WP, PR, MOD_W, MOD_D, TARIFA, CITIES, cityOf, SEGMENTOS, SUBSECTORES, BATS, calc, kwhOf, pesosOf, errorDeConsumo,
     PAISES_TELEFONO, paisTelefono, fmtTelefono, errorDeTelefono, CORREO_RE, MENSAJE_CORREO_ALIADO } = M);
   POLITICA_URL = M.POLITICA_URL;
+  MEDDPICC = M.meddpicc;
   return true;
 }
 const BANKS = [
@@ -397,7 +436,11 @@ class Component extends DCLogic {
     mode: 'auto', sysDark: false, vw: typeof window !== 'undefined' ? window.innerWidth : 1440,
     lbl: { w: '', d: '', inv: '', bat: '', grid: '' }, leadErr: null, leadSent: false, leadSending: false, webglFail: false,
     listo: false, pais: 'CO', autoriza: false, autErr: false, connErr: null, simId: null,
-    sesion: false, referente: '', referenteErr: false, revisandoCorreo: false, pdfBusy: false, pdfErr: null
+    sesion: false, revisando: false, pdfBusy: false, pdfErr: null, puntos: 0,
+    /* editId: cotización que se sigue editando (misma fila) hasta «Solicitar propuesta» o salir del cotizador. */
+    editId: null,
+    /* Preguntas antes del PDF: respuestas en edición (mResp) y las guardadas por cotización (mGuardadas[id]). */
+    mOpen: false, mResp: {}, mErrQ: null, mErr: null, mBusy: false, mGuardadas: {}, mDescargar: false
   };
 
   componentDidMount() {
@@ -1143,10 +1186,14 @@ class Component extends DCLogic {
     if (!s.autoriza) return this.setState({ autErr: true, connErr: 'Marca la autorización de tratamiento de datos para continuar.' });
     const n = (this.nPedido = (this.nPedido || 0) + 1);
     this.setState({ connecting: true, connErr: null, autErr: false });
-    const r = await this.pedir('ads:cotizador-simular', { segmento: s.segmento, datos: this.datosContacto(), unidad: s.unidad, valor: s.valor, aislado: !!s.aislado, bateria: s.bateria, autoriza: true });
+    const r = await this.pedir('ads:cotizador-simular', { id: s.editId || undefined, segmento: s.segmento, datos: this.datosContacto(), unidad: s.unidad, valor: s.valor, aislado: !!s.aislado, bateria: s.bateria, autoriza: true });
     if (this.dead || n !== this.nPedido) return;
-    if (!r.ok) return this.setState({ connecting: false, connErr: r.mensaje || 'No pudimos guardar el diseño. Intenta de nuevo.' });
-    this.setState({ simId: r.id });
+    if (!r.ok) {
+      const errKey = r.repetido ? (s.segmento === 'residencial' ? 'nombre' : 'empresa') : null;
+      if (r.repetido) { this.nombreRevisado = null; return this.setState({ connecting: false, connErr: null, step: 2, errKey, formErr: r.mensaje }); }
+      return this.setState({ connecting: false, connErr: r.mensaje || 'No pudimos guardar el diseño. Intenta de nuevo.' });
+    }
+    this.setState({ simId: r.id, editId: r.id });
     if (!this.three || !this.paths) return this.setState({ connecting: false, connected: true });
     this.makeCables();
     const now = performance.now(), m = this.rm ? 0 : 1, hasB = !!this.paths.B;
@@ -1159,26 +1206,73 @@ class Component extends DCLogic {
     this.later(() => { this.ledMat.emissiveIntensity = 1.6; this.dirty = true; }, 1050 * m);
     this.later(() => { this.simH = 9; this.setState({ connecting: false, connected: true, simH: 9, playing: !this.rm }); }, (hasB ? 2400 : 1800) * m);
   }
-  reset(extra) { this.nPedido = (this.nPedido || 0) + 1; return Object.assign({ connected: false, connecting: false, playing: false, leadSent: false, leadSending: false, leadErr: null, connErr: null, simId: null }, extra); }
+  reset(extra) { this.nPedido = (this.nPedido || 0) + 1; return Object.assign({ connected: false, connecting: false, playing: false, leadSent: false, leadSending: false, leadErr: null, connErr: null, simId: null, mOpen: false }, extra); }
   async solicitar() {
     const s = this.state;
     if (s.leadSending || !s.simId) return;
-    const referente = s.sesion ? '' : s.referente.trim();
-    if (referente && !CORREO_RE.test(referente)) return this.setState({ referenteErr: true, leadErr: 'Revisa el correo de quien refiere o déjalo vacío.' });
     const n = this.nPedido;
-    this.setState({ leadSending: true, leadErr: null, referenteErr: false });
-    const r = await this.pedir('ads:cotizador-propuesta', { segmento: s.segmento, id: s.simId, correo_referente: referente || undefined });
+    this.setState({ leadSending: true, leadErr: null });
+    const r = await this.pedir('ads:cotizador-propuesta', { segmento: s.segmento, id: s.simId });
     if (this.dead || n !== this.nPedido) return;
-    this.setState(r.ok ? { leadSending: false, leadSent: true } : { leadSending: false, leadErr: r.mensaje || 'No pudimos enviar la solicitud. Intenta de nuevo.' });
+    // Ya pedida, la cotización no se edita más: un cambio posterior se guarda como otra (con otro nombre).
+    this.setState(r.ok ? { leadSending: false, leadSent: true, puntos: r.puntos || 0, editId: null } : { leadSending: false, leadErr: r.mensaje || 'No pudimos enviar la solicitud. Intenta de nuevo.' });
+  }
+  /* «Referir esta empresa»: el Hub abre «Nueva oportunidad» con los datos de esta cotización. */
+  referir() {
+    const s = this.state, emp = s.segmento !== 'residencial', city = cityOf(s.ciudad), c = calc(s), pc = paisTelefono(s.pais);
+    const pesos = c && c.C ? Math.round(pesosOf(s) || 0) : 0;
+    const datos = {
+      empresa: emp ? s.empresa.trim() : s.nombre.trim(), contacto: emp ? s.contacto.trim() : s.nombre.trim(),
+      country: pc.id, telefono: s.telefono.replace(/\D/g, ''), correo: s.correo.trim(),
+      sector: s.segmento === 'industrial' ? 'Industrial' : s.segmento === 'comercial' ? 'Comercial' : 'Residencial',
+      subsector: emp ? s.subsector : '', ciudad: city ? city.name + ', ' + city.dep : '', factura: pesos ? '$ ' + nf(pesos) : ''
+    };
+    if (this.props.onRefer) this.props.onRefer(datos);
+    else window.dispatchEvent(new CustomEvent('ads:cotizador-referir', { detail: datos }));
   }
   /* «Descargar precotización (PDF)»: lo arma js/cotizador.js en el navegador con los mismos datos de la simulación. */
   async descargarPdf() {
     const s = this.state;
-    if (s.pdfBusy) return;
+    if (s.pdfBusy || !s.simId) return;
+    if (!s.mGuardadas[s.simId]) return this.abrirPreguntas(true);
     this.setState({ pdfBusy: true, pdfErr: null });
     const r = await this.pedir('ads:cotizador-pdf', { segmento: s.segmento, datos: this.datosContacto(), unidad: s.unidad, valor: s.valor, aislado: !!s.aislado, bateria: s.bateria });
     if (this.dead) return;
     this.setState({ pdfBusy: false, pdfErr: r.ok ? null : (r.mensaje || 'No pudimos preparar el PDF. Intenta de nuevo.') });
+  }
+  /* Preguntas comerciales (MEDDPICC): se abren antes del primer PDF de cada cotización, o con «Actualizar respuestas». */
+  abrirPreguntas(descargar) {
+    const s = this.state, g = s.mGuardadas[s.simId];
+    this.setState({ mOpen: true, mDescargar: !!descargar, mResp: g ? JSON.parse(JSON.stringify(g)) : {}, mErrQ: null, mErr: null });
+  }
+  elegirOpcion(p, o) {
+    const s = this.state, r = Object.assign({}, s.mResp), actual = (r[p.id] && r[p.id].o) || [];
+    let o2;
+    if (!p.varias) o2 = [o.id];
+    else if (actual.includes(o.id)) o2 = actual.filter(x => x !== o.id);
+    else if (o.unica) o2 = [o.id];
+    else {
+      const unicas = p.opciones.filter(x => x.unica).map(x => x.id);
+      o2 = actual.filter(x => !unicas.includes(x)).concat(o.id);
+      if (o2.length > p.varias) return this.setState({ mErrQ: p.id, mErr: null });
+    }
+    const otroVisible = p.opciones.some(x => x.otro && o2.includes(x.id));
+    r[p.id] = otroVisible && r[p.id] && r[p.id].otro ? { o: o2, otro: r[p.id].otro } : { o: o2 };
+    this.setState({ mResp: r, mErrQ: null, mErr: null });
+  }
+  async guardarPreguntas() {
+    const s = this.state;
+    if (s.mBusy || !s.simId) return;
+    const v = MEDDPICC.validarMeddpicc(s.mResp, s.segmento);
+    if (!v.ok) return this.setState({ mErrQ: v.pregunta, mErr: v.error });
+    const id = s.simId, n = this.nPedido;
+    this.setState({ mBusy: true, mErr: null, mErrQ: null });
+    const r = await this.pedir('ads:cotizador-meddpicc', { segmento: s.segmento, id, respuestas: s.mResp });
+    if (this.dead) return;
+    if (!r.ok) return this.setState({ mBusy: false, mErr: r.mensaje || 'No pudimos guardar las respuestas. Intenta de nuevo.' });
+    const descargar = this.state.mDescargar && n === this.nPedido;
+    this.setState({ mBusy: false, mOpen: false, mGuardadas: Object.assign({}, this.state.mGuardadas, { [id]: v.valor.respuestas }) });
+    if (descargar) this.descargarPdf();
   }
   renderVals() {
     const goBack = () => { if (this.props.onBack) this.props.onBack(); };
@@ -1283,22 +1377,49 @@ class Component extends DCLogic {
       leadOpen: !s.leadSent, leadSent: s.leadSent, hasLeadErr: !!s.leadErr, leadErr: s.leadErr || '',
       leadSending: s.leadSending, leadLabel: s.leadSending ? 'Enviando…' : 'Solicitar propuesta',
       submitLead: () => this.solicitar(),
-      showReferente: !s.sesion, referente: s.referente, referenteBorder: s.referenteErr ? '#E5484D' : 'var(--ads-line)',
-      setReferente: e => this.setState({ referente: e.target.value, referenteErr: false, leadErr: null }),
+      leadTitulo: s.puntos > 0 ? '¡Listo! Ganaste +' + nf(s.puntos) + ' Puntos Sol' : 'Solicitud recibida',
+      referir: () => this.referir(),
       descargarPdf: () => this.descargarPdf(), pdfBusy: s.pdfBusy, pdfLabel: s.pdfBusy ? 'Preparando PDF…' : 'Descargar precotización (PDF)',
-      hasPdfErr: !!s.pdfErr, pdfErr: s.pdfErr || ''
+      hasPdfErr: !!s.pdfErr, pdfErr: s.pdfErr || '',
+      mRespondidas: !!(s.simId && s.mGuardadas[s.simId]), mAviso: !!(s.simId && !s.mGuardadas[s.simId]),
+      mEditar: () => this.abrirPreguntas(false),
+      revisando: s.revisando, next2Label: s.revisando ? 'Revisando…' : 'Continuar',
+      ...this.valsPreguntas()
+    };
+  }
+  valsPreguntas() {
+    const s = this.state;
+    if (!s.mOpen || !MEDDPICC) return { mOpen: false, mPreguntas: [], hasMErr: false, mErr: '', mBusy: false, mGuardarLabel: '' };
+    const mPreguntas = MEDDPICC.preguntasPara(s.segmento).map((p, i) => {
+      const r = s.mResp[p.id] || {}, el = r.o || [];
+      return {
+        n: i + 1, t: p.t, ayuda: p.varias ? '(hasta ' + p.varias + ')' : '', rol: p.varias ? 'checkbox' : 'radio',
+        opciones: p.opciones.map(o => {
+          const on = el.includes(o.id);
+          return { t: o.t, on: on ? 'true' : 'false', border: on ? 'var(--ads-accent)' : 'var(--ads-line)', bg: on ? 'var(--ads-chip-bg)' : 'var(--ads-field)', pick: () => this.elegirOpcion(p, o) };
+        }),
+        conOtro: p.opciones.some(o => o.otro && el.includes(o.id)), otro: r.otro || '',
+        setOtro: e => { const m = Object.assign({}, this.state.mResp); m[p.id] = Object.assign({}, m[p.id], { otro: e.target.value.slice(0, MEDDPICC.MAX_OTRO) }); this.setState({ mResp: m }); },
+        hasErr: s.mErrQ === p.id, err: s.mErrQ === p.id ? (s.mErr || 'Elige máximo ' + p.varias + ' opciones.') : ''
+      };
+    });
+    return {
+      mOpen: true, mPreguntas, hasMErr: !!s.mErr && !s.mErrQ, mErr: s.mErr || '', mBusy: s.mBusy,
+      mGuardarLabel: s.mBusy ? 'Guardando…' : s.mDescargar ? 'Guardar y descargar PDF' : 'Guardar respuestas',
+      mCerrar: () => this.setState({ mOpen: false }), mGuardar: () => this.guardarPreguntas()
     };
   }
   pickSeg(id) {
     const s = this.state, tipo = id === 'residencial' ? 'hogar' : 'industria';
     if (s.segmento === id) return this.setState({ step: 2, maxStep: Math.max(s.maxStep, 2) });
     const same = s.tipo === tipo;
-    this.setState(this.reset(Object.assign({ segmento: id, tipo, step: 2, formErr: null, errKey: null },
+    this.nombreRevisado = null;
+    this.setState(this.reset(Object.assign({ segmento: id, tipo, step: 2, formErr: null, errKey: null, editId: null },
       same ? { maxStep: Math.max(s.maxStep, 2) } : { maxStep: 2, unidad: 'cop', valor: tipo === 'industria' ? '10.000.000' : '1.000.000', valorErr: null, bateria: null, aislado: false })));
   }
   async next2() {
     const s = this.state, emp = s.segmento !== 'residencial';
-    const req = emp ? [['empresa', 'el nombre de la empresa'], ['contacto', 'el nombre del contacto'], ['telefono', 'el teléfono'], ['correo', 'el correo'], ['ciudad', 'la ciudad'], ['subsector', 'el subsector']] : [['nombre', 'tu nombre'], ['telefono', 'tu teléfono'], ['correo', 'tu correo'], ['ciudad', 'tu ciudad']];
+    const req = emp ? [['empresa', 'el nombre de la empresa'], ['contacto', 'el nombre del contacto'], ['telefono', 'el teléfono'], ['correo', 'el correo'], ['ciudad', 'la ciudad'], ['subsector', 'el subsector']] : [['nombre', 'el nombre del cliente'], ['telefono', 'el teléfono'], ['correo', 'el correo'], ['ciudad', 'la ciudad']];
     for (const [k, t] of req) if (!String(s[k] || '').trim()) return this.setState({ errKey: k, formErr: (k === 'ciudad' || k === 'subsector' ? 'Selecciona ' : 'Escribe ') + t + ' para continuar.' });
     const errTel = errorDeTelefono(s.telefono, s.pais);
     if (errTel) return this.setState({ errKey: 'telefono', formErr: errTel });
@@ -1306,15 +1427,28 @@ class Component extends DCLogic {
     // Un correo de aliado no se acepta (su contacto en Clientify dejaría de ser de aliado). Si no hay conexión se
     // sigue: el servidor lo vuelve a revisar al conectar el inversor.
     const correo = s.correo.trim().toLowerCase();
+    if (s.revisando) return;
     if (this.correoRevisado !== correo) {
-      if (s.revisandoCorreo) return;
-      this.setState({ revisandoCorreo: true });
+      this.setState({ revisando: true });
       const r = await this.pedir('ads:cotizador-correo', { correo });
       if (this.dead) return;
-      this.setState({ revisandoCorreo: false });
+      this.setState({ revisando: false });
       if (this.state.correo.trim().toLowerCase() !== correo) return;
       if (r.ok && r.aliado) return this.setState({ errKey: 'correo', formErr: MENSAJE_CORREO_ALIADO });
       if (r.ok) this.correoRevisado = correo;
+    }
+    // El nombre de la empresa (o del cliente) no se repite entre las cotizaciones del aliado. Sin conexión se sigue: el
+    // servidor lo vuelve a revisar al conectar el inversor.
+    const campoNombre = emp ? 'empresa' : 'nombre', nombre = s[campoNombre].trim(), claveNombre = nombre.toLowerCase() + '|' + (s.editId || '');
+    if (this.nombreRevisado !== claveNombre) {
+      this.setState({ revisando: true });
+      const r = await this.pedir('ads:cotizador-nombre', { nombre, id: s.editId || undefined });
+      if (this.dead) return;
+      this.setState({ revisando: false });
+      if (this.state[campoNombre].trim() !== nombre) return;
+      if (r.ok && !r.disponible) return this.setState({ errKey: campoNombre, formErr: r.mensaje });
+      if (!r.ok && /sesión|aliados/.test(r.mensaje || '')) return this.setState({ formErr: r.mensaje });
+      if (r.ok) this.nombreRevisado = claveNombre;
     }
     this.setState({ step: Math.max(3, Math.min(s.maxStep, 3)), maxStep: Math.max(s.maxStep, 3), formErr: null, errKey: null });
     const name = s.empresa.trim();

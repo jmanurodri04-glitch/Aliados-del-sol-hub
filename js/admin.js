@@ -22,7 +22,7 @@ const ACCIONES = { aprobar_aliado: 'Aprobó la solicitud', rechazar_aliado: 'Rec
   otorgar_meddpicc: 'Otorgó el MEDDPICC (+20)', reintentar_correo: 'Reintentó un correo', reintentar_aviso_n8n: 'Reintentó un aviso a n8n',
   estado_operador: 'Cambió el estado de un operador', eliminar_operador: 'Eliminó un operador',
   guardar_curso: 'Guardó un minicurso de la Academy', guardar_certificacion: 'Guardó una certificación de la Academy',
-  guardar_herramienta: 'Guardó una herramienta de la Academy', borrar_cotizaciones: 'Borró simulaciones del Cotizador Solar' };
+  guardar_herramienta: 'Guardó una herramienta de la Academy', borrar_cotizaciones: 'Borró cotizaciones del Cotizador Solar' };
 const VARIABLES = { calificado: 'Calificado', perfecto: 'Referido perfecto', fuera_perfil: 'Fuera del perfil', oportunidad_tecnica: 'Evaluación técnica',
   propuesta_comercial: 'Propuesta comercial', negocio_cerrado: 'Negocio cerrado', informacion_falsa: 'Información falsa', integridad_informacion: 'Integridad' };
 const PESTANAS = [['resumen', 'Resumen'], ['solicitudes', 'Solicitudes'], ['aliados', 'Aliados'], ['eventos', 'Eventos'], ['conflictos', 'Conflictos'],

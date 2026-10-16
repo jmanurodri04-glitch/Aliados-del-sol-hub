@@ -1,9 +1,12 @@
-// Pestaña «Cotizador» del panel (CLAUDE.md §7.5): las simulaciones del Cotizador Solar para el análisis de marketing.
+// Pestaña «Cotizador» del panel (CLAUDE.md §7.5): las cotizaciones de los aliados en el Cotizador Solar.
 //
-// Se descargan en CSV (una tabla por tipo de proyecto) cada 6 a 12 meses y después se pueden borrar (decisión del
-// equipo). Lee las tablas cotizador_* con la sesión del admin (RLS) y borra con POST /api/admin
-// { accion: 'borrar_cotizaciones' } (admin_cotizador_borrar), que no borra las propuestas que aún no llegan a
-// Clientify y queda en la Auditoría. Las fechas son días de Bogotá.
+// Se descargan en CSV (una tabla por tipo de proyecto, con el código del aliado y sus respuestas a las preguntas antes
+// del PDF) y después se pueden borrar (decisión del equipo). Lee las tablas cotizador_* con la sesión del admin (RLS)
+// y borra con POST /api/admin { accion: 'borrar_cotizaciones' } (admin_cotizador_borrar), que solo borra las de más
+// de 12 meses, nunca las propuestas que aún no llegan a Clientify, y queda en la Auditoría. «Uso por aliado»
+// (v_admin_cotizador_aliados) sirve para ver un uso exagerado y descontar puntos si hace falta. Fechas de Bogotá.
+
+import { resumenMeddpicc } from './cotizador-meddpicc.js';
 
 export const SEGMENTOS = [['industrial', 'Industrial'], ['comercial', 'Comercial'], ['residencial', 'Residencial']];
 const ALMACENAMIENTO = { none: 'Sin baterías', respaldo: 'Respaldo', autonomia: 'Autonomía nocturna', extendida: 'Autonomía extendida' };
@@ -11,7 +14,8 @@ const SYNC = { pendiente: 'Pendiente', ok: 'Enviada', error: 'Con error' };
 
 // Columnas del CSV: [encabezado, columna o función]. Las de la persona solo en su tipo de proyecto.
 const COMUNES = [
-  ['Fecha (Bogotá)', (f) => fechaHora(f.created_at)], ['Teléfono', 'telefono'], ['Correo', 'correo'], ['Ciudad', 'ciudad'],
+  ['Aliado', (f) => (f.aliados && f.aliados.codigo_aliado) || ''],
+  ['Fecha (Bogotá)', (f) => fechaHora(f.created_at)], ['Última edición', (f) => fechaHora(f.actualizada_at)], ['Teléfono', 'telefono'], ['Correo', 'correo'], ['Ciudad', 'ciudad'],
   ['Departamento', 'departamento'], ['Región', 'region'], ['Escribió el consumo en', (f) => (f.unidad === 'cop' ? 'Pesos' : 'kWh')],
   ['Consumo (kWh/mes)', 'consumo_kwh_mes'], ['Valor factura (COP/mes)', 'valor_factura_cop'],
   ['Conectado a la red', (f) => (f.conectado_red ? 'Sí' : 'No')], ['Almacenamiento', (f) => ALMACENAMIENTO[f.almacenamiento] || f.almacenamiento],
@@ -20,7 +24,8 @@ const COMUNES = [
   ['Almacenamiento (kWh)', 'almacenamiento_kwh'], ['Área mínima (m²)', 'area_minima_m2'], ['Inversión total + IVA (COP)', 'inversion_total_cop'],
   ['Pidió propuesta', (f) => (f.propuesta_solicitada_at ? fechaHora(f.propuesta_solicitada_at) : 'No')],
   ['Clientify', (f) => (f.clientify_sync_estado ? SYNC[f.clientify_sync_estado] || f.clientify_sync_estado : '')],
-  ['Política de datos', 'politica_datos_version']
+  ['Política de datos', 'politica_datos_version'],
+  ['Preguntas antes del PDF', (f) => resumenMeddpicc(f.meddpicc, f.segmento).join(' | ')]
 ];
 export const COLUMNAS = {
   residencial: [['Nombre', 'nombre'], ...COMUNES],
@@ -75,6 +80,13 @@ export function crearCotizador({ cliente, llamarAdmin, leer, esc, aviso, numero,
       filas.map((r) => `<tr><td>${esc((SEGMENTOS.find(([id]) => id === r.segmento) || [, r.segmento])[1])}</td><td>${numero(r.simulaciones)}</td><td>${numero(r.propuestas)}</td>`
         + `<td>${r.sin_enviar > 0 ? `<span class="chip bad">${numero(r.sin_enviar)}</span>` : '0'}</td><td>${esc(fecha(r.primera))}</td><td>${esc(fecha(r.ultima))}</td></tr>`).join('')
     }</tbody></table>`;
+    const usos = await leer(cliente().from('v_admin_cotizador_aliados').select('*').limit(200));
+    $('cot-aliados').innerHTML = usos.length
+      ? `<table><thead><tr><th>Aliado</th><th>Nombre</th><th>Cotizaciones (7 días)</th><th>Cotizaciones (30 días)</th><th>Total</th><th>Propuestas pedidas (30 días)</th><th>Total pedidas</th><th>Puntos del cotizador</th><th>Última</th></tr></thead><tbody>${
+        usos.map((u) => `<tr><td>${esc(u.codigo_aliado)}</td><td>${esc(u.nombre_completo)}</td><td>${numero(u.cotizaciones_7d)}</td><td>${numero(u.cotizaciones_30d)}</td><td>${numero(u.cotizaciones)}</td>`
+          + `<td>${numero(u.solicitudes_30d)}</td><td>${numero(u.solicitudes)}</td><td>${numero(u.puntos_cotizador)}</td><td>${esc(fecha(u.ultima))}</td></tr>`).join('')
+      }</tbody></table>`
+      : '<p class="nota">Ningún aliado ha usado el cotizador todavía.</p>';
     if (!$('cot-desde').value) $('cot-desde').value = haceUnAno();
     if (!$('cot-hasta').value) $('cot-hasta').value = hoy();
     pintarBorrar();
@@ -90,8 +102,8 @@ export function crearCotizador({ cliente, llamarAdmin, leer, esc, aviso, numero,
     const b = $('cot-borrar');
     b.disabled = !descargado;
     $('cot-borrar-nota').textContent = descargado
-      ? `Descargaste ${numero(descargado.filas)} simulaciones de tipo ${descargado.segmento}, del ${descargado.desde} al ${descargado.hasta}.`
-      : 'Primero descarga el CSV: solo se borra lo que ya descargaste.';
+      ? `Descargaste ${numero(descargado.filas)} cotizaciones de tipo ${descargado.segmento}, del ${descargado.desde} al ${descargado.hasta}. Solo se borran las de más de 12 meses.`
+      : 'Primero descarga el CSV: solo se borra lo que ya descargaste, y solo lo de más de 12 meses.';
   }
 
   async function descargar() {
@@ -99,12 +111,13 @@ export function crearCotizador({ cliente, llamarAdmin, leer, esc, aviso, numero,
     const tabla = 'cotizador_' + r.segmento;
     const filas = [];
     for (let i = 0; ; i += 1000) {
-      const pagina = await leer(cliente().from(tabla).select('*').gte('created_at', inicioDelDia(r.desde)).lt('created_at', inicioDelDia(r.hasta, 1))
+      const pagina = await leer(cliente().from(tabla).select('*, aliados(codigo_aliado)').gte('created_at', inicioDelDia(r.desde)).lt('created_at', inicioDelDia(r.hasta, 1))
         .order('created_at').order('id').range(i, i + 999));
       filas.push(...pagina);
       if (pagina.length < 1000) break;
     }
-    if (!filas.length) { aviso('No hay simulaciones en ese rango.'); descargado = null; pintarBorrar(); return; }
+    filas.forEach((f) => { f.segmento = r.segmento; });
+    if (!filas.length) { aviso('No hay cotizaciones en ese rango.'); descargado = null; pintarBorrar(); return; }
     const url = URL.createObjectURL(new Blob([aCsv(r.segmento, filas)], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url; a.download = `cotizador-${r.segmento}-${r.desde}-a-${r.hasta}.csv`;
@@ -112,15 +125,15 @@ export function crearCotizador({ cliente, llamarAdmin, leer, esc, aviso, numero,
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     descargado = Object.assign({ filas: filas.length }, r);
     pintarBorrar();
-    aviso(`Descargadas ${numero(filas.length)} simulaciones.`);
+    aviso(`Descargadas ${numero(filas.length)} cotizaciones.`);
   }
 
   function borrar() {
     if (!descargado) return;
     const d = descargado;
     pedir({
-      titulo: 'Borrar simulaciones descargadas',
-      texto: `Se borran las simulaciones de tipo ${d.segmento} del ${d.desde} al ${d.hasta}. No se pueden recuperar. Las propuestas que todavía no llegan a Clientify no se borran.`,
+      titulo: 'Borrar cotizaciones descargadas',
+      texto: `Se borran las cotizaciones de tipo ${d.segmento} del ${d.desde} al ${d.hasta} que tengan más de 12 meses. No se pueden recuperar. Las más recientes y las propuestas que todavía no llegan a Clientify no se borran.`,
       campos: [{ id: 'guardado', etiqueta: 'Ya guardé el archivo descargado en un lugar seguro', tipo: 'casilla' }],
       confirmar: 'Borrar', peligro: true,
       accion: async (v) => {
@@ -128,7 +141,9 @@ export function crearCotizador({ cliente, llamarAdmin, leer, esc, aviso, numero,
         const r = await llamarAdmin('borrar_cotizaciones', { segmento: d.segmento, desde: inicioDelDia(d.desde), hasta: inicioDelDia(d.hasta, 1) });
         descargado = null;
         await cargar();
-        return `Borradas ${numero(r.borradas)} simulaciones` + (r.sin_enviar ? `; quedan ${numero(r.sin_enviar)} propuestas por llegar a Clientify.` : '.');
+        return `Borradas ${numero(r.borradas)} cotizaciones.`
+          + (r.recientes ? ` Se conservan ${numero(r.recientes)} de los últimos 12 meses.` : '')
+          + (r.sin_enviar ? ` Quedan ${numero(r.sin_enviar)} propuestas por llegar a Clientify.` : '');
       }
     });
   }

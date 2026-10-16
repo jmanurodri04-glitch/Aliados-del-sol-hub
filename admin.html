@@ -234,8 +234,11 @@
 
     <section data-pestana="cotizador" hidden>
       <h1>Cotizador Solar</h1>
-      <p class="nota">Las simulaciones que la gente guarda al «Conectar al inversor» en Herramientas › Cotizador Solar (con o sin sesión), una tabla por tipo de proyecto. Son para el análisis de marketing: descárgalas cada 6 a 12 meses y, cuando el archivo esté guardado, bórralas. No tienen relación con los aliados ni con los Puntos Sol. Las propuestas que la gente pidió llegan a Clientify con la etiqueta «Cotizador Hub»; las que aún no llegan no se borran.</p>
+      <p class="nota">Las cotizaciones que los aliados guardan al «Conectar al inversor» en Herramientas › Cotizador Solar, una tabla por tipo de proyecto. Cada «Solicitar propuesta» da +5 Puntos Sol al aliado y llega a Clientify con la etiqueta «Cotizador Hub» (sin ID_aliado). Descarga el CSV para el análisis de marketing; solo se pueden borrar las de más de 12 meses, y nunca las propuestas que aún no llegan a Clientify.</p>
       <div class="tarjeta tabla" id="cot-resumen"></div>
+      <h2 style="margin-top:20px">Uso por aliado</h2>
+      <p class="nota">Ordenado por las cotizaciones de los últimos 30 días. Si ves un uso exagerado, descuenta los puntos con un ajuste de puntos desde la pestaña «Aliados».</p>
+      <div class="tarjeta tabla" id="cot-aliados"></div>
       <div class="barra" style="margin-top:16px">
         <select id="cot-segmento" aria-label="Tipo de proyecto"><option value="industrial">Industrial</option><option value="comercial">Comercial</option><option value="residencial">Residencial</option></select>
         <label>Desde <input type="date" id="cot-desde" style="min-width:0"></label>

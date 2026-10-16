@@ -848,9 +848,16 @@
   </sc-if>
 
   <sc-if value="{{ isPubCotizador }}" hint-placeholder-val="{{ false }}">
-  <section data-screen-label="Cotizador Solar público" style="padding:0 clamp(16px,3.4vw,44px);animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
-    <div style="max-width:1320px;margin:0 auto">
-      <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
+  <section data-screen-label="Herramienta solo para aliados" style="padding:clamp(44px,7vh,90px) clamp(16px,3.4vw,44px);animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
+    <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px;padding:clamp(24px,4vw,40px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:var(--w-024,rgba(255,255,255,.024))">
+      <button onClick="{{ cotizadorAtras }}" style="align-self:flex-start;padding:0;border:none;background:transparent;cursor:pointer;font-size:14px;font-weight:600;color:var(--mut,#9A968F)">← Herramientas</button>
+      <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Disponible para aliados</span>
+      <h1 style="margin:0;font-size:clamp(28px,4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.02em">{{ pubSoloAliados.titulo }}</h1>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:var(--t3,#B4B0A9)">{{ pubSoloAliados.texto }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <button onClick="{{ goLogin }}" style="padding:12px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14.5px;font-weight:700;cursor:pointer">Iniciar sesión</button>
+        <button onClick="{{ goJoin }}" style="padding:12px 20px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:10px;background:transparent;color:var(--fg,#F2F0EC);font-size:14.5px;font-weight:600;cursor:pointer">Quiero ser aliado</button>
+      </div>
     </div>
   </section>
   </sc-if>
@@ -2542,7 +2549,13 @@
 
       <sc-if value="{{ isCotizador }}" hint-placeholder-val="{{ false }}">
       <section data-screen-label="Cotizador Solar" style="animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
-        <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
+        <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" on-refer="{{ cotizadorReferir }}" hint-size="100%,900px"></dc-import>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isComparador }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Comparador de propuestas" style="animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
+        <dc-import name="ADSComparador" theme="{{ themeAttr }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
       </section>
       </sc-if>
 
@@ -3042,8 +3055,8 @@
 
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Juan Rodríguez&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;points&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts de nivel&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;pointsBalance&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts disponibles&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:82,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;qualitySample&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:14,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:200,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;streakWeeks&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:4,&quot;step&quot;:1,&quot;unit&quot;:&quot;semanas&quot;,&quot;section&quot;:&quot;Aliado demo&quot;}}">
-const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'proyectos', 'cotizador', 'puntos', 'mobile'];
-const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-proyectos', 'p-cotizador', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
+const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'proyectos', 'cotizador', 'comparador', 'puntos', 'mobile'];
+const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-proyectos', 'p-cotizador', 'p-comparador', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
 
 const OPPS = [
   { id: 'o1', empresa: 'Textiles Andinas S.A.S.', sector: 'Manufactura', ciudad: 'Medellín, Antioquia', ciudadCorta: 'Medellín', fecha: '12 ago 2026', etapa: 'Propuesta', step: 3, consumo: '42.000 kWh/mes', pts: 250, upd: 'hace 2 días',
@@ -3097,6 +3110,7 @@ const POINTS_CONFIG = {
   ],
   perfectFields: ['Empresa', 'Nombre del contacto', 'Cargo', 'Teléfono', 'Correo', 'Sector', 'Subsector', 'Ciudad', 'Valor de la factura', 'Factura adjunta'],
   /* MEDDPICC: +20 una vez por referido cuando GEENERA revisa la información que envía el aliado (correo de confirmación). */
+  cotizador: { label: 'Uso del Cotizador Solar', pts: 5, desc: 'Al pedir con «Solicitar propuesta» la propuesta de una cotización tuya. Sin tope; el equipo GEENERA revisa el uso.' },
   meddpicc: { label: 'Información MEDDPICC del referido', pts: 20, desc: 'Responde el correo de confirmación con el MEDDPICC de la empresa. Aplica a referidos perfectos o con ciudad.' },
   academy: { label: 'Módulo de Academy completado', pts: 5, masterclassPts: 10, monthlyCap: 40, certPts: 15, category: 'Academy' },
   event: { label: 'Evento aliado validado', pts: 100, category: 'Eventos', requires: ['Evento realizado', 'GEENERA involucrada', 'Registro de asistentes', 'Mínimo 5 empresas dentro del perfil'], minCompanies: 5, note: 'Las oportunidades generadas en el evento acumulan sus Puntos Sol normalmente; el evento no las sustituye.' },
@@ -3667,7 +3681,7 @@ const ETAPA_SIGUIENTE = {
   noviable: ['No continúa', 'La oportunidad no continúa.']
 };
 /* Categoría del historial según el vínculo del movimiento (filtros de la pantalla Puntos Sol). */
-const VINCULO_HISTORIAL = { empresas: 'Oportunidades', racha: 'Racha', modulos_completados: 'Academy', eventos: 'Eventos', canjes: 'Canjes', ajuste_admin: 'Ajustes', aliados: 'Bienvenida' };
+const VINCULO_HISTORIAL = { empresas: 'Oportunidades', racha: 'Racha', modulos_completados: 'Academy', eventos: 'Eventos', canjes: 'Canjes', ajuste_admin: 'Ajustes', aliados: 'Bienvenida', cotizador: 'Cotizador' };
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -3898,7 +3912,13 @@ class Component extends DCLogic {
       })),
       proyQuery: s.proyQuery || '', onProyQuery: (ev) => this.setState({ proyQuery: ev.target.value }),
       proyAtras: () => this.go(s.route === 'p-proyectos' ? 'p-herramientas' : 'herramientas'),
-      cotizadorAtras: () => this.go(s.route === 'p-cotizador' ? 'p-herramientas' : 'herramientas'),
+      cotizadorAtras: () => this.go(s.route === 'p-cotizador' || s.route === 'p-comparador' ? 'p-herramientas' : 'herramientas'),
+      /* «Referir esta empresa» desde el Cotizador: abre «Nueva oportunidad» con los datos de la cotización. */
+      cotizadorReferir: d => this.setState({ newOpen: true, appMenu: false, step: 1, done: false, refTried: false, refError: '', refResult: null, refSending: false,
+        refData: Object.assign({}, d, { telefono: fmtPhone(d.telefono, d.country) }) }),
+      pubSoloAliados: s.route === 'p-comparador'
+        ? { titulo: 'Comparador de propuestas', texto: 'Compara lado a lado hasta 4 propuestas solares, escritas a mano o traídas de tus cotizaciones. Inicia sesión como aliado para usarlo.' }
+        : { titulo: 'Cotizador Solar', texto: 'Diseña el sistema solar de tus clientes, descarga la precotización y pide la propuesta a GEENERA. Cada solicitud suma Puntos Sol. Inicia sesión como aliado para usarlo.' },
       proyVolver: () => this.setState({ proySel: null }), proyReintentar: () => this.cargarProyectos(true)
     };
   }
@@ -4056,7 +4076,8 @@ class Component extends DCLogic {
   }
   withPublic(list) {
     const map = {
-      'Cotizador Solar': ['Abierta', 'Abrir cotizador', true],
+      'Cotizador Solar': ['Solo aliados', 'Iniciar sesión', false],
+      'Comparador de propuestas': ['Solo aliados', 'Iniciar sesión', false],
       'Casos y proyectos': ['Abierta', 'Explorar proyectos', true],
       'Financiación Solar': ['Abierta', 'Ver aliados financieros', true],
       'Recursos comerciales': ['Solo aliados', 'Acceder como aliado', false]
@@ -4342,7 +4363,7 @@ class Component extends DCLogic {
     }));
 
     const nav = [['inicio', 'Inicio'], ['oportunidades', 'Oportunidades'], ['puntos', 'Puntos Sol'], ['beneficios', 'Beneficios'], ['herramientas', 'Herramientas'], ['academy', 'Academy']].filter(([id]) => id !== 'beneficios' || perms.seeBenefits).map(([id, label]) => {
-      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && (route === 'financiacion' || route === 'proyectos' || route === 'cotizador'));
+      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && (route === 'financiacion' || route === 'proyectos' || route === 'cotizador' || route === 'comparador'));
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
     /* Fase 11: «Mi QR» abre el QR de canje (js/mi-qr.js) encima de la página; solo con sesión real. */
@@ -4975,13 +4996,13 @@ class Component extends DCLogic {
       menuLabel: s.menuOpen ? 'Cerrar' : 'Menú', menuExpanded: s.menuOpen ? 'true' : 'false',
       toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
       isHome: route === 'home', isPubOportunidades: route === 'p-oportunidades', isPubBeneficios: route === 'p-beneficios',
-      isPubHerramientas: route === 'p-herramientas', isPubProyectos: route === 'p-proyectos', isPubCotizador: route === 'p-cotizador', isPubAcademy: route === 'p-academy',
+      isPubHerramientas: route === 'p-herramientas', isPubProyectos: route === 'p-proyectos', isPubCotizador: route === 'p-cotizador' || route === 'p-comparador', isPubAcademy: route === 'p-academy',
       isPubAliados: route === 'p-aliados', isPubSoporte: route === 'p-soporte',
       publicNav: [['home', 'Inicio'], ['p-oportunidades', 'Oportunidades'], ['p-beneficios', 'Beneficios'], ['p-herramientas', 'Herramientas'], ['p-academy', 'Academy'], ['p-aliados', 'Aliados'], ['p-soporte', 'Soporte']].map(([id, label]) => ({
         label, go: () => this.go(id),
-        bg: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 'rgba(255,202,5,.1)' : 'transparent',
-        color: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
-        fw: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 600 : 400
+        bg: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador' || route === 'p-comparador')) ? 'rgba(255,202,5,.1)' : 'transparent',
+        color: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador' || route === 'p-comparador')) ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
+        fw: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador' || route === 'p-comparador')) ? 600 : 400
       })),
       goHome: () => this.go('home'), goPubBeneficios: () => this.go('p-beneficios'), goPubHerramientas: () => this.go('p-herramientas'),
       goPubAcademy: () => this.go('p-academy'), goPubAliados: () => this.go('p-aliados'), goPubSoporte: () => this.go('p-soporte'),
@@ -5052,7 +5073,7 @@ class Component extends DCLogic {
       isBeneficios: route === 'beneficios', isHerramientas: route === 'herramientas', isAcademy: route === 'academy',
       acaAllyType: this.role().id, acaUserKey: real ? real.aliado.codigo_aliado : '', acaGuest: !real,
       isPerfil: route === 'perfil', isComisiones: route === 'comisiones', isMobile: route === 'mobile',
-      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isProyectos: route === 'proyectos', isCotizador: route === 'cotizador', isPuntos: route === 'puntos',
+      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isProyectos: route === 'proyectos', isCotizador: route === 'cotizador', isComparador: route === 'comparador', isPuntos: route === 'puntos',
       goFinanciacion: () => this.go('financiacion'), goPuntos: () => this.go('puntos'),
       userName, firstName: userName.split(' ')[0], greeting,
       todayLabel: real ? (() => { const d = enBogota(new Date()); return DIAS_SEMANA[d.getUTCDay()] + ', ' + d.getUTCDate() + ' de ' + MESES_LARGOS[d.getUTCMonth()]; })() : 'Viernes, 28 de agosto',
@@ -5108,6 +5129,7 @@ class Component extends DCLogic {
       hayQR: !!real, abrirQR,
       earnRules: POINTS_CONFIG.opportunity.map(m => ({ pts: m.pts, label: m.label, note: m.desc })).concat([
         { pts: POINTS_CONFIG.meddpicc.pts, label: POINTS_CONFIG.meddpicc.label, note: POINTS_CONFIG.meddpicc.desc },
+        { pts: POINTS_CONFIG.cotizador.pts, label: POINTS_CONFIG.cotizador.label, note: POINTS_CONFIG.cotizador.desc },
         { pts: POINTS_CONFIG.academy.pts, label: 'Módulo de Academy', note: '+' + POINTS_CONFIG.academy.pts + ' por minicurso y +' + POINTS_CONFIG.academy.masterclassPts + ' por la masterclass · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' Puntos Sol al mes' },
         { pts: POINTS_CONFIG.academy.certPts, label: 'Certificación de la Academy', note: 'Al completar todos los minicursos de una certificación · aparte de los puntos de cada minicurso y fuera del tope mensual' },
         { pts: STREAK_CONFIG.bonus, label: STREAK_CONFIG.name, note: STREAK_CONFIG.rule }
@@ -5124,7 +5146,8 @@ class Component extends DCLogic {
       }),
       ledger: historyRows,
       tools: this.withPublic([
-        { name: 'Cotizador Solar', desc: 'Estima potencia, ahorro mensual y retorno con el consumo de la empresa. Genera un resumen que puedes compartir.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir cotizador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Diseño, ahorro e inversión aproximados', iconBg: 'rgba(255,202,5,.14)', iconColor: 'var(--y,#FFCA05)', iconShape: '50%', act: () => this.go('cotizador'), pubAct: () => this.go(this.state.sesion ? 'cotizador' : 'p-cotizador') },
+        { name: 'Cotizador Solar', desc: 'Diseña el sistema de tu cliente: potencia, ahorro e inversión. Descarga la precotización y pide la propuesta (+5 Puntos Sol).', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir cotizador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Diseño, ahorro e inversión aproximados', iconBg: 'rgba(255,202,5,.14)', iconColor: 'var(--y,#FFCA05)', iconShape: '50%', act: () => this.go('cotizador'), pubAct: () => this.go(this.state.sesion ? 'cotizador' : 'p-cotizador') },
+        { name: 'Comparador de propuestas', desc: 'Pon lado a lado hasta 4 propuestas solares de tu cliente, escritas a mano o traídas de tus cotizaciones, y ve cuál conviene.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir comparador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Inversión, potencia, garantías y servicios', iconBg: 'rgba(127,211,166,.14)', iconColor: 'var(--g2,#7FD3A6)', iconShape: '2px', act: () => this.go('comparador'), pubAct: () => this.go(this.state.sesion ? 'comparador' : 'p-comparador') },
         { name: 'Casos y proyectos', desc: 'Explora proyectos ejecutados por GEENERA y encuentra referencias para diferentes tipos de empresas.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Explorar proyectos', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Kilovatios, ahorro y CO₂ de cada proyecto', iconBg: 'rgba(249,165,26,.14)', iconColor: 'var(--o,#F9A51A)', iconShape: '3px', act: () => this.go('proyectos'), pubAct: () => this.go(this.state.sesion ? 'proyectos' : 'p-proyectos') },
         { name: 'Financiación Solar', desc: 'Conoce los aliados financieros que pueden acompañar la inversión en tu proyecto solar. No es un comparador: las condiciones las define cada entidad.', state: 'Informativo', stBg: 'rgba(249,165,26,.16)', stColor: 'var(--o,#F9A51A)', cta: 'Ver aliados financieros', ctaBg: 'var(--w-06,rgba(255,255,255,.06))', ctaColor: 'var(--fg,#F2F0EC)', meta: '5 entidades aliadas', iconBg: 'rgba(243,121,32,.14)', iconColor: '#F37920', iconShape: '2px 10px 2px 10px', act: () => this.go('financiacion') },
         { name: 'Recursos comerciales', desc: 'Presentaciones, brochures, guiones y piezas listas para compartir con una empresa o por WhatsApp.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Ver biblioteca', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: '18 piezas actualizadas', iconBg: 'var(--w-08,rgba(255,255,255,.08))', iconColor: 'var(--t2,#C9C5BE)', iconShape: '50% 50% 50% 2px', act: () => this.ping('Abriendo la biblioteca de recursos.') }

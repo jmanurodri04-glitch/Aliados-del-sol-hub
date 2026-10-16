@@ -95,13 +95,17 @@ test('envío: no repite el resumen en la descripción', () => {
   assert.equal('description' in actualizacionDeExistente({ description: 'x\n\n' + datos.description }, datos).cambios, false);
 });
 
-test('ID_aliado de quien refiere: va al contacto nuevo; uno que ya tenía el contacto no se cambia', () => {
-  const datos = construirContactoCotizacion({ ...IND, referente_codigo: 'EMABCD2345XY' }, 'production');
-  assert.equal(valor(datos, 'ID_aliado'), 'EMABCD2345XY');
-  assert.equal(valor(construirContactoCotizacion(IND, 'production'), 'ID_aliado'), undefined, 'sin quien refiere, vacío');
+test('sin ID_aliado; la descripción dice qué aliado cotizó y lleva las preguntas si se respondieron', () => {
+  const datos = construirContactoCotizacion({ ...IND, codigo_aliado: 'FIJJPL7K4MQ9TX',
+    meddpicc: { v: 1, respuestas: { necesidad: { o: ['factura'] }, competencia: { o: ['1_2'] } } } }, 'production');
+  assert.equal(valor(datos, 'ID_aliado'), undefined);
+  assert.match(datos.description, /Cotizado en el Hub por el aliado FIJJPL7K4MQ9TX\./);
+  assert.match(datos.description, /- ¿Por qué quiere el cliente un sistema solar ahora\? Bajar la factura de energía/);
+  assert.match(datos.description, /- ¿Con quién más lo está comparando\? Con 1 o 2 proveedores más/);
+  const sin = construirContactoCotizacion(IND, 'production');
+  assert.doesNotMatch(sin.description, /Preguntas del aliado/);
   const conId = actualizacionDeExistente({ custom_fields: [{ field: 'ID_aliado', value: 'FIPRIMERO2345' }] }, datos).cambios;
-  assert.equal(valor(conId, 'ID_aliado'), undefined, 'la atribución es del primer aliado');
-  assert.equal(valor(actualizacionDeExistente({}, datos).cambios, 'ID_aliado'), 'EMABCD2345XY');
+  assert.equal(valor(conId, 'ID_aliado'), undefined, 'el ID_aliado de «Referir empresa» no se toca');
 });
 
 test('envío: el contacto de un aliado (Tipo Aliados Estratégicos) solo recibe los campos y el resumen', async () => {

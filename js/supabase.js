@@ -117,8 +117,8 @@ async function cargarAcademy(activa) {
   }
 }
 
-// Cotizador Solar (js/cotizador.js, CLAUDE.md §7.5): con sesión de aliado, «Solicitar propuesta» lleva su token para
-// que el servidor ponga su ID_aliado en Clientify. Devuelve { activa, token? }; nunca expone datos del aliado.
+// Cotizador Solar y Comparador (js/cotizador.js, CLAUDE.md §7.5 y §7.6): toda llamada a /api/cotizador lleva el token
+// de la sesión (el servidor toma el aliado de ahí). Devuelve { activa, token? }; nunca expone datos del aliado.
 window.adsSesionCotizador = async () => {
   if (!sesionActual.activa) return { activa: false };
   try {

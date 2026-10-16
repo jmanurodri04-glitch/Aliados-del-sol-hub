@@ -1,20 +1,33 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-CO">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aliados del Sol · Programa de aliados de GEENERA</title>
-<meta name="description" content="Programa de aliados de GEENERA: refiere empresas, sigue el avance de cada oportunidad y acumula Puntos Sol, niveles y beneficios.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aliados del Sol | Comunidad de aliados de energía solar en Colombia – GEENERA</title>
+<meta name="description" content="Únete a Aliados del Sol, la comunidad de GEENERA que conecta consultores, gremios, entidades financieras y profesionales con empresas que buscan transformar su energía. Aprende, conecta, refiere oportunidades y accede a beneficios.">
+<link rel="canonical" href="https://aliadosdelsol.com/">
+<meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#07070A">
 <meta name="color-scheme" content="dark light">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="assets/favicon-512.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preload" as="image" href="assets/foto-paneles.jpg" fetchpriority="high">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Aliados del Sol · por GEENERA">
-<meta property="og:description" content="Una conexión puede convertirse en energía. Refiere empresas a GEENERA y sigue cada oportunidad.">
-<meta property="og:image" content="assets/foto-paneles.jpg">
+<meta property="og:locale" content="es_CO">
+<meta property="og:site_name" content="Aliados del Sol">
+<meta property="og:url" content="https://aliadosdelsol.com/">
+<meta property="og:title" content="Aliados del Sol · La comunidad de GEENERA">
+<meta property="og:description" content="Una comunidad que conecta empresas con la energía del sol. Aprende. Conecta. Refiere. Crece.">
+<meta property="og:image" content="https://aliadosdelsol.com/assets/foto-paneles.jpg">
+<meta property="og:image:alt" content="Paneles solares en una cubierta empresarial">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Aliados del Sol · La comunidad de GEENERA">
+<meta name="twitter:description" content="Una comunidad que conecta empresas con la energía del sol.">
+<meta name="twitter:image" content="https://aliadosdelsol.com/assets/foto-paneles.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Aliados del Sol","url":"https://aliadosdelsol.com/","logo":"https://aliadosdelsol.com/assets/logo-aliados-v2.png","parentOrganization":{"@type":"Organization","name":"GEENERA","url":"https://geenera.com"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Aliados del Sol","url":"https://aliadosdelsol.com/","inLanguage":"es-CO"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Qué es Aliados del Sol?","acceptedAnswer":{"@type":"Answer","text":"Es la comunidad de GEENERA que reúne consultores, empresarios, gremios, entidades financieras y profesionales para aprender, conectar e impulsar oportunidades de energía solar empresarial en Colombia."}},{"@type":"Question","name":"¿Necesito unirme para referir una empresa?","acceptedAnswer":{"@type":"Answer","text":"Puedes referir con tu correo y la plataforma relaciona la empresa contigo. Al unirte a la comunidad sigues el avance de cada empresa, accedes a Academy y herramientas, y tu aporte se reconoce con Puntos Sol."}},{"@type":"Question","name":"¿Puntos y comisiones son lo mismo?","acceptedAnswer":{"@type":"Answer","text":"No. Los Puntos Sol son reconocimiento y abren beneficios del catálogo. La comisión es dinero y se liquida según el contrato de aliado cuando el proyecto se cierra. Nunca se mezclan."}},{"@type":"Question","name":"¿Cuánto tarda la validación de un referido?","acceptedAnswer":{"@type":"Answer","text":"El equipo GEENERA revisa los datos en menos de 24 horas hábiles y te informa si necesita información adicional."}},{"@type":"Question","name":"¿Qué pasa si la empresa no es viable?","acceptedAnswer":{"@type":"Answer","text":"La oportunidad queda marcada como no viable con la razón. No hay penalización: penalizamos mala calidad evitable, nunca el resultado comercial. Conservas tus Puntos Sol."}},{"@type":"Question","name":"¿Cómo suben mis puntos más rápido?","acceptedAnswer":{"@type":"Answer","text":"Entrega todos los datos del Referido Perfecto: el registro suma +10 y el Referido Perfecto agrega +20. La validación de la empresa suma +30, la evaluación técnica +30, la propuesta +50 y el cierre +150. La Racha Solar 4x4 agrega +75."}},{"@type":"Question","name":"¿Quién puede unirse?","acceptedAnswer":{"@type":"Answer","text":"Consultores, EMIs, Linkers, profesionales, empresarios, entidades financieras, gremios, cámaras y empresas del ecosistema. El equipo GEENERA valida cada solicitud."}}]}</script>
 <script src="./support.js"></script>
 <!-- Supabase Auth: registro, login y sesión (ver js/supabase.js) -->
 <script type="module" src="./js/supabase.js"></script>
@@ -31,6 +44,22 @@
 </template>
 </head>
 <body>
+<noscript>
+<main style="max-width:860px;margin:0 auto;padding:48px 20px;font-family:system-ui,sans-serif;color:#F2F0EC;background:#07070A;line-height:1.6">
+<h1>Conecta una empresa con la energía del sol.</h1>
+<p>Aliados del Sol es la comunidad de GEENERA que reúne consultores, empresarios, gremios, entidades financieras y profesionales para aprender, conectar e impulsar nuevas oportunidades de energía solar empresarial en Colombia.</p>
+<h2>Cómo funciona</h2><p>Aprende → Conecta → Refiere → Crece.</p>
+<h2>Herramientas</h2><ul><li>Academy</li><li>Casos y Proyectos</li><li>Cotizador Solar</li><li>Financiador Leasing Solar</li><li>Comparador de Propuestas Solares</li><li>Recursos comerciales</li></ul>
+<h2>Preguntas frecuentes</h2>
+<h3>¿Qué es Aliados del Sol?</h3><p>Es la comunidad de GEENERA que reúne consultores, empresarios, gremios, entidades financieras y profesionales para aprender, conectar e impulsar oportunidades de energía solar empresarial en Colombia.</p>
+<h3>¿Necesito unirme para referir una empresa?</h3><p>Puedes referir con tu correo y la plataforma relaciona la empresa contigo. Al unirte a la comunidad sigues el avance de cada empresa, accedes a Academy y herramientas, y tu aporte se reconoce con Puntos Sol.</p>
+<h3>¿Puntos y comisiones son lo mismo?</h3><p>No. Los Puntos Sol son reconocimiento y abren beneficios del catálogo. La comisión es dinero y se liquida según el contrato de aliado cuando el proyecto se cierra. Nunca se mezclan.</p>
+<h3>¿Cuánto tarda la validación de un referido?</h3><p>El equipo GEENERA revisa los datos en menos de 24 horas hábiles y te informa si necesita información adicional.</p>
+<h3>¿Qué pasa si la empresa no es viable?</h3><p>La oportunidad queda marcada como no viable con la razón. No hay penalización: penalizamos mala calidad evitable, nunca el resultado comercial. Conservas tus Puntos Sol.</p>
+<h3>¿Cómo suben mis puntos más rápido?</h3><p>Entrega todos los datos del Referido Perfecto: el registro suma +10 y el Referido Perfecto agrega +20. La validación de la empresa suma +30, la evaluación técnica +30, la propuesta +50 y el cierre +150. La Racha Solar 4x4 agrega +75.</p>
+<h3>¿Quién puede unirse?</h3><p>Consultores, EMIs, Linkers, profesionales, empresarios, entidades financieras, gremios, cámaras y empresas del ecosistema. El equipo GEENERA valida cada solicitud.</p>
+</main>
+</noscript>
 <x-dc>
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,9 +99,9 @@
 
 <sc-if value="{{ isPublic }}" hint-placeholder-val="{{ true }}">
 <div style="min-height:100vh;display:flex;flex-direction:column;overflow-x:clip">
-  <header style="position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:clamp(10px,1.6vw,22px);padding:12px clamp(14px,3vw,44px);border-bottom:1px solid var(--w-07,rgba(255,255,255,.07));background:var(--b-92,rgba(7,7,10,.92));backdrop-filter:blur(10px)">
+  <header style="position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:clamp(10px,1.6vw,22px);padding:calc(12px + env(safe-area-inset-top,0px)) max(clamp(14px,3vw,44px),env(safe-area-inset-right,0px)) 12px max(clamp(14px,3vw,44px),env(safe-area-inset-left,0px));border-bottom:1px solid var(--w-07,rgba(255,255,255,.07));background:var(--b-92,rgba(7,7,10,.92));backdrop-filter:blur(10px)">
     <button onClick="{{ goHome }}" style="display:flex;align-items:center;gap:10px;border:none;background:transparent;cursor:pointer;padding:0">
-      <img src="assets/logo-aliados.png" alt="Aliados del Sol" style="width:clamp(104px,9vw,132px);height:auto;display:block">
+      <img src="assets/logo-aliados-v2.png" alt="Aliados del Sol" width="162" height="113" style="height:clamp(40px,3.6vw,48px);width:auto;display:block">
     </button><sc-if value="{{ pantallaAncha }}" hint-placeholder-val="{{ true }}"><span style="flex: none; font-size: 10px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--mut4,#6B6762)">by GEENERA</span>
     <span style="flex:none;width:1px;height:22px;background:var(--w-10,rgba(255,255,255,.1))"></span></sc-if>
     
@@ -98,10 +127,9 @@
           <button onClick="{{ m.go }}" style="padding: 5px 9px; border: none; border-radius: 6px; background: {{ m.bg }}; color: {{ m.color }}; font-size: 8px; font-weight: 400; cursor: pointer; transition: background 160ms ease,color 160ms ease; white-space: nowrap; text-align: right" type="button">{{ m.label }}</button>
         </sc-for>
       </span>
-      <button onClick="{{ goLogin }}" style="padding:9px 14px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg2,#E4E1DB);font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color 180ms ease" style-hover="border-color:rgba(255,202,5,.35)">Iniciar sesión</button>
-      <button onClick="{{ goRefer }}" style="padding:9px 14px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg2,#E4E1DB);font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color 180ms ease" style-hover="border-color:rgba(255,202,5,.35)">Referir empresa</button>
+      <button onClick="{{ goLogin }}" style="padding:9px 14px;border:1px solid var(--w-12,rgba(255,255,255,.12));border-radius:9px;background:var(--w-03,rgba(255,255,255,.03));color:var(--fg2,#E4E1DB);font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color 180ms ease" style-hover="border-color:rgba(255,202,5,.35)">Ingresar</button>
       </sc-if>
-      <button onClick="{{ goJoin }}" style="padding:9px 17px;border:none;border-radius:9px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 6px 18px -8px rgba(243,121,32,.7);transition:transform 160ms ease" style-hover="transform:translateY(-1px)">Quiero ser aliado</button>
+      <button onClick="{{ goJoin }}" style="padding:9px 17px;border:none;border-radius:9px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 6px 18px -8px rgba(243,121,32,.7);transition:transform 160ms ease" style-hover="transform:translateY(-1px)">Unirme a la comunidad</button>
     </div>
   </header>
 
@@ -115,10 +143,10 @@
           <button onClick="{{ m.go }}" style="padding:5px 9px;border:none;border-radius:6px;background:{{ m.bg }};color:{{ m.color }};font-size:11.5px;font-weight:600;cursor:pointer;transition:background 160ms ease,color 160ms ease;white-space:nowrap">{{ m.label }}</button>
         </sc-for>
       </span></div>
-    <button onClick="{{ goJoin }}" style="margin-top:8px;padding:12px;border:1px dashed rgba(255,202,5,.35);border-radius:10px;background:rgba(255,202,5,.05);color:var(--y,#FFCA05);font-size:14px;font-weight:600;cursor:pointer">Quiero ser aliado</button>
+    <button onClick="{{ goJoin }}" style="margin-top:8px;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15px;font-weight:700;cursor:pointer;min-height:52px">Quiero unirme a la comunidad</button>
     <div style="display:flex;gap:10px;padding-top:10px">
-      <button onClick="{{ goLogin }}" style="flex:1;padding:13px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:10px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:14.5px;font-weight:600;cursor:pointer;min-height:48px">Iniciar sesión</button>
-      <button onClick="{{ goRefer }}" style="flex:1;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14.5px;font-weight:700;cursor:pointer;min-height:48px">Referir empresa</button>
+      <button onClick="{{ goLogin }}" style="flex:1;padding:13px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:10px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:14.5px;font-weight:600;cursor:pointer;min-height:48px">Ingresar</button>
+      <button onClick="{{ goRefer }}" style="flex:1;padding:13px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:10px;background:transparent;color:var(--y,#FFCA05);font-size:14.5px;font-weight:600;cursor:pointer;min-height:48px">Referir empresa</button>
     </div>
   </nav>
   </sc-if>
@@ -129,7 +157,7 @@
     <section style="position:relative;display:grid;place-items:center;min-height:calc(100vh - 62px);padding:clamp(40px,7vh,90px) clamp(16px,3.4vw,44px);overflow:hidden">
       <img src="assets/foto-paneles.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 60%;opacity:.22;transform:scale(1.04)">
       <div style="position:absolute;inset:0;background:radial-gradient(ellipse 58% 52% at 80% 4%,rgba(255,210,80,.42) 0%,rgba(249,165,26,.16) 34%,var(--b-0,rgba(7,7,10,0)) 66%),linear-gradient(180deg,var(--b-50,rgba(7,7,10,.5)) 0%,var(--b-84,rgba(7,7,10,.84)) 58%,var(--bg,#07070A) 100%)"></div>
-      <div style="position:absolute;inset:0;opacity:.5;background-image:linear-gradient(var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px),linear-gradient(90deg,var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px);background-size:96px 96px;mask-image:radial-gradient(ellipse 62% 58% at 50% 46%,#000 25%,transparent 76%);-webkit-mask-image:radial-gradient(ellipse 62% 58% at 50% 46%,#000 25%,transparent 76%)"></div>
+      <div style="position: absolute; inset: 0px; opacity: 0.5; background-image: linear-gradient(var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px),linear-gradient(90deg,var(--w-04,rgba(255,255,255,.04)) 1px,transparent 1px); background-size: 96px 96px; mask-image: radial-gradient(62% 58% at 50% 46%, rgb(0, 0, 0) 25%, transparent 76%);"></div>
       <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:clamp(20px,3vh,34px);text-align:center;max-width:980px">
         <span data-reveal="1" style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45);opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">Aliados del Sol · by GEENERA</span>
         <h1 style="margin:0;font-size:clamp(36px,6.4vw,84px);line-height:1;font-weight:700;letter-spacing:-.04em;display:flex;flex-direction:column;align-items:center;gap:.04em">
@@ -151,8 +179,8 @@
           </sc-for>
         </div>
       </div>
-      <div style="position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--mut5,#5A5651);font-size:11px;letter-spacing:.18em;text-transform:uppercase">
-        <span>Desliza</span><span style="width:1px;height:26px;background:linear-gradient(180deg,rgba(255,202,5,.7),rgba(255,202,5,0))"></span>
+      <div style="position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--mut5,#5A5651); font-size: 11px; letter-spacing: .18em; text-transform: uppercase">
+        <span style="width: 55px; height: 8px">Desliza</span><span style="width:1px;height:26px;background:linear-gradient(180deg,rgba(255,202,5,.7),rgba(255,202,5,0))"></span>
       </div>
     </section>
 
@@ -163,9 +191,9 @@
     <section ref="{{ referRef }}" style="padding:clamp(60px,9vh,110px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
       <div style="max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;gap:clamp(28px,4vw,56px);align-items:start">
         <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:22px">
-          <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Referir empresa · como Aliado del Sol</span>
-          <h2 style="margin:0;font-size:clamp(28px,3.6vw,44px);line-height:1.08;font-weight:700;letter-spacing:-.03em;text-wrap:pretty">¿Conoces una empresa que pueda ahorrar con energía solar?</h2>
-          <p style="margin:0;font-size:clamp(15px,1.3vw,18px);line-height:1.55;color:var(--mut,#9A968F);max-width:44ch">Refiérela en menos de dos minutos. El equipo GEENERA se encargará del resto y te mantendrá informado.</p>
+          <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Referir empresa como Aliado del Sol</span>
+          <h2 style="margin:0;font-size:clamp(28px,3.6vw,44px);line-height:1.08;font-weight:700;letter-spacing:-.03em;text-wrap:pretty">Una buena oportunidad empieza por entender el negocio.</h2>
+          <p style="margin:0;font-size:clamp(15px,1.3vw,18px);line-height:1.55;color:var(--mut,#9A968F);max-width:44ch">Buscamos empresas con consumo energético relevante, infraestructura adecuada y condiciones operativas que permitan estructurar un proyecto solar técnica y financieramente viable. Refiérela en pocos minutos: el equipo GEENERA evalúa y te mantiene informado.</p>
           <div style="display:flex;flex-direction:column;gap:11px;padding-top:4px">
             <span style="font-size:15.5px;font-weight:600;color:var(--fg2,#E4E1DB)">Haz que tu referido valga más</span>
             <sc-for list="{{ qualityTiers }}" as="q" hint-placeholder-count="3">
@@ -178,7 +206,7 @@
                 <span style="font-size:17px;font-weight:700;color:{{ q.ptsColor }};white-space:nowrap">{{ q.pts }}</span>
               </div>
             </sc-for>
-            <p style="margin:0;font-size:12.5px;color:var(--mut5,#5A5651)">Puntos Sol de demostración, configurables desde el panel de GEENERA.</p>
+            
           </div>
         </div>
 
@@ -259,9 +287,9 @@
     <section style="padding:clamp(56px,8vh,100px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
       <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(26px,4vh,44px)">
         <div style="display:flex;flex-direction:column;gap:14px;max-width:60ch">
-          <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Comunidad</span>
-          <h2 style="margin:0;font-size:clamp(26px,3.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.03em;text-wrap:pretty">Construimos oportunidades junto a grandes aliados.</h2>
-          <p style="margin:0;font-size:15.5px;line-height:1.55;color:var(--t3,#B4B0A9);max-width:52ch;text-wrap:pretty">Una red de personas que abren conversaciones donde nadie más entra. Consultores, gremios, proveedores y directivos que conocen su país.</p>
+          <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Comunidad · Una iniciativa de GEENERA</span>
+          <h2 style="margin:0;font-size:clamp(26px,3.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.03em;text-wrap:pretty">¿Qué es Aliados del Sol?</h2>
+          <p style="margin:0;font-size:15.5px;line-height:1.55;color:var(--t3,#B4B0A9);max-width:52ch;text-wrap:pretty">Más que un programa de referidos: la comunidad de GEENERA donde consultores, empresarios, gremios, entidades financieras y empresas clientes aprenden, se conectan e impulsan proyectos solares empresariales en Colombia.</p>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;max-width:1080px">
           <sc-for list="{{ communityStats }}" as="c" hint-placeholder-count="5">
@@ -347,7 +375,109 @@
           </sc-if>
         </div>
       </sc-for>
-        <p style="margin:0;font-size:12.5px;color:var(--mut5,#5A5651)"></p>
+        <sc-if value="{{ staging }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px;border:1px dashed rgba(255,202,5,.35);border-radius:12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;letter-spacing:.04em;line-height:1.5;color:var(--mut3,#7C7873)">SOLO STAGING · Espacio reservado para reconocimientos institucionales recibidos por Aliados del Sol.</div></sc-if>
+      </div>
+    </section>
+
+    <section style="padding:clamp(60px,9vh,112px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
+      <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(30px,5vh,52px)">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px 40px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:14px;max-width:64ch">
+            <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Cómo funciona</span>
+            <h2 data-reveal="1" style="margin: 0; font-size: clamp(26px,3.4vw,42px); line-height: 1.08; font-weight: 700; letter-spacing: -.03em; text-wrap: pretty; opacity: 0; transform: translateY(18px); transition: opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms; width: 774px; height: 55px">Aprende → Conecta → Refiere → Crece.</h2>
+            <p data-reveal="1" style="margin:0;font-size:clamp(15px,1.25vw,17px);line-height:1.6;color:var(--t3,#B4B0A9);max-width:58ch;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 120ms,transform 820ms cubic-bezier(.22,.61,.36,1) 120ms">Pertenecer a la comunidad es el punto de partida. Los referidos y el reconocimiento son la consecuencia.</p>
+          </div>
+        </div>
+        <ol style="list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:14px">
+          <li data-reveal="1" style="display:flex;flex-direction:column;gap:12px;padding:clamp(22px,2.2vw,28px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">
+            <span style="display:flex;align-items:center;gap:12px"><span style="display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#FFCA05;color:#1A1200;font-size:13px;font-weight:700">1</span><span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,202,5,.4),rgba(255,202,5,0))"></span></span>
+            <h3 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em">Aprende</h3>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:var(--t3,#B4B0A9);text-wrap:pretty">Academy y casos reales para entender qué hace viable un proyecto solar empresarial.</p>
+          </li>
+          <li data-reveal="1" style="display:flex;flex-direction:column;gap:12px;padding:clamp(22px,2.2vw,28px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 90ms,transform 820ms cubic-bezier(.22,.61,.36,1) 90ms">
+            <span style="display:flex;align-items:center;gap:12px"><span style="display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,202,5,.4);color:var(--y,#FFCA05);font-size:13px;font-weight:700">2</span><span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,202,5,.4),rgba(255,202,5,0))"></span></span>
+            <h3 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em">Conecta</h3>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:var(--t3,#B4B0A9);text-wrap:pretty">Con empresarios, gremios, entidades financieras y el equipo GEENERA.</p>
+          </li>
+          <li data-reveal="1" style="display:flex;flex-direction:column;gap:12px;padding:clamp(22px,2.2vw,28px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 180ms,transform 820ms cubic-bezier(.22,.61,.36,1) 180ms">
+            <span style="display:flex;align-items:center;gap:12px"><span style="display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,202,5,.4);color:var(--y,#FFCA05);font-size:13px;font-weight:700">3</span><span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,202,5,.4),rgba(255,202,5,0))"></span></span>
+            <h3 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em">Refiere</h3>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:var(--t3,#B4B0A9);text-wrap:pretty">Registra empresas con potencial. GEENERA evalúa, estructura y acompaña cada proyecto.</p>
+          </li>
+          <li data-reveal="1" style="display:flex;flex-direction:column;gap:12px;padding:clamp(22px,2.2vw,28px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 270ms,transform 820ms cubic-bezier(.22,.61,.36,1) 270ms">
+            <span style="display:flex;align-items:center;gap:12px"><span style="display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,202,5,.4);color:var(--y,#FFCA05);font-size:13px;font-weight:700">4</span><span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,202,5,.4),rgba(255,202,5,0))"></span></span>
+            <h3 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em">Crece</h3>
+            <p style="margin:0;font-size:14.5px;line-height:1.55;color:var(--t3,#B4B0A9);text-wrap:pretty">Sigue cada oportunidad, avanza de nivel y accede a reconocimiento y beneficios.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section style="padding:clamp(60px,9vh,112px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
+      <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(30px,5vh,52px)">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px 40px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:14px;max-width:64ch">
+            <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Herramientas</span>
+            <h2 data-reveal="1" style="margin:0;font-size:clamp(26px,3.4vw,42px);line-height:1.08;font-weight:700;letter-spacing:-.03em;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">Todo lo que tienes para crecer dentro de Aliados del Sol.</h2>
+            <p data-reveal="1" style="margin:0;font-size:clamp(15px,1.25vw,17px);line-height:1.6;color:var(--t3,#B4B0A9);max-width:58ch;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 120ms,transform 820ms cubic-bezier(.22,.61,.36,1) 120ms">Cada herramienta resuelve un momento concreto de tu conversación con una empresa.</p>
+          </div><button onClick="{{ goPubHerramientas }}" style="padding:15px 24px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:12px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:16px;font-weight:600;cursor:pointer;min-height:52px;transition:border-color 180ms ease;font-size:14.5px;padding:12px 20px;min-height:46px" style-hover="border-color:rgba(255,202,5,.4)">Ver herramientas</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px">
+          <button onClick="{{ goPubAcademy }}" data-reveal="1" style="display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 26px;min-height:150px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:border-color 220ms ease,transform 220ms ease;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms" style-hover="border-color:rgba(255,202,5,.32);transform:translateY(-2px)">
+            <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;color:var(--y,#FFCA05)">01</span>
+            <span style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px"><h3 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Academy</h3><span style="color:var(--y,#FFCA05)">→</span></span>
+            <span style="font-size:14.5px;line-height:1.5;color:var(--mut,#9A968F);text-wrap:pretty">Aprendes a identificar oportunidades y a hablar de energía solar con criterio.</span>
+          </button>
+          <button onClick="{{ openCases }}" data-reveal="1" style="display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 26px;min-height:150px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:border-color 220ms ease,transform 220ms ease;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 70ms,transform 820ms cubic-bezier(.22,.61,.36,1) 70ms" style-hover="border-color:rgba(255,202,5,.32);transform:translateY(-2px)">
+            <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;color:var(--y,#FFCA05)">02</span>
+            <span style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px"><h3 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Casos y Proyectos</h3><span style="color:var(--y,#FFCA05)">→</span></span>
+            <span style="font-size:14.5px;line-height:1.5;color:var(--mut,#9A968F);text-wrap:pretty">Encuentras un proyecto real de la misma industria para respaldar tu conversación.</span>
+          </button>
+          <button onClick="{{ goPubHerramientas }}" data-reveal="1" style="display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 26px;min-height:150px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:border-color 220ms ease,transform 220ms ease;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 140ms,transform 820ms cubic-bezier(.22,.61,.36,1) 140ms" style-hover="border-color:rgba(255,202,5,.32);transform:translateY(-2px)">
+            <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;color:var(--y,#FFCA05)">03</span>
+            <span style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px"><h3 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Cotizador Solar</h3><span style="color:var(--y,#FFCA05)">→</span></span>
+            <span style="font-size:14.5px;line-height:1.5;color:var(--mut,#9A968F);text-wrap:pretty">Estimas potencia, ahorro y retorno antes de la primera reunión.</span>
+          </button>
+          <button onClick="{{ goPubHerramientas }}" data-reveal="1" style="display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 26px;min-height:150px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:border-color 220ms ease,transform 220ms ease;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms" style-hover="border-color:rgba(255,202,5,.32);transform:translateY(-2px)">
+            <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;color:var(--y,#FFCA05)">04</span>
+            <span style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px"><h3 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Financiador Leasing Solar</h3><span style="color:var(--y,#FFCA05)">→</span></span>
+            <span style="font-size:14.5px;line-height:1.5;color:var(--mut,#9A968F);text-wrap:pretty">Muestras a la empresa cómo financiar el proyecto con entidades aliadas.</span>
+          </button>
+          <button onClick="{{ goPubHerramientas }}" data-reveal="1" style="display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 26px;min-height:150px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:border-color 220ms ease,transform 220ms ease;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 70ms,transform 820ms cubic-bezier(.22,.61,.36,1) 70ms" style-hover="border-color:rgba(255,202,5,.32);transform:translateY(-2px)">
+            <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;color:var(--y,#FFCA05)">05</span>
+            <span style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px"><h3 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Comparador de Propuestas Solares</h3><span style="color:var(--y,#FFCA05)">→</span></span>
+            <span style="font-size:14.5px;line-height:1.5;color:var(--mut,#9A968F);text-wrap:pretty">Ayudas a la empresa a evaluar propuestas con los mismos criterios técnicos y financieros.</span>
+          </button>
+          <button onClick="{{ goPubHerramientas }}" data-reveal="1" style="display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 26px;min-height:150px;border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:18px;background:var(--w-022,rgba(255,255,255,.022));color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:border-color 220ms ease,transform 220ms ease;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 140ms,transform 820ms cubic-bezier(.22,.61,.36,1) 140ms" style-hover="border-color:rgba(255,202,5,.32);transform:translateY(-2px)">
+            <span style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:12px;color:var(--y,#FFCA05)">06</span>
+            <span style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px"><h3 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em">Recursos comerciales</h3><span style="color:var(--y,#FFCA05)">→</span></span>
+            <span style="font-size:14.5px;line-height:1.5;color:var(--mut,#9A968F);text-wrap:pretty">Tienes presentaciones y piezas listas para compartir con un gerente o por WhatsApp.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding:clamp(60px,9vh,112px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
+      <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(30px,5vh,52px)">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px 40px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:14px;max-width:64ch">
+            <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Casos reales</span>
+            <h2 data-reveal="1" style="margin:0;font-size:clamp(26px,3.4vw,42px);line-height:1.08;font-weight:700;letter-spacing:-.03em;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">Empresas que ya generan su propia energía.</h2>
+            <p data-reveal="1" style="margin:0;font-size:clamp(15px,1.25vw,17px);line-height:1.6;color:var(--t3,#B4B0A9);max-width:58ch;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 120ms,transform 820ms cubic-bezier(.22,.61,.36,1) 120ms">Solo casos empresariales ejecutados por GEENERA. Úsalos para mostrar a una empresa lo que es posible en su industria.</p>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px">
+          <div data-reveal="1" style="position:relative;min-height:380px;border-radius:20px;overflow:hidden;grid-column:1 / -1;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">
+            <img src="assets/foto-guamito.jpg" alt="Proyecto solar empresarial ejecutado por GEENERA" loading="lazy" width="1600" height="1000" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:14px;padding:clamp(22px,2.6vw,34px);background:linear-gradient(180deg,rgba(7,7,10,.05) 30%,rgba(7,7,10,.9));color:#F2F0EC">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#FFCA05">Case Finder</span>
+              <span style="font-size:clamp(22px,2.4vw,30px);font-weight:700;letter-spacing:-.02em;line-height:1.15;max-width:22ch">Encuentra proyectos por industria y región.</span>
+              <span style="display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:rgba(242,240,236,.8)"><span>Empresa</span><span style="opacity:.4">·</span><span>Industria</span><span style="opacity:.4">·</span><span>Ubicación</span><span style="opacity:.4">·</span><span>Tamaño del proyecto</span><span style="opacity:.4">·</span><span>Problema</span><span style="opacity:.4">·</span><span>Solución</span><span style="opacity:.4">·</span><span>Resultado</span></span>
+              <button onClick="{{ openCases }}" style="align-self:flex-start;padding:12px 20px;min-height:46px;border:none;border-radius:11px;background:#F2F0EC;color:#141210;font-size:14.5px;font-weight:700;cursor:pointer">Explorar casos →</button>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ staging }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px;border:1px dashed rgba(255,202,5,.35);border-radius:12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;letter-spacing:.04em;line-height:1.5;color:var(--mut3,#7C7873)">SOLO STAGING · Preparado para /casos/[slug] (ej. /casos/frigorifico-vijagual): empresa, sector, ciudad, capacidad, generación, ahorro, problema, solución, fotos.</div></sc-if>
       </div>
     </section>
 
@@ -355,9 +485,9 @@
       <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(24px,3.6vh,40px)">
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:12px;max-width:52ch">
-            <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Progreso</span>
-            <h2 data-reveal="1" style="margin:0;font-size:clamp(26px,3.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.03em;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">Seis niveles. Un solo camino, medido por calidad.</h2>
-            <p data-reveal="1" style="margin:0;font-size:15.5px;line-height:1.55;color:var(--mut,#9A968F);opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 140ms,transform 820ms cubic-bezier(.22,.61,.36,1) 140ms">KILO → MEGA → GIGA → TERA → PETA → EXA. Tu nivel se calcula con tu actividad de los últimos 6 meses. No premia volumen: premia mejores oportunidades.</p>
+            <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Beneficios por nivel</span>
+            <h2 data-reveal="1" style="margin:0;font-size:clamp(26px,3.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.03em;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">No premiamos solo cantidad. Reconocemos calidad, avance y participación.</h2>
+            <p data-reveal="1" style="margin:0;font-size:15.5px;line-height:1.55;color:var(--mut,#9A968F);opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 140ms,transform 820ms cubic-bezier(.22,.61,.36,1) 140ms">Sumas Puntos Sol al registrar oportunidades de calidad, avanzar empresas en el proceso, participar en actividades, aprender, activar comunidad y lograr cierres. Tu nivel se calcula con tu actividad de los últimos 6 meses.</p>
           </div>
           <div data-reveal="1" style="display:flex;flex-direction:column;gap:12px;padding:20px 24px;border:1px solid rgba(255,202,5,.22);border-radius:16px;background:rgba(255,202,5,.05);min-width:270px;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 200ms,transform 820ms cubic-bezier(.22,.61,.36,1) 200ms">
             <span style="font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold,#8E7A45)">Racha Solar 4x4</span>
@@ -434,90 +564,36 @@
       </div>
     </section>
 
-    <section style="padding:clamp(56px,8vh,100px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
-      <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:26px">
-        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap">
-          <div style="display:flex;flex-direction:column;gap:14px;max-width:62ch">
-            <h2 style="margin:0;font-size:clamp(26px,3.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.03em;display:flex;flex-wrap:wrap;gap:0 .3em">
-              <span data-reveal="1" style="display:inline-block;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">Tus puntos</span>
-              <span data-reveal="1" style="display:inline-block;color:var(--mut,#9A968F);font-weight:400;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 240ms,transform 820ms cubic-bezier(.22,.61,.36,1) 240ms">se convierten en</span>
-            </h2>
-            <div style="display:flex;flex-wrap:wrap;gap:10px">
-              <sc-for list="{{ storyChips }}" as="c" hint-placeholder-count="4">
-                <span data-reveal="1" style="padding:9px 16px;border:1px solid rgba(255,202,5,.3);border-radius:99px;background:rgba(255,202,5,.07);color:var(--y,#FFCA05);font-size:15px;font-weight:600;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) {{ c.delay }},transform 820ms cubic-bezier(.22,.61,.36,1) {{ c.delay }}">{{ c.t }}</span>
-              </sc-for>
-            </div>
-            <p data-reveal="1" style="margin:0;font-size:clamp(18px,1.9vw,24px);font-weight:600;letter-spacing:-.01em;color:var(--fg,#F2F0EC);opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 920ms,transform 820ms cubic-bezier(.22,.61,.36,1) 920ms">No es un catálogo. Es tu progreso.</p>
-          </div>
-          <button onClick="{{ goPubBeneficios }}" style="padding:11px 19px;border:1px solid var(--w-13,rgba(255,255,255,.13));border-radius:10px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">Explorar beneficios</button>
+    <section style="padding:clamp(60px,9vh,112px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
+      <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(30px,5vh,52px)">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px 40px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:14px;max-width:64ch">
+            <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Preguntas frecuentes</span>
+            <h2 data-reveal="1" style="margin:0;font-size:clamp(26px,3.4vw,42px);line-height:1.08;font-weight:700;letter-spacing:-.03em;text-wrap:pretty;opacity:0;transform:translateY(18px);transition:opacity 700ms cubic-bezier(.22,.61,.36,1) 0ms,transform 820ms cubic-bezier(.22,.61,.36,1) 0ms">Lo que suelen preguntarnos antes de unirse.</h2>
+            
+          </div><button onClick="{{ goPubSoporte }}" style="padding:15px 24px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:12px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:16px;font-weight:600;cursor:pointer;min-height:52px;transition:border-color 180ms ease;font-size:14.5px;padding:12px 20px;min-height:46px" style-hover="border-color:rgba(255,202,5,.4)">Ver soporte</button>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
-          <sc-for list="{{ publicBenefits }}" as="b" hint-placeholder-count="3">
-            <div style="display:flex;flex-direction:column;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-024,rgba(255,255,255,.024));overflow:hidden;transition:transform 220ms cubic-bezier(.22,.61,.36,1),border-color 220ms ease" style-hover="transform:translateY(-3px);border-color:rgba(255,202,5,.28)">
-              <div style="position:relative;height:168px;overflow:hidden;background:url(assets/placeholder-beneficio.png) center/cover,var(--bg2,#0C0C10)">
-                <span style="position:absolute;inset:0;display:grid;place-items:center;padding:10px;text-align:center;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut4,#6B6762);opacity:{{ b.phOp }}">{{ b.ph }}</span>
-                <div role="img" aria-label="{{ b.name }}" style="position:absolute;inset:0;background-size:cover;background-position:center;background-repeat:no-repeat;background-image:{{ b.imgUrl }}"></div>
-                <span style="position:absolute;top:12px;left:12px;padding:3px 10px;border-radius:99px;background:var(--b-72,rgba(7,7,10,.72));backdrop-filter:blur(6px);font-size:11px;font-weight:600;color:var(--t2,#C9C5BE)">{{ b.cat }}</span>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:7px;padding:18px 19px;flex:1">
-                <h3 style="margin:0;font-size:17px;font-weight:600;line-height:1.25;letter-spacing:-.01em">{{ b.name }}</h3>
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:26px">
-                  <span role="img" aria-label="{{ b.partner }}" style="display:inline-flex;align-items:center;height:20px;flex:none">
-                    <sc-if value="{{ b.hasLogo }}" hint-placeholder-val="{{ true }}"><span style="display:block;width:72px;height:18px;background-image:{{ b.logoUrl }};background-size:contain;background-repeat:no-repeat;background-position:left center;opacity:.8"></span></sc-if>
-                    <sc-if value="{{ b.noLogo }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:{{ beneLogoInk }};opacity:.72">{{ b.partner }}</span></sc-if>
-                  </span>
-                  <sc-if value="{{ b.hasAud }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--mut3,#7C7873)">{{ b.aud }}</span></sc-if>
-                </div>
-                <span style="margin-top:auto;padding-top:12px;font-size:14px;color:var(--t3,#B4B0A9)"><b style="color:var(--y,#FFCA05);font-weight:700">{{ b.ptsLabel }}</b> · {{ b.reqLabel }}</span>
-              </div>
-            </div>
+        <div style="display:flex;flex-direction:column;gap:1px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;overflow:hidden;background:var(--w-06,rgba(255,255,255,.06))">
+          <sc-for list="{{ faqs }}" as="f" hint-placeholder-count="6">
+            <button onClick="{{ f.toggle }}" style="display:flex;flex-direction:column;gap:9px;width:100%;padding:20px 22px;min-height:56px;border:none;background:var(--bg2,#0A0A0D);color:inherit;font-family:inherit;text-align:left;cursor:pointer;transition:background 160ms ease" style-hover="background:var(--w-03,rgba(255,255,255,.03))">
+              <span style="display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%"><h3 style="margin:0;font-size:16px;font-weight:600;color:var(--fg,#F2F0EC)">{{ f.q }}</h3><span style="font-size:18px;color:var(--mut4,#6B6762);flex:none;line-height:1">{{ f.sign }}</span></span>
+              <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:14.5px;line-height:1.6;color:var(--mut,#9A968F);max-width:72ch">{{ f.a }}</span></sc-if>
+            </button>
           </sc-for>
         </div>
       </div>
     </section>
 
-    <section style="padding:clamp(56px,8vh,100px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
-      <div style="max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:clamp(28px,4vw,52px)">
-        <div style="display:flex;flex-direction:column;gap:20px">
-          <h2 style="margin:0;font-size:clamp(26px,3.4vw,38px);line-height:1.1;font-weight:700;letter-spacing:-.03em">Herramientas para hablar con criterio.</h2>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <sc-for list="{{ tools }}" as="t" hint-placeholder-count="4">
-              <button onClick="{{ goPubHerramientas }}" style="display:flex;align-items:center;gap:14px;padding:15px 17px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:13px;background:var(--w-024,rgba(255,255,255,.024));cursor:pointer;text-align:left;transition:border-color 200ms ease,transform 200ms ease" style-hover="border-color:rgba(255,202,5,.3);transform:translateX(3px)">
-                <span style="width:34px;height:34px;flex:none;border-radius:9px;display:grid;place-items:center;background:{{ t.iconBg }}"><span style="width:12px;height:12px;border-radius:{{ t.iconShape }};background:{{ t.iconColor }}"></span></span>
-                <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
-                  <span style="font-size:15.5px;font-weight:600;color:var(--fg,#F2F0EC)">{{ t.name }}</span>
-                  <span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ t.access }}</span>
-                </span>
-                <span style="color:var(--mut4,#6B6762)">→</span>
-              </button>
-            </sc-for>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:20px">
-          <h2 style="margin:0;font-size:clamp(26px,3.4vw,38px);line-height:1.1;font-weight:700;letter-spacing:-.03em">Academy abierta para explorar.</h2>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <sc-for list="{{ routes }}" as="r" hint-placeholder-count="4">
-              <button onClick="{{ goPubAcademy }}" style="display:flex;align-items:center;gap:14px;padding:15px 17px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:13px;background:var(--w-024,rgba(255,255,255,.024));cursor:pointer;text-align:left;transition:border-color 200ms ease,transform 200ms ease" style-hover="border-color:rgba(255,202,5,.3);transform:translateX(3px)">
-                <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
-                  <span style="font-size:15.5px;font-weight:600;color:var(--fg,#F2F0EC)">{{ r.name }}</span>
-                  <span style="font-size:12.5px;color:var(--mut3,#7C7873)">{{ r.meta }}</span>
-                </span>
-                <span style="color:var(--mut4,#6B6762)">→</span>
-              </button>
-            </sc-for>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section style="padding:clamp(64px,10vh,130px) clamp(16px,3.4vw,44px);border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
-      <div style="max-width:820px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center">
-        <h2 style="margin:0;font-size:clamp(30px,4.6vw,56px);line-height:1.04;font-weight:700;letter-spacing:-.035em;text-wrap:pretty">Conecta. Refiere. Avanza. Disfruta.</h2>
-        <p style="margin:0;font-size:clamp(15px,1.4vw,18px);color:var(--mut,#9A968F);max-width:46ch;line-height:1.55">Regístrate como Aliado del Sol para referir empresas, seguir cada proyecto y redimir beneficios con tus Puntos Sol. Si ya lo eres, tu progreso te espera.</p>
+    <section style="position:relative;padding:clamp(72px,12vh,140px) clamp(16px,3.4vw,44px) calc(clamp(72px,12vh,140px) + env(safe-area-inset-bottom,0px));border-top:1px solid var(--w-06,rgba(255,255,255,.06));overflow:hidden">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse 50% 70% at 50% 100%,rgba(255,202,5,.14),rgba(255,202,5,0) 70%)"></div>
+      <div style="position:relative;max-width:820px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center">
+        <h2 style="margin:0;font-size:clamp(32px,4.8vw,60px);line-height:1.03;font-weight:700;letter-spacing:-.035em;text-wrap:pretty">Únete a Aliados del Sol.</h2>
+        <p style="margin:0;font-size:clamp(15px,1.4vw,18px);color:var(--t3,#B4B0A9);max-width:50ch;line-height:1.55;text-wrap:pretty">Más aliados, más conexiones, más proyectos. Haz parte de la comunidad que lleva energía solar a las empresas de Colombia.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-          <button onClick="{{ goJoin }}" style="padding:15px 28px;border:none;border-radius:12px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:16px;font-weight:700;cursor:pointer;transition:transform 170ms ease" style-hover="transform:translateY(-2px)">Quiero ser aliado</button>
-          <button onClick="{{ goLogin }}" style="padding:15px 26px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:12px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:16px;font-weight:600;cursor:pointer">Iniciar sesión</button>
+          <button onClick="{{ goJoin }}" style="padding:15px 28px;border:none;border-radius:12px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:16px;font-weight:700;cursor:pointer;min-height:52px;box-shadow:0 14px 34px -14px rgba(243,121,32,.8);transition:transform 180ms ease;padding:17px 32px;font-size:17px" style-hover="transform:translateY(-2px)">Quiero unirme a la comunidad</button>
+          <button onClick="{{ goRefer }}" style="padding:15px 24px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:12px;background:var(--w-04,rgba(255,255,255,.04));color:var(--fg,#F2F0EC);font-size:16px;font-weight:600;cursor:pointer;min-height:52px;transition:border-color 180ms ease" style-hover="border-color:rgba(255,202,5,.4)">Referir una empresa</button>
         </div>
+        <button onClick="{{ goLogin }}" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0;border:none;background:transparent;color:var(--y,#FFCA05);font-size:14.5px;font-weight:600;cursor:pointer;text-align:left;gap:6px;color:var(--mut,#9A968F);font-weight:500" style-hover="color:var(--fg,#F2F0EC)">¿Ya eres aliado?<span style="color:var(--y,#FFCA05);font-weight:600">Ingresar</span></button>
       </div>
     </section>
   </div>
@@ -528,7 +604,7 @@
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(30px,5vh,56px)">
       <div style="display:flex;flex-direction:column;gap:14px;max-width:58ch">
         <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Oportunidades</span>
-        <h1 style="margin:0;font-size:clamp(30px,4.4vw,52px);line-height:1.06;font-weight:700;letter-spacing:-.035em;text-wrap:pretty">Una oportunidad es una empresa que paga mucha energía.</h1>
+        <h1 style="margin:0;font-size:clamp(30px,4.4vw,52px);line-height:1.06;font-weight:700;letter-spacing:-.035em;text-wrap:pretty">Una buena oportunidad empieza por entender el negocio.</h1>
         <p style="margin:0;font-size:clamp(15px,1.4vw,18px);line-height:1.55;color:var(--mut,#9A968F)">Así funciona el proceso, desde tu referido hasta el proyecto en operación. Regístrate como aliado y refiere tu primera empresa hoy mismo.</p>
         <div style="display:flex;gap:10px;flex-wrap:nowrap;padding-top:6px;max-width:100%;overflow-x:auto">
           <button onClick="{{ goJoin }}" style="flex:none;white-space:nowrap;padding:13px 20px;border:none;border-radius:11px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:15px;font-weight:700;cursor:pointer">Quiero ser aliado</button>
@@ -870,9 +946,16 @@
   </sc-if>
 
   <sc-if value="{{ isPubCotizador }}" hint-placeholder-val="{{ false }}">
-  <section data-screen-label="Cotizador Solar público" style="padding:0 clamp(16px,3.4vw,44px);animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
-    <div style="max-width:1320px;margin:0 auto">
-      <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
+  <section data-screen-label="Herramienta solo para aliados" style="padding:clamp(44px,7vh,90px) clamp(16px,3.4vw,44px);animation:riseIn 380ms cubic-bezier(.22,.61,.36,1) both">
+    <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px;padding:clamp(24px,4vw,40px);border:1px solid var(--w-08,rgba(255,255,255,.08));border-radius:20px;background:var(--w-024,rgba(255,255,255,.024))">
+      <button onClick="{{ cotizadorAtras }}" style="align-self:flex-start;padding:0;border:none;background:transparent;cursor:pointer;font-size:14px;font-weight:600;color:var(--mut,#9A968F)">← Herramientas</button>
+      <span style="font-size:11.5px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--gold,#8E7A45)">Disponible para aliados</span>
+      <h1 style="margin:0;font-size:clamp(28px,4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.02em">{{ pubSoloAliados.titulo }}</h1>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:var(--t3,#B4B0A9)">{{ pubSoloAliados.texto }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <button onClick="{{ goLogin }}" style="padding:12px 20px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFCA05,#F37920);color:#1A1200;font-size:14.5px;font-weight:700;cursor:pointer">Iniciar sesión</button>
+        <button onClick="{{ goJoin }}" style="padding:12px 20px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:10px;background:transparent;color:var(--fg,#F2F0EC);font-size:14.5px;font-weight:600;cursor:pointer">Quiero ser aliado</button>
+      </div>
     </div>
   </section>
   </sc-if>
@@ -1008,21 +1091,6 @@
           </sc-if>
         </div>
       </sc-for>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:24px 28px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
-        <span style="display:flex;flex-direction:column;gap:5px;max-width:56ch">
-          <b style="font-size:16.5px;font-weight:600">Financiación Solar</b>
-          <span style="font-size:13.5px;line-height:1.55;color:var(--mut2,#8E8B86)">{{ financeDisclaimer }}</span>
-        </span>
-        <button onClick="{{ goPubHerramientas }}" style="padding:11px 18px;border:1px solid var(--w-14,rgba(255,255,255,.14));border-radius:10px;background:var(--w-05,rgba(255,255,255,.05));color:var(--fg,#F2F0EC);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">Ver herramientas</button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
-        <sc-for list="{{ profiles }}" as="p" hint-placeholder-count="4">
-          <div style="display:flex;flex-direction:column;gap:9px;padding:22px 24px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:15px;background:var(--w-024,rgba(255,255,255,.024))">
-            <span style="font-size:16.5px;font-weight:600">{{ p.t }}</span>
-            <span style="font-size:13.5px;line-height:1.5;color:var(--mut2,#8E8B86)">{{ p.d }}</span>
-          </div>
-        </sc-for>
-      </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:26px 30px;border:1px solid rgba(255,202,5,.22);border-radius:18px;background:linear-gradient(150deg,rgba(255,202,5,.08),var(--w-015,rgba(255,255,255,.015)))">
         <span style="display:flex;flex-direction:column;gap:5px">
           <span style="font-size:19px;font-weight:600">¿Quieres ser aliado?</span>
@@ -1188,9 +1256,9 @@
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:34px">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:28px">
         <div style="display:flex;flex-direction:column;gap:12px">
-          <img src="assets/logo-aliados.png" alt="Aliados del Sol" style="width:148px;height:auto">
+          <img src="assets/logo-aliados-v2.png" alt="Aliados del Sol" style="width:148px;height:auto">
           <span style="font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">by GEENERA</span>
-          <p style="margin:0;font-size:13.5px;line-height:1.55;color:var(--mut3,#7C7873);max-width:30ch">Programa de aliados de GEENERA para llevar energía solar a empresas en Colombia.</p>
+          <p style="margin:0;font-size:13.5px;line-height:1.55;color:var(--mut3,#7C7873);max-width:30ch">La comunidad de GEENERA que conecta personas y organizaciones con oportunidades de energía solar empresarial.</p>
         </div>
         <sc-for list="{{ footerCols }}" as="c" hint-placeholder-count="3">
           <div style="display:flex;flex-direction:column;gap:11px">
@@ -1202,7 +1270,7 @@
         </sc-for>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:22px;border-top:1px solid var(--w-06,rgba(255,255,255,.06))">
-        <span style="font-size:12.5px;color:var(--mut5,#5A5651)">© 2026 GEENERA S.A.S. Datos y cifras de esta demostración son ilustrativos.</span>
+        <span style="font-size:12.5px;color:var(--mut5,#5A5651)">© 2026 GEENERA S.A.S. Todos los derechos reservados.</span>
         <span style="font-size:12.5px;color:var(--mut5,#5A5651)">Medellín · Bucaramanga · Barranquilla</span>
       </div>
     </div>
@@ -1224,7 +1292,7 @@
 
   <aside aria-label="Menú del Hub" style="position:{{ asidePos }};top:0;left:0;z-index:90;width:{{ asideW }};box-sizing:border-box;height:100vh;height:100dvh;transform:{{ asideTf }};visibility:{{ asideVis }};transition:transform 240ms cubic-bezier(.22,.61,.36,1),visibility 240ms;display:flex;flex-direction:column;gap:26px;padding:26px 18px 20px;overflow-y:auto;scrollbar-width:thin;min-height:0;border-right:1px solid var(--w-07,rgba(255,255,255,.07));background:{{ asideBg }};box-shadow:{{ asideShadow }}">
     <div style="display:flex;flex-direction:column;gap:7px;padding:0 6px">
-      <img src="assets/logo-aliados.png" alt="Aliados del Sol" style="width:140px;height:auto;display:block">
+      <img src="assets/logo-aliados-v2.png" alt="Aliados del Sol" style="width:140px;height:auto;display:block">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span style="font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">by GEENERA</span>
         <button onClick="{{ goHome }}" style="border:none;background:transparent;padding:0;color:var(--mut3,#7C7873);font-size:11.5px;font-weight:600;cursor:pointer;transition:color 160ms ease" style-hover="color:var(--o,#F9A51A)">Sitio público ↗</button>
@@ -1273,12 +1341,12 @@
             </sc-for>
           </span>
         </div>
-        <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ true }}">
-        <div style="padding:6px 12px 6px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mut5,#5A5651)">Perfil demo (role-based)</div>
+        <sc-if value="{{ stagingTools }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:6px 12px 6px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mut5,#5A5651)">Staging · perfil por rol</div>
         <sc-for list="{{ roleOptions }}" as="r" hint-placeholder-count="4">
           <button onClick="{{ r.go }}" style="padding:5px 12px;border:none;border-radius:8px;background:transparent;color:{{ r.color }};font-weight:{{ r.fw }};font-size:13px;text-align:left;cursor:pointer;transition:color 160ms ease" style-hover="color:var(--o,#F9A51A)">{{ r.label }}</button>
         </sc-for>
-        <div style="padding:10px 12px 6px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mut5,#5A5651)">Vistas demo</div>
+        <div style="padding:10px 12px 6px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mut5,#5A5651)">Staging · vistas</div>
         <sc-for list="{{ demoNav }}" as="d" hint-placeholder-count="3">
           <button onClick="{{ d.go }}" style="padding:6px 12px;border:none;border-radius:8px;background:transparent;color:var(--mut3,#7C7873);font-size:13px;text-align:left;cursor:pointer;transition:color 160ms ease" style-hover="color:var(--o,#F9A51A)">{{ d.label }}</button>
         </sc-for>
@@ -1594,7 +1662,7 @@
           <sc-if value="{{ w.isForecast }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;flex-direction:column;gap:18px;padding:24px 26px;border:1px solid rgba(255,202,5,.2);border-radius:16px;background:linear-gradient(160deg,rgba(255,202,5,.05),var(--w-012,rgba(255,255,255,.012)))">
               <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
-                <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold,#8E7A45)">Próximos desembolsos</span><b style="font-size:19px;font-weight:700;letter-spacing:-.02em">Vista 30 · 60 · 90 días</b><sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Demostración</span></sc-if></span>
+                <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold,#8E7A45)">Próximos desembolsos</span><b style="font-size:19px;font-weight:700;letter-spacing:-.02em">Vista 30 · 60 · 90 días</b><sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Ejemplo</span></sc-if></span>
                 <span style="font-size:12.5px;color:var(--mut2,#8E8B86)">Fechas estimadas de seguimiento, no compromisos contractuales.</span>
               </div>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
@@ -1670,7 +1738,7 @@
               <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:14px;padding:22px 24px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:16px;background:var(--w-022,rgba(255,255,255,.022))">
                 <span style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut4,#6B6762)">Distribución por ejecutivo GEENERA</span>
-                <sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Demostración</span></sc-if>
+                <sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Ejemplo</span></sc-if>
                 <sc-for list="{{ distExec }}" as="d" hint-placeholder-count="4">
                   <div style="display:grid;grid-template-columns:140px minmax(0,1fr) 28px;align-items:center;gap:12px;font-size:13.5px">
                     <span style="color:var(--t2,#C9C5BE);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.label }}</span>
@@ -1736,7 +1804,7 @@
               <button onClick="{{ f.go }}" style="padding:6px 13px;border:1px solid {{ f.border }};border-radius:99px;background:{{ f.bg }};color:{{ f.color }};font-size:13px;font-weight:600;cursor:pointer;transition:all 160ms ease" style-hover="border-color:rgba(255,202,5,.35)">{{ f.label }}</button>
             </sc-for>
           </div>
-          <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ stagingTools }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto;padding:3px;border:1px solid var(--w-07,rgba(255,255,255,.07));border-radius:9px">
             <sc-for list="{{ stateDemo }}" as="s" hint-placeholder-count="4">
               <button onClick="{{ s.go }}" style="padding:5px 11px;border:none;border-radius:6px;background:{{ s.bg }};color:{{ s.color }};font-size:12px;font-weight:600;cursor:pointer">{{ s.label }}</button>
@@ -1988,7 +2056,7 @@
           <div style="display:flex;flex-direction:column;gap:20px">
             <div style="display:flex;flex-direction:column;gap:9px">
               <h1 style="margin:0;font-size:clamp(28px,3.6vw,38px);font-weight:700;letter-spacing:-.025em">Beneficios</h1>
-              <sc-if value="{{ beneDemoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Demostración</span></sc-if>
+              <sc-if value="{{ beneDemoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Ejemplo</span></sc-if>
               <p style="margin:0;font-size:16px;color:var(--mut,#9A968F);max-width:52ch;line-height:1.5">Tus puntos reconocen la calidad de lo que refieres y de lo que aprendes. Son independientes de tus comisiones.</p>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;max-width:640px">
@@ -2306,7 +2374,6 @@
             <div style="padding:36px 22px;text-align:center;font-size:14px;color:var(--mut3,#7C7873)">No hay movimientos con este filtro.</div>
           </sc-if>
         </div>
-        <sc-if value="{{ showDemoTools }}" hint-placeholder-val="{{ true }}"><p style="margin:14px 0 0;font-size:12px;color:var(--mut5,#5A5651);line-height:1.55">Valores de demostración. Puntos, umbrales, calidad, racha y etapas están centralizados y son configurables sin rediseñar el Hub.</p></sc-if>
 
         <sc-if value="{{ esReal }}" hint-placeholder-val="{{ false }}">
         <div data-screen-label="Eventos aliados" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;padding-top:36px;align-items:start">
@@ -2564,7 +2631,13 @@
 
       <sc-if value="{{ isCotizador }}" hint-placeholder-val="{{ false }}">
       <section data-screen-label="Cotizador Solar" style="animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
-        <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
+        <dc-import name="ADSCotizador" theme="{{ themeAttr }}" header-offset="{{ stickyHeaderOffset }}" on-back="{{ cotizadorAtras }}" on-refer="{{ cotizadorReferir }}" hint-size="100%,900px"></dc-import>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isComparador }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Comparador de propuestas" style="animation:riseIn 320ms cubic-bezier(.22,.61,.36,1) both">
+        <dc-import name="ADSComparador" theme="{{ themeAttr }}" on-back="{{ cotizadorAtras }}" hint-size="100%,900px"></dc-import>
       </section>
       </sc-if>
 
@@ -2665,7 +2738,7 @@
         <button onClick="{{ goPerfil }}" style="margin:36px 0 20px;padding:0;border:none;background:transparent;color:var(--mut2,#8E8B86);font-size:13.5px;font-weight:600;cursor:pointer">← Mi perfil</button>
         <div style="display:flex;flex-direction:column;gap:9px;padding-bottom:28px">
           <h1 style="margin:0;font-size:clamp(28px,3.6vw,38px);font-weight:700;letter-spacing:-.025em">Mis comisiones</h1>
-          <sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Demostración</span></sc-if>
+          <sc-if value="{{ demoTag }}" hint-placeholder-val="{{ false }}"><span title="Aún no hay datos reales para esta sección" style="display:inline-flex;align-self:flex-start;align-items:center;padding:2px 8px;border:1px dashed rgba(249,165,26,.55);border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--o,#F9A51A)">Ejemplo</span></sc-if>
           <p style="margin:0;font-size:15.5px;color:var(--mut,#9A968F);max-width:60ch;line-height:1.5">Las comisiones son dinero y se liquidan según el contrato de aliado. No se mezclan con tus puntos ni se pueden canjear por beneficios.</p>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding-bottom:26px">
@@ -2694,7 +2767,7 @@
             </div>
           </sc-for>
         </div>
-        <p style="margin:20px 0 0;font-size:12.5px;color:var(--mut5,#5A5651)">Cifras de demostración en pesos colombianos (COP).</p>
+        <p style="margin:20px 0 0;font-size:12.5px;color:var(--mut5,#5A5651)">Cifras en pesos colombianos (COP).</p>
       </section>
       </sc-if>
 
@@ -2710,7 +2783,7 @@
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 22px 6px;font-size:12px;font-weight:600;color:var(--mut2,#8E8B86)"><span>9:41</span><span>▮▮▮</span></div>
             <div style="padding:10px 20px 92px;height:100%;overflow:hidden">
               <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:20px">
-                <img src="assets/logo-aliados.png" alt="Aliados del Sol" style="width:104px;height:auto">
+                <img src="assets/logo-aliados-v2.png" alt="Aliados del Sol" style="width:104px;height:auto">
                 <span style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#F9A51A,#F37920);color:#1A1200;font-size:11.5px;font-weight:700">JR</span>
               </div>
               <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding-bottom:20px">
@@ -2835,7 +2908,7 @@
   <div style="position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:44px">
     <img src="assets/foto-equipo.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62">
     <div style="position:absolute;inset:0;background:linear-gradient(170deg,var(--b-55,rgba(7,7,10,.55)) 0%,rgba(28,16,48,.55) 45%,var(--b-94,rgba(7,7,10,.94)) 100%)"></div>
-    <img src="assets/logo-aliados.png" alt="Aliados del Sol" style="position:relative;width:168px;height:auto">
+    <img src="assets/logo-aliados-v2.png" alt="Aliados del Sol" style="position:relative;width:168px;height:auto">
     <div style="position:relative;display:flex;flex-direction:column;gap:16px;max-width:26ch">
       <h1 style="margin:0;font-size:clamp(26px,4vw,46px);line-height:1.05;font-weight:700;letter-spacing:-.03em;text-transform:uppercase">Las grandes transformaciones comienzan con grandes <span style="color:var(--y,#FFCA05)">aliados</span>.</h1>
       <p style="margin:0;font-size:15px;color:var(--t2,#C9C5BE);line-height:1.55;max-width:34ch">Conecta. Refiere. Avanza. Disfruta.</p>
@@ -3063,42 +3136,42 @@
 </div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Juan Rodríguez&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;points&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts de nivel&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;pointsBalance&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts disponibles&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:82,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;qualitySample&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:14,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:200,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;streakWeeks&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:4,&quot;step&quot;:1,&quot;unit&quot;:&quot;semanas&quot;,&quot;section&quot;:&quot;Aliado demo&quot;}}">
-const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'proyectos', 'cotizador', 'puntos', 'mobile'];
-const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-proyectos', 'p-cotizador', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
+<script type="text/x-dc" data-dc-script data-props="{&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Juan Rodríguez&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;points&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts de nivel&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;pointsBalance&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1400,&quot;step&quot;:10,&quot;unit&quot;:&quot;pts disponibles&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;quality&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:82,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;qualitySample&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:14,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:200,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;streakWeeks&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:4,&quot;step&quot;:1,&quot;unit&quot;:&quot;semanas&quot;,&quot;section&quot;:&quot;Aliado demo&quot;},&quot;staging&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Publicación&quot;}}">
+const HUB = ['inicio', 'oportunidades', 'detalle', 'beneficios', 'herramientas', 'academy', 'perfil', 'comisiones', 'financiacion', 'proyectos', 'cotizador', 'comparador', 'puntos', 'mobile'];
+const PUB = ['home', 'p-oportunidades', 'p-beneficios', 'p-herramientas', 'p-proyectos', 'p-cotizador', 'p-comparador', 'p-academy', 'p-aliados', 'p-soporte', 'join'];
 
 const OPPS = [
   { id: 'o1', empresa: 'Textiles Andinas S.A.S.', sector: 'Manufactura', ciudad: 'Medellín, Antioquia', ciudadCorta: 'Medellín', fecha: '12 ago 2026', etapa: 'Propuesta', step: 3, consumo: '42.000 kWh/mes', pts: 250, upd: 'hace 2 días',
     next: 'GEENERA presenta la propuesta técnica y financiera el 3 de septiembre.', nextShort: 'Presentación de propuesta',
-    contacto: 'Marcela Ruiz', cargo: 'Gerente de Operaciones', tel: '+57 310 482 1176', mail: 'mruiz@textilesandinas.demo',
+    contacto: 'Marcela Ruiz', cargo: 'Gerente de Operaciones', tel: '+57 310 482 1176', mail: 'mruiz@textilesandinas.ejemplo',
     history: [ { d: '12 ago', t: 'Referiste la empresa con factura de energía adjunta. +250 puntos.' }, { d: '13 ago', t: 'Diana López validó los datos y agendó la primera llamada.' }, { d: '19 ago', t: 'Visita técnica al techo de la planta de Itagüí.' }, { d: '26 ago', t: 'Propuesta en construcción con el equipo de ingeniería.' } ] },
   { id: 'o2', empresa: 'Clínica Portoazul', sector: 'Salud', ciudad: 'Barranquilla, Atlántico', ciudadCorta: 'Barranquilla', fecha: '4 ago 2026', etapa: 'En negociación', step: 3, consumo: '96.000 kWh/mes', pts: 250, upd: 'ayer',
     next: 'El comité financiero de la clínica revisa el modelo de arrendamiento.', nextShort: 'Revisión del comité',
-    contacto: 'Andrés Cabrera', cargo: 'Director Administrativo', tel: '+57 315 220 9043', mail: 'acabrera@portoazul.demo',
+    contacto: 'Andrés Cabrera', cargo: 'Director Administrativo', tel: '+57 315 220 9043', mail: 'acabrera@portoazul.ejemplo',
     history: [ { d: '4 ago', t: 'Referiste la empresa con consumo estimado. +150 puntos.' }, { d: '6 ago', t: 'Primera reunión con el equipo administrativo.' }, { d: '21 ago', t: 'Propuesta entregada: 780 kWp en cubierta y parqueadero.' } ] },
   { id: 'o3', empresa: 'Alimentos Guamito', sector: 'Agroindustria', ciudad: 'Rionegro, Antioquia', ciudadCorta: 'Rionegro', fecha: '18 may 2026', etapa: 'Ganada', step: 4, consumo: '58.000 kWh/mes', pts: 250, upd: 'hace 3 semanas',
     next: 'Proyecto en operación. Tu comisión fue desembolsada el 30 de julio.', nextShort: 'Proyecto en operación',
-    contacto: 'Luisa Herrera', cargo: 'Jefe de Planta', tel: '+57 301 774 5520', mail: 'lherrera@guamito.demo',
+    contacto: 'Luisa Herrera', cargo: 'Jefe de Planta', tel: '+57 301 774 5520', mail: 'lherrera@guamito.ejemplo',
     history: [ { d: '18 may', t: 'Referiste la empresa con factura adjunta. +250 puntos.' }, { d: '2 jun', t: 'Empresa calificada por el equipo comercial. +300 puntos.' }, { d: '9 jul', t: 'Contrato firmado: 620 kWp en cubierta industrial.' }, { d: '30 jul', t: 'Comisión desembolsada y proyecto energizado.' } ] },
   { id: 'o4', empresa: 'Plásticos del Caribe', sector: 'Manufactura', ciudad: 'Cartagena, Bolívar', ciudadCorta: 'Cartagena', fecha: '22 ago 2026', etapa: 'En validación', step: 0, consumo: 'Sin dato', pts: 20, upd: 'hace 4 días',
     next: 'Necesitamos el consumo mensual o una factura para avanzar.', nextShort: 'Falta consumo o factura',
-    contacto: 'Jorge Mendoza', cargo: 'Gerente General', tel: '+57 320 118 6642', mail: 'jmendoza@plasticaribe.demo',
+    contacto: 'Jorge Mendoza', cargo: 'Gerente General', tel: '+57 320 118 6642', mail: 'jmendoza@plasticaribe.ejemplo',
     history: [ { d: '22 ago', t: 'Referiste la empresa con datos básicos. +20 puntos.' }, { d: '24 ago', t: 'Diana López solicitó información de consumo.' } ] },
   { id: 'o5', empresa: 'Hotel Cañaveral', sector: 'Hotelería', ciudad: 'Santa Marta, Magdalena', ciudadCorta: 'Santa Marta', fecha: '15 ago 2026', etapa: 'Contactada', step: 1, consumo: '31.000 kWh/mes', pts: 150, upd: 'hace 6 días',
     next: 'Llamada de diagnóstico agendada para el 2 de septiembre.', nextShort: 'Llamada de diagnóstico',
-    contacto: 'Paula Navarro', cargo: 'Gerente', tel: '+57 318 904 2213', mail: 'pnavarro@canaveral.demo',
+    contacto: 'Paula Navarro', cargo: 'Gerente', tel: '+57 318 904 2213', mail: 'pnavarro@canaveral.ejemplo',
     history: [ { d: '15 ago', t: 'Referiste la empresa con consumo estimado. +150 puntos.' }, { d: '18 ago', t: 'Primer contacto exitoso con la gerencia.' } ] },
   { id: 'o6', empresa: 'Frigorífico La Sabana', sector: 'Agroindustria', ciudad: 'Mosquera, Cundinamarca', ciudadCorta: 'Mosquera', fecha: '8 ago 2026', etapa: 'Calificada', step: 2, consumo: '124.000 kWh/mes', pts: 250, upd: 'hace 9 días',
     next: 'Levantamiento técnico en sitio la próxima semana.', nextShort: 'Levantamiento técnico',
-    contacto: 'Camilo Ossa', cargo: 'Director de Operaciones', tel: '+57 312 556 3390', mail: 'cossa@lasabana.demo',
+    contacto: 'Camilo Ossa', cargo: 'Director de Operaciones', tel: '+57 312 556 3390', mail: 'cossa@lasabana.ejemplo',
     history: [ { d: '8 ago', t: 'Referiste la empresa con factura adjunta. +250 puntos.' }, { d: '11 ago', t: 'Empresa calificada: consumo y cubierta viables. +300 puntos.' } ] },
   { id: 'o7', empresa: 'Ferretería Occidente', sector: 'Comercio', ciudad: 'Cali, Valle del Cauca', ciudadCorta: 'Cali', fecha: '25 ago 2026', etapa: 'Recibida', step: 0, consumo: '9.400 kWh/mes', pts: 150, upd: 'hace 1 día',
     next: 'En cola de validación. Sin acción de tu parte por ahora.', nextShort: 'En cola de validación',
-    contacto: 'Ricardo Peña', cargo: 'Propietario', tel: '+57 317 442 8811', mail: 'rpena@ferroccidente.demo',
+    contacto: 'Ricardo Peña', cargo: 'Propietario', tel: '+57 317 442 8811', mail: 'rpena@ferroccidente.ejemplo',
     history: [ { d: '25 ago', t: 'Referiste la empresa con consumo estimado. +150 puntos.' } ] },
   { id: 'o8', empresa: 'Colegio San Marcos', sector: 'Educación', ciudad: 'Bogotá, D.C.', ciudadCorta: 'Bogotá', fecha: '2 jul 2026', etapa: 'No viable', step: 1, consumo: '7.200 kWh/mes', pts: 20, upd: 'hace 7 semanas',
     next: 'La sede es arrendada y no autoriza intervención de cubierta.', nextShort: 'Cubierta no autorizada',
-    contacto: 'Hna. Beatriz Gil', cargo: 'Rectora', tel: '+57 601 745 2200', mail: 'rectoria@sanmarcos.demo',
+    contacto: 'Hna. Beatriz Gil', cargo: 'Rectora', tel: '+57 601 745 2200', mail: 'rectoria@sanmarcos.ejemplo',
     history: [ { d: '2 jul', t: 'Referiste la empresa con datos básicos. +20 puntos.' }, { d: '11 jul', t: 'Validación: la institución no es propietaria del inmueble.' } ] }
 ];
 
@@ -3119,6 +3192,7 @@ const POINTS_CONFIG = {
   ],
   perfectFields: ['Empresa', 'Nombre del contacto', 'Cargo', 'Teléfono', 'Correo', 'Sector', 'Subsector', 'Ciudad', 'Valor de la factura', 'Factura adjunta'],
   /* MEDDPICC: +20 una vez por referido cuando GEENERA revisa la información que envía el aliado (correo de confirmación). */
+  cotizador: { label: 'Uso del Cotizador Solar', pts: 5, desc: 'Al pedir con «Solicitar propuesta» la propuesta de una cotización tuya. Sin tope; el equipo GEENERA revisa el uso.' },
   meddpicc: { label: 'Información MEDDPICC del referido', pts: 20, desc: 'Responde el correo de confirmación con el MEDDPICC de la empresa. Aplica a referidos perfectos o con ciudad.' },
   academy: { label: 'Módulo de Academy completado', pts: 5, masterclassPts: 10, monthlyCap: 40, certPts: 15, category: 'Academy' },
   event: { label: 'Evento aliado validado', pts: 100, category: 'Eventos', requires: ['Evento realizado', 'GEENERA involucrada', 'Registro de asistentes', 'Mínimo 5 empresas dentro del perfil'], minCompanies: 5, note: 'Las oportunidades generadas en el evento acumulan sus Puntos Sol normalmente; el evento no las sustituye.' },
@@ -3689,7 +3763,7 @@ const ETAPA_SIGUIENTE = {
   noviable: ['No continúa', 'La oportunidad no continúa.']
 };
 /* Categoría del historial según el vínculo del movimiento (filtros de la pantalla Puntos Sol). */
-const VINCULO_HISTORIAL = { empresas: 'Oportunidades', racha: 'Racha', modulos_completados: 'Academy', eventos: 'Eventos', canjes: 'Canjes', ajuste_admin: 'Ajustes', aliados: 'Bienvenida' };
+const VINCULO_HISTORIAL = { empresas: 'Oportunidades', racha: 'Racha', modulos_completados: 'Academy', eventos: 'Eventos', canjes: 'Canjes', ajuste_admin: 'Ajustes', aliados: 'Bienvenida', cotizador: 'Cotizador' };
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -3920,7 +3994,13 @@ class Component extends DCLogic {
       })),
       proyQuery: s.proyQuery || '', onProyQuery: (ev) => this.setState({ proyQuery: ev.target.value }),
       proyAtras: () => this.go(s.route === 'p-proyectos' ? 'p-herramientas' : 'herramientas'),
-      cotizadorAtras: () => this.go(s.route === 'p-cotizador' ? 'p-herramientas' : 'herramientas'),
+      cotizadorAtras: () => this.go(s.route === 'p-cotizador' || s.route === 'p-comparador' ? 'p-herramientas' : 'herramientas'),
+      /* «Referir esta empresa» desde el Cotizador: abre «Nueva oportunidad» con los datos de la cotización. */
+      cotizadorReferir: d => this.setState({ newOpen: true, appMenu: false, step: 1, done: false, refTried: false, refError: '', refResult: null, refSending: false,
+        refData: Object.assign({}, d, { telefono: fmtPhone(d.telefono, d.country) }) }),
+      pubSoloAliados: s.route === 'p-comparador'
+        ? { titulo: 'Comparador de propuestas', texto: 'Compara lado a lado hasta 4 propuestas solares, escritas a mano o traídas de tus cotizaciones. Inicia sesión como aliado para usarlo.' }
+        : { titulo: 'Cotizador Solar', texto: 'Diseña el sistema solar de tus clientes, descarga la precotización y pide la propuesta a GEENERA. Cada solicitud suma Puntos Sol. Inicia sesión como aliado para usarlo.' },
       proyVolver: () => this.setState({ proySel: null }), proyReintentar: () => this.cargarProyectos(true)
     };
   }
@@ -4078,7 +4158,8 @@ class Component extends DCLogic {
   }
   withPublic(list) {
     const map = {
-      'Cotizador Solar': ['Abierta', 'Abrir cotizador', true],
+      'Cotizador Solar': ['Solo aliados', 'Iniciar sesión', false],
+      'Comparador de propuestas': ['Solo aliados', 'Iniciar sesión', false],
       'Casos y proyectos': ['Abierta', 'Explorar proyectos', true],
       'Financiación Solar': ['Abierta', 'Ver aliados financieros', true],
       'Recursos comerciales': ['Solo aliados', 'Acceder como aliado', false]
@@ -4364,7 +4445,7 @@ class Component extends DCLogic {
     }));
 
     const nav = [['inicio', 'Inicio'], ['oportunidades', 'Oportunidades'], ['puntos', 'Puntos Sol'], ['beneficios', 'Beneficios'], ['herramientas', 'Herramientas'], ['academy', 'Academy']].filter(([id]) => id !== 'beneficios' || perms.seeBenefits).map(([id, label]) => {
-      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && (route === 'financiacion' || route === 'proyectos' || route === 'cotizador'));
+      const on = route === id || (id === 'oportunidades' && route === 'detalle') || (id === 'herramientas' && (route === 'financiacion' || route === 'proyectos' || route === 'cotizador' || route === 'comparador'));
       return { label, go: () => this.go(id), bg: on ? 'rgba(255,202,5,.1)' : 'transparent', color: on ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)', fw: on ? 600 : 400, dot: on ? 'var(--y,#FFCA05)' : 'var(--w-18,rgba(255,255,255,.18))' };
     });
     /* Fase 11: «Mi QR» abre el QR de canje (js/mi-qr.js) encima de la página; solo con sesión real. */
@@ -4912,7 +4993,7 @@ class Component extends DCLogic {
       downloadResource: () => this.ping('Recurso descargable: pendiente de cargar el PDF del equipo GEENERA.'),
       heroLine1: ['Conecta', 'una', 'empresa'].map((t, i) => ({ t, delay: (i * 90) + 'ms' })),
       heroLine2: ['con', 'la', 'energía', 'del', 'sol.'].map((t, i) => ({ t, delay: (270 + i * 90) + 'ms' })),
-      storyChips: ['Experiencias', 'Formación', 'Beneficios', 'Conexiones'].map((t, i) => ({ t, delay: (420 + i * 110) + 'ms' })),
+      storyChips: ['Acceso', 'Formación', 'Networking', 'Experiencias', 'Herramientas', 'Reconocimiento', 'Beneficios de aliados comerciales'].map((t, i) => ({ t, delay: (420 + i * 110) + 'ms' })),
       geeneraOwner: real ? { name: 'Equipo GEENERA', cargo: 'Equipo comercial', regional: 'Aliados del Sol', initials: 'G', contact: 'WhatsApp · lunes a viernes' } : GEENERA_TEAM.dl,
 
       pointsRaw: c.points, pointsSol: this.n(c.points), balanceLabel: this.n(c.balance),
@@ -4997,13 +5078,16 @@ class Component extends DCLogic {
       menuLabel: s.menuOpen ? 'Cerrar' : 'Menú', menuExpanded: s.menuOpen ? 'true' : 'false',
       toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
       isHome: route === 'home', isPubOportunidades: route === 'p-oportunidades', isPubBeneficios: route === 'p-beneficios',
-      isPubHerramientas: route === 'p-herramientas', isPubProyectos: route === 'p-proyectos', isPubCotizador: route === 'p-cotizador', isPubAcademy: route === 'p-academy',
+      isPubHerramientas: route === 'p-herramientas', isPubProyectos: route === 'p-proyectos', isPubCotizador: route === 'p-cotizador' || route === 'p-comparador', isPubAcademy: route === 'p-academy',
       isPubAliados: route === 'p-aliados', isPubSoporte: route === 'p-soporte',
-      publicNav: [['home', 'Inicio'], ['p-oportunidades', 'Oportunidades'], ['p-beneficios', 'Beneficios'], ['p-herramientas', 'Herramientas'], ['p-academy', 'Academy'], ['p-aliados', 'Aliados'], ['p-soporte', 'Soporte']].map(([id, label]) => ({
+      staging: !!(this.props.staging ?? (typeof location !== 'undefined' && /[?&]staging=1/.test(location.search))),
+      openCases: () => this.go('p-proyectos'),
+      goPubOportunidades: () => this.go('p-oportunidades'),
+      publicNav: [['home', 'Inicio'], ['p-oportunidades', 'Cómo funciona'], ['p-aliados', 'Comunidad'], ['p-herramientas', 'Herramientas'], ['p-academy', 'Academy'], ['p-beneficios', 'Beneficios'], ['p-soporte', 'Soporte']].map(([id, label]) => ({
         label, go: () => this.go(id),
-        bg: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 'rgba(255,202,5,.1)' : 'transparent',
-        color: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
-        fw: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador')) ? 600 : 400
+        bg: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador' || route === 'p-comparador')) ? 'rgba(255,202,5,.1)' : 'transparent',
+        color: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador' || route === 'p-comparador')) ? 'var(--y,#FFCA05)' : 'var(--mut,#9A968F)',
+        fw: route === id || (id === 'p-herramientas' && (route === 'p-proyectos' || route === 'p-cotizador' || route === 'p-comparador')) ? 600 : 400
       })),
       goHome: () => this.go('home'), goPubBeneficios: () => this.go('p-beneficios'), goPubHerramientas: () => this.go('p-herramientas'),
       goPubAcademy: () => this.go('p-academy'), goPubAliados: () => this.go('p-aliados'), goPubSoporte: () => this.go('p-soporte'),
@@ -5058,28 +5142,31 @@ class Component extends DCLogic {
         { t: '¿Necesitas ayuda con una oportunidad?', d: 'Cuéntanos qué está pasando y te ayudamos a revisarla.', cta: 'Consultar un caso', href: waLink('caso') }
       ],
       faqs: [
-        { q: '¿Necesito ser aliado para referir una empresa?', a: 'Sí, te recomendamos registrarte primero desde Quiero ser aliado. Así cada referido queda a tu nombre, sigues su avance y acumulas Puntos Sol para redimir beneficios.' },
+        { q: '¿Qué es Aliados del Sol?', a: 'Es la comunidad de GEENERA que reúne consultores, empresarios, gremios, entidades financieras y profesionales para aprender, conectar e impulsar oportunidades de energía solar empresarial en Colombia.' },
+        { q: '¿Necesito unirme para referir una empresa?', a: 'Puedes referir con tu correo y la plataforma relaciona la empresa contigo. Al unirte a la comunidad sigues el avance de cada empresa, accedes a Academy y herramientas, y tu aporte se reconoce con Puntos Sol.' },
         { q: '¿Puntos y comisiones son lo mismo?', a: 'No. Los Puntos Sol son reconocimiento y abren beneficios del catálogo. La comisión es dinero y se liquida según el contrato de aliado cuando el proyecto se cierra. Nunca se mezclan.' },
         { q: '¿Cuánto tarda la validación de un referido?', a: 'El equipo GEENERA revisa los datos en menos de 24 horas hábiles y te informa si necesita información adicional.' },
         { q: '¿Qué pasa si la empresa no es viable?', a: 'La oportunidad queda marcada como no viable con la razón. No hay penalización: penalizamos mala calidad evitable, nunca el resultado comercial. Conservas tus Puntos Sol.' },
         { q: '¿Cómo suben mis puntos más rápido?', a: 'Entrega todos los datos del Referido Perfecto: el registro suma +10 y el Referido Perfecto agrega +20. La validación de la empresa suma +30, la evaluación técnica +30, la propuesta +50 y el cierre +150. La Racha Solar 4x4 agrega +75.' },
-        { q: '¿Los niveles y puntajes son definitivos?', a: 'Los valores de esta versión son de demostración. Puntos, umbrales de nivel, racha y etapas están centralizados y GEENERA los ajusta desde su panel.' }
+        { q: '¿Quién puede unirse?', a: 'Consultores, EMIs, Linkers, profesionales, empresarios, entidades financieras, gremios, cámaras y empresas del ecosistema. El equipo GEENERA valida cada solicitud.' }
       ].map((f, i) => ({ q: f.q, a: f.a, open: s.faqOpen === i, sign: s.faqOpen === i ? '−' : '+', toggle: () => this.setState({ faqOpen: s.faqOpen === i ? -1 : i }) })),
       footerCols: [
         { title: 'Aliados del Sol', links: [ { t: 'Inicio', go: () => this.go('home') }, { t: 'Oportunidades', go: () => this.go('p-oportunidades') }, { t: 'Beneficios', go: () => this.go('p-beneficios') }, { t: 'Herramientas', go: () => this.go('p-herramientas') } ] },
-        { title: 'Programa', links: [ { t: 'Academy', go: () => this.go('p-academy') }, { t: 'Aliados y ecosistema', go: () => this.go('p-aliados') }, { t: 'Referir una empresa', go: () => this.jump(() => this.referEl) }, { t: 'Iniciar sesión', go: () => this.go('login') } ] },
+        { title: 'Programa', links: [ { t: 'Academy', go: () => this.go('p-academy') }, { t: 'Aliados y ecosistema', go: () => this.go('p-aliados') }, { t: 'Referir una empresa', go: () => this.jump(() => this.referEl) }, { t: 'Ingresar', go: () => this.go('login') } ] },
         { title: 'Soporte y legal', links: [ { t: 'Centro de ayuda', go: () => this.go('p-soporte') }, { t: 'Términos y condiciones', go: () => window.open(JOIN_CONFIG.legal.terminosUrl, '_blank', 'noopener') }, { t: 'Política de privacidad', go: () => window.open(JOIN_CONFIG.legal.politicaDatosUrl, '_blank', 'noopener') }, { t: 'Contacto', go: () => this.go('p-soporte') } ] }
       ],
       isInicio: route === 'inicio', isOportunidades: route === 'oportunidades', isDetalle: route === 'detalle',
       isBeneficios: route === 'beneficios', isHerramientas: route === 'herramientas', isAcademy: route === 'academy',
       acaAllyType: this.role().id, acaUserKey: real ? real.aliado.codigo_aliado : '', acaGuest: !real,
       isPerfil: route === 'perfil', isComisiones: route === 'comisiones', isMobile: route === 'mobile',
-      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isProyectos: route === 'proyectos', isCotizador: route === 'cotizador', isPuntos: route === 'puntos',
+      isFinanciacion: route === 'financiacion' && !this.sinFinanciacion(), isProyectos: route === 'proyectos', isCotizador: route === 'cotizador', isComparador: route === 'comparador', isPuntos: route === 'puntos',
       goFinanciacion: () => this.go('financiacion'), goPuntos: () => this.go('puntos'),
       userName, firstName: userName.split(' ')[0], greeting,
       todayLabel: real ? (() => { const d = enBogota(new Date()); return DIAS_SEMANA[d.getUTCDay()] + ', ' + d.getUTCDate() + ' de ' + MESES_LARGOS[d.getUTCMonth()]; })() : 'Viernes, 28 de agosto',
       /* Vista con datos reales: se ocultan las herramientas de demostración y se etiqueta lo que aún es demo. */
       esReal: !!real, showDemoTools: !real, demoTag: !!real,
+      /* Selector de perfil y de estados: solo en staging (?staging=1) y sin sesión. */
+      stagingTools: !real && !!(this.props.staging ?? (typeof location !== 'undefined' && /[?&]staging=1/.test(location.search))),
       codigoAliado: real ? real.aliado.codigo_aliado : 'JR-SOL-482',
       enlaceAliado: real ? 'Comparte tu código: las empresas que lleguen con él quedan asociadas a ti.' : 'aliadosdelsol.co/r/JR-SOL-482',
       aliadoDesde: real ? (() => { const d = enBogota(real.aliado.aprobado_at || real.aliado.created_at); return 'desde ' + MESES_LARGOS[d.getUTCMonth()] + ' de ' + d.getUTCFullYear(); })() : 'desde marzo de 2026',
@@ -5130,6 +5217,7 @@ class Component extends DCLogic {
       hayQR: !!real, abrirQR,
       earnRules: POINTS_CONFIG.opportunity.map(m => ({ pts: m.pts, label: m.label, note: m.desc })).concat([
         { pts: POINTS_CONFIG.meddpicc.pts, label: POINTS_CONFIG.meddpicc.label, note: POINTS_CONFIG.meddpicc.desc },
+        { pts: POINTS_CONFIG.cotizador.pts, label: POINTS_CONFIG.cotizador.label, note: POINTS_CONFIG.cotizador.desc },
         { pts: POINTS_CONFIG.academy.pts, label: 'Módulo de Academy', note: '+' + POINTS_CONFIG.academy.pts + ' por minicurso y +' + POINTS_CONFIG.academy.masterclassPts + ' por la masterclass · máximo ' + POINTS_CONFIG.academy.monthlyCap + ' Puntos Sol al mes' },
         { pts: POINTS_CONFIG.academy.certPts, label: 'Certificación de la Academy', note: 'Al completar todos los minicursos de una certificación · aparte de los puntos de cada minicurso y fuera del tope mensual' },
         { pts: STREAK_CONFIG.bonus, label: STREAK_CONFIG.name, note: STREAK_CONFIG.rule }
@@ -5146,7 +5234,8 @@ class Component extends DCLogic {
       }),
       ledger: historyRows,
       tools: this.withPublic([
-        { name: 'Cotizador Solar', desc: 'Estima potencia, ahorro mensual y retorno con el consumo de la empresa. Genera un resumen que puedes compartir.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir cotizador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Diseño, ahorro e inversión aproximados', iconBg: 'rgba(255,202,5,.14)', iconColor: 'var(--y,#FFCA05)', iconShape: '50%', act: () => this.go('cotizador'), pubAct: () => this.go(this.state.sesion ? 'cotizador' : 'p-cotizador') },
+        { name: 'Cotizador Solar', desc: 'Diseña el sistema de tu cliente: potencia, ahorro e inversión. Descarga la precotización y pide la propuesta (+5 Puntos Sol).', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir cotizador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Diseño, ahorro e inversión aproximados', iconBg: 'rgba(255,202,5,.14)', iconColor: 'var(--y,#FFCA05)', iconShape: '50%', act: () => this.go('cotizador'), pubAct: () => this.go(this.state.sesion ? 'cotizador' : 'p-cotizador') },
+        { name: 'Comparador de propuestas', desc: 'Pon lado a lado hasta 4 propuestas solares de tu cliente, escritas a mano o traídas de tus cotizaciones, y ve cuál conviene.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Abrir comparador', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Inversión, potencia, garantías y servicios', iconBg: 'rgba(127,211,166,.14)', iconColor: 'var(--g2,#7FD3A6)', iconShape: '2px', act: () => this.go('comparador'), pubAct: () => this.go(this.state.sesion ? 'comparador' : 'p-comparador') },
         { name: 'Casos y proyectos', desc: 'Explora proyectos ejecutados por GEENERA y encuentra referencias para diferentes tipos de empresas.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Explorar proyectos', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: 'Kilovatios, ahorro y CO₂ de cada proyecto', iconBg: 'rgba(249,165,26,.14)', iconColor: 'var(--o,#F9A51A)', iconShape: '3px', act: () => this.go('proyectos'), pubAct: () => this.go(this.state.sesion ? 'proyectos' : 'p-proyectos') },
         { name: 'Financiación Solar', desc: 'Conoce los aliados financieros que pueden acompañar la inversión en tu proyecto solar. No es un comparador: las condiciones las define cada entidad.', state: 'Informativo', stBg: 'rgba(249,165,26,.16)', stColor: 'var(--o,#F9A51A)', cta: 'Ver aliados financieros', ctaBg: 'var(--w-06,rgba(255,255,255,.06))', ctaColor: 'var(--fg,#F2F0EC)', meta: '5 entidades aliadas', iconBg: 'rgba(243,121,32,.14)', iconColor: '#F37920', iconShape: '2px 10px 2px 10px', act: () => this.go('financiacion') },
         { name: 'Recursos comerciales', desc: 'Presentaciones, brochures, guiones y piezas listas para compartir con una empresa o por WhatsApp.', state: 'Disponible', stBg: 'rgba(95,191,139,.16)', stColor: 'var(--g2,#7FD3A6)', cta: 'Ver biblioteca', ctaBg: 'var(--btn,#F2F0EC)', ctaColor: 'var(--btnfg,#141210)', meta: '18 piezas actualizadas', iconBg: 'var(--w-08,rgba(255,255,255,.08))', iconColor: 'var(--t2,#C9C5BE)', iconShape: '50% 50% 50% 2px', act: () => this.ping('Abriendo la biblioteca de recursos.') }
@@ -5179,7 +5268,7 @@ class Component extends DCLogic {
         { k: 'Celular', v: real.aliado.celular }, { k: 'Ciudad', v: real.aliado.regional || 'Sin registrar' },
         { k: 'Perfil', v: roleCfg.label + (real.aliado.organizacion ? ' · ' + real.aliado.organizacion : '') }, { k: 'Código de aliado', v: real.aliado.codigo_aliado }
       ] : [
-        { k: 'Nombre', v: userName }, { k: 'Correo', v: 'juan.rodriguez@demo.co' },
+        { k: 'Nombre', v: userName }, { k: 'Correo', v: 'juan.rodriguez@correo.co' },
         { k: 'Celular', v: '+57 310 555 0182' }, { k: 'Ciudad', v: 'Medellín, Antioquia' },
         { k: 'Perfil', v: roleCfg.label + ' · ' + roleCfg.org }, { k: 'Aliado desde', v: 'Marzo de 2026' }
       ],
@@ -5237,7 +5326,7 @@ class Component extends DCLogic {
       closeLevelUp: () => { this.setState({ levelUp: false }); this.go('beneficios'); },
       dismissLevelUp: () => this.setState({ levelUp: false }),
       unlocked: [ { k: 'Experiencias', t: 'Palco corporativo y visitas técnicas' }, { k: 'GEENERA', t: 'Auditoría energética de cortesía' }, { k: 'Acompañamiento', t: 'Consultora comercial asignada' } ],
-      toast: s.toast, notifToast: () => this.ping('Listo. Esta acción es demostrativa en esta versión.'),
+      toast: s.toast, notifToast: () => this.ping('Listo. Te avisaremos por correo.'),
       copyLabel: s.copied ? 'Copiado' : 'Copiar',
       copyLink: () => { this.setState({ copied: true }); this.ping('Enlace copiado al portapapeles.'); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: false }), 2200); },
       goInicio: () => this.go('inicio'), goOportunidades: () => this.go('oportunidades'), goBeneficios: () => this.go('beneficios'),

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-ads-cmp="dark"]{--ads-bg:#07070A;--ads-surface:#121214;--ads-surface-2:#19191C;--ads-field:#151517;--ads-line:#27272C;--ads-ink:#F4F1EA;--ads-muted:#A6A39C;--ads-accent:#FFC20E;--ads-accent-ink:#FFC20E;--ads-eyebrow:#C9A23A;--ads-chip-bg:#2A2208;--ads-chip-ink:#FFC20E;--ads-cta:linear-gradient(90deg,#FFC20E,#F7931E);--ads-cta-ink:#1A1205;--ads-best:rgba(60,203,127,.14);--ads-best-ink:#3CCB7F}
+[data-ads-cmp="light"]{--ads-bg:#F6F2EC;--ads-surface:#FDFBF8;--ads-surface-2:#EFEBE4;--ads-field:#F3EFE9;--ads-line:#DED7CC;--ads-ink:#1A1814;--ads-muted:#5E5A52;--ads-accent:#B87400;--ads-accent-ink:#9A6400;--ads-eyebrow:#9A6A00;--ads-chip-bg:#FBEBC8;--ads-chip-ink:#9A5E00;--ads-cta:linear-gradient(90deg,#FFC20E,#F7931E);--ads-cta-ink:#1A1205;--ads-best:rgba(30,138,82,.12);--ads-best-ink:#1E8A52}
+[data-ads-cmp] :focus-visible{outline:2px solid var(--ads-accent);outline-offset:2px}
+[data-ads-cmp] input::placeholder,[data-ads-cmp] textarea::placeholder{color:var(--ads-muted);opacity:.8}
+[data-ads-cmp] .cmp-in{width:100%;min-height:40px;padding:0 10px;border-radius:8px;border:1px solid var(--ads-line);background:var(--ads-field);color:var(--ads-ink);font:400 14px/1.2 'Titillium Web',sans-serif;box-sizing:border-box}
+[data-ads-cmp] textarea.cmp-in{min-height:72px;padding:8px 10px;resize:vertical}
+[data-ads-cmp] select.cmp-in{cursor:pointer;padding-right:6px}
+</style>
+</helmet>
+<!-- Comparador de propuestas (Herramientas del Hub, ruta comparador; solo con sesión; CLAUDE.md §7.6). Hasta 4 propuestas lado a
+     lado: escritas a mano (con las ayudas del diccionario del comparador) o traídas de una cotización del Cotizador Solar, que se
+     llenan con las reglas fijas del equipo. Campos, reglas y cálculos: js/comparador-calculo.js (window.ADS_COMPARADOR). Las
+     comparaciones no se guardan en la base; el borrador vive solo en esta pestaña (sessionStorage). -->
+<div data-ads-cmp="{{ themeAttr }}" data-clarity-mask="true" style="color:var(--ads-ink); font-family:'Titillium Web',system-ui,sans-serif; padding:0 0 64px">
+
+  <section style="padding:36px 0 24px; display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:20px 48px">
+    <div style="display:flex; flex-direction:column; gap:16px; max-width:760px">
+      <button type="button" onClick="{{ goBack }}" style="align-self:flex-start; padding:0; border:none; background:transparent; cursor:pointer; font:600 14px/1.2 'Titillium Web',sans-serif; color:var(--ads-muted)">← Herramientas</button>
+      <span style="font-weight:600; font-size:13px; letter-spacing:.3em; text-transform:uppercase; color:var(--ads-eyebrow)">Comparador de propuestas</span>
+      <h1 style="margin:0; font-weight:700; font-size:clamp(32px,4.2vw,56px); line-height:1.02; letter-spacing:-.02em; text-wrap:balance">Pon las propuestas lado a lado <span style="color:var(--ads-accent)">y ve cuál conviene.</span></h1>
+    </div>
+    <p style="margin:0; max-width:460px; font-weight:300; font-size:17px; line-height:1.55; color:var(--ads-muted); text-wrap:pretty">Agrega hasta 4 propuestas: escríbelas a mano o tráelas de tus cotizaciones. Lo que falte queda como «Pendiente por definir». Nada de esto se guarda.</p>
+  </section>
+
+  <sc-if value="{{ cargando }}" hint-placeholder-val="{{ false }}">
+    <div style="height:360px; border-radius:20px; border:1px solid var(--ads-line); background:var(--ads-surface-2)"></div>
+  </sc-if>
+
+  <sc-if value="{{ listo }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex; flex-direction:column; gap:16px">
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px">
+      <button type="button" onClick="{{ addManual }}" disabled="{{ lleno }}" style="min-height:46px; padding:0 18px; border-radius:10px; border:none; cursor:pointer; background:var(--ads-cta); color:var(--ads-cta-ink); font:700 15px/1 'Titillium Web',sans-serif; opacity:{{ addOpacity }}">+ Propuesta manual</button>
+      <button type="button" onClick="{{ togglePicker }}" disabled="{{ lleno }}" aria-expanded="{{ pickerOpen }}" style="min-height:46px; padding:0 18px; border-radius:10px; border:1px solid var(--ads-accent); cursor:pointer; background:transparent; color:var(--ads-ink); font:700 15px/1 'Titillium Web',sans-serif; opacity:{{ addOpacity }}">+ Desde mis cotizaciones</button>
+      <span style="font-size:13px; color:var(--ads-muted)">{{ contador }}</span>
+      <sc-if value="{{ hayPropuestas }}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{ limpiar }}" style="margin-left:auto; min-height:44px; padding:0 12px; border:none; background:transparent; cursor:pointer; color:var(--ads-muted); font:600 14px/1 'Titillium Web',sans-serif">Empezar de nuevo</button>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ pickerOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flex-direction:column; gap:10px; padding:16px; border-radius:16px; border:1px solid var(--ads-line); background:var(--ads-surface-2)">
+        <span style="font-weight:700; font-size:16px">Elige una de tus cotizaciones</span>
+        <span style="font-size:13px; line-height:1.5; color:var(--ads-muted)">Se llena con los equipos y condiciones estándar de GEENERA: paneles JA Solar de 615 Wp, inversores Huawei, garantías de 30, 5 y 25 años, trámites incluidos, modalidad EPC y 1 año de mantenimiento y monitoreo.</span>
+        <sc-if value="{{ cotCargando }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px; color:var(--ads-muted)">Cargando tus cotizaciones…</span></sc-if>
+        <sc-if value="{{ cotHayErr }}" hint-placeholder-val="{{ false }}">
+          <span role="alert" style="font-size:14px; color:#E5484D">{{ cotErr }} <button type="button" onClick="{{ recargar }}" style="padding:0; border:none; background:transparent; cursor:pointer; color:var(--ads-accent-ink); font:600 14px/1 'Titillium Web',sans-serif">Reintentar</button></span>
+        </sc-if>
+        <sc-if value="{{ cotVacio }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px; color:var(--ads-muted)">Aún no tienes cotizaciones. Haz una en el Cotizador Solar y vuelve aquí.</span></sc-if>
+        <div style="display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto">
+          <sc-for list="{{ cotLista }}" as="c" hint-placeholder-count="3">
+            <button type="button" onClick="{{ c.pick }}" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 16px; min-height:56px; padding:10px 14px; border-radius:12px; border:1px solid var(--ads-line); background:var(--ads-surface); color:var(--ads-ink); cursor:pointer; text-align:left; font:inherit" style-hover="border-color:var(--ads-accent)">
+              <span style="display:flex; flex-direction:column; gap:2px; min-width:0"><span style="font-weight:700; font-size:15px">{{ c.nombre }}</span><span style="font-size:13px; color:var(--ads-muted)">{{ c.sub }}</span></span>
+              <span style="font-weight:700; font-size:14px; font-variant-numeric:tabular-nums">{{ c.cifras }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flex-direction:column; gap:8px; padding:28px 24px; border-radius:18px; border:1px dashed var(--ads-line); background:var(--ads-surface-2)">
+        <span style="font-weight:700; font-size:18px">Agrega la primera propuesta</span>
+        <span style="font-size:14px; line-height:1.55; color:var(--ads-muted)">Escribe los datos de la propuesta que recibió tu cliente o trae una de tus cotizaciones. Con dos o más, marcamos el menor costo por kWp, la mayor suplencia y las garantías más largas.</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayPropuestas }}" hint-placeholder-val="{{ true }}">
+      <div role="region" aria-label="Tabla comparativa" tabindex="0" style="overflow-x:auto; border-radius:18px; border:1px solid var(--ads-line); background:var(--ads-surface)">
+        <div role="table" style="display:grid; grid-template-columns:{{ gridCols }}; min-width:{{ minW }}">
+          <div role="row" style="display:contents">
+            <div role="columnheader" style="position:sticky; left:0; z-index:2; padding:14px; background:var(--ads-surface-2); border-bottom:1px solid var(--ads-line); font-weight:600; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--ads-muted)">Campo</div>
+            <sc-for list="{{ cols }}" as="col" hint-placeholder-count="2">
+              <div role="columnheader" style="display:flex; flex-direction:column; gap:6px; padding:14px; background:var(--ads-surface-2); border-bottom:1px solid var(--ads-line); border-left:1px solid var(--ads-line)">
+                <span style="display:flex; align-items:center; justify-content:space-between; gap:8px"><span style="font-weight:700; font-size:16px">{{ col.titulo }}</span><button type="button" onClick="{{ col.quitar }}" aria-label="{{ col.quitarLabel }}" style="width:36px; height:36px; border-radius:8px; border:1px solid var(--ads-line); background:transparent; color:var(--ads-muted); cursor:pointer; font-size:16px; line-height:1">×</button></span>
+                <span style="align-self:flex-start; padding:4px 8px; border-radius:6px; background:var(--ads-chip-bg); color:var(--ads-chip-ink); font-weight:600; font-size:12px">{{ col.origen }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ filas }}" as="f" hint-placeholder-count="8">
+            <div role="row" style="display:contents">
+              <sc-if value="{{ f.esSeccion }}" hint-placeholder-val="{{ false }}">
+                <div role="rowheader" style="grid-column:1 / -1; padding:18px 14px 8px; border-bottom:1px solid var(--ads-line); font-weight:600; font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--ads-eyebrow)"><span style="position:sticky; left:14px">{{ f.titulo }}</span></div>
+              </sc-if>
+              <sc-if value="{{ f.esCampo }}" hint-placeholder-val="{{ true }}">
+                <div role="rowheader" style="position:sticky; left:0; z-index:1; display:flex; flex-direction:column; gap:3px; padding:12px 14px; background:var(--ads-surface); border-bottom:1px solid var(--ads-line)">
+                  <span style="font-weight:600; font-size:14px; line-height:1.3">{{ f.label }}</span>
+                  <sc-if value="{{ f.hayUnidad }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; color:var(--ads-muted)">{{ f.unidad }}</span></sc-if>
+                  <sc-if value="{{ f.hayAyuda }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px; line-height:1.4; color:var(--ads-muted)">{{ f.ayuda }}</span></sc-if>
+                </div>
+                <sc-for list="{{ f.celdas }}" as="c" hint-placeholder-count="2">
+                  <div role="cell" style="display:flex; flex-direction:column; gap:6px; padding:10px 12px; border-bottom:1px solid var(--ads-line); border-left:1px solid var(--ads-line); background:{{ c.bg }}">
+                    <sc-if value="{{ c.fijo }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px; line-height:1.4; color:{{ c.ink }}; font-variant-numeric:tabular-nums">{{ c.texto }}</span></sc-if>
+                    <sc-if value="{{ c.esTexto }}" hint-placeholder-val="{{ false }}"><input class="cmp-in" type="text" value="{{ c.valor }}" onChange="{{ c.set }}" placeholder="{{ c.ph }}" maxlength="120" aria-label="{{ c.aria }}"></sc-if>
+                    <sc-if value="{{ c.esArea }}" hint-placeholder-val="{{ false }}"><textarea class="cmp-in" value="{{ c.valor }}" onChange="{{ c.set }}" placeholder="{{ c.ph }}" maxlength="600" aria-label="{{ c.aria }}"></textarea></sc-if>
+                    <sc-if value="{{ c.esNumero }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:flex; gap:6px">
+                        <input class="cmp-in" type="text" inputmode="decimal" value="{{ c.valor }}" onChange="{{ c.set }}" placeholder="{{ c.ph }}" maxlength="20" aria-label="{{ c.aria }}" style="flex:1; min-width:0">
+                        <sc-if value="{{ c.conMoneda }}" hint-placeholder-val="{{ false }}">
+                          <select class="cmp-in" value="{{ c.moneda }}" onChange="{{ c.setMoneda }}" aria-label="Moneda" style="flex:none; width:78px"><option value="COP">COP</option><option value="USD">USD</option></select>
+                        </sc-if>
+                      </span>
+                    </sc-if>
+                    <sc-if value="{{ c.esOpcion }}" hint-placeholder-val="{{ false }}">
+                      <select class="cmp-in" value="{{ c.valor }}" onChange="{{ c.set }}" aria-label="{{ c.aria }}">
+                        <option value="">Pendiente por definir</option>
+                        <sc-for list="{{ c.opciones }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+                      </select>
+                    </sc-if>
+                    <sc-if value="{{ c.conOtro }}" hint-placeholder-val="{{ false }}"><input class="cmp-in" type="text" value="{{ c.otro }}" onChange="{{ c.setOtro }}" placeholder="¿Cuál?" maxlength="80" aria-label="{{ c.aria }}: cuál"></sc-if>
+                    <sc-if value="{{ c.esEstado }}" hint-placeholder-val="{{ false }}">
+                      <select class="cmp-in" value="{{ c.estado }}" onChange="{{ c.setEstado }}" aria-label="{{ c.aria }}">
+                        <option value="">Pendiente por definir</option>
+                        <sc-for list="{{ c.estados }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+                      </select>
+                    </sc-if>
+                    <sc-if value="{{ c.conPlazo }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:flex; gap:6px">
+                        <input class="cmp-in" type="text" inputmode="numeric" value="{{ c.plazo }}" onChange="{{ c.setPlazo }}" placeholder="{{ c.plazoPh }}" maxlength="3" aria-label="{{ c.aria }}: plazo" style="flex:1; min-width:0">
+                        <sc-if value="{{ c.conUnidad }}" hint-placeholder-val="{{ false }}">
+                          <select class="cmp-in" value="{{ c.unidadPlazo }}" onChange="{{ c.setUnidad }}" aria-label="Unidad del plazo" style="flex:none; width:92px"><option value="años">años</option><option value="meses">meses</option></select>
+                        </sc-if>
+                        <sc-if value="{{ c.soloAnios }}" hint-placeholder-val="{{ false }}"><span style="align-self:center; font-size:13px; color:var(--ads-muted)">años</span></sc-if>
+                      </span>
+                    </sc-if>
+                    <sc-if value="{{ c.mejor }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start; padding:3px 8px; border-radius:6px; background:var(--ads-best); color:var(--ads-best-ink); font-weight:700; font-size:12px">Mejor valor</span></sc-if>
+                  </div>
+                </sc-for>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <span style="font-size:12px; line-height:1.5; color:var(--ads-muted)">«Mejor valor» marca el menor costo por kWp (entre propuestas de la misma moneda), la mayor suplencia y las garantías más largas. Revisa siempre los alcances y las exclusiones de cada propuesta.</span>
+    </sc-if>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark'|'light'&quot;,&quot;section&quot;:&quot;Comparador&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+/* Campos, reglas y cálculos: js/comparador-calculo.js, que js/cotizador.js publica en window.ADS_COMPARADOR. Hasta que
+   llegue, el componente muestra un recuadro vacío. */
+const BORRADOR = 'ads-comparador-borrador-v1';
+const SEGMENTO_TXT = { residencial: 'Residencial', comercial: 'Comercial', industrial: 'Industrial' };
+const nf = (n, d) => new Intl.NumberFormat('es-CO', { maximumFractionDigits: d || 0 }).format(n);
+const M = () => window.ADS_COMPARADOR;
+function leerBorrador() {
+  try { const b = JSON.parse(sessionStorage.getItem(BORRADOR) || 'null'); return Array.isArray(b) ? b.slice(0, 4) : []; } catch (e) { return []; }
+}
+function guardarBorrador(propuestas) {
+  try { if (propuestas.length) sessionStorage.setItem(BORRADOR, JSON.stringify(propuestas)); else sessionStorage.removeItem(BORRADOR); } catch (e) { /* sin almacenamiento: no pasa nada */ }
+}
+class Component extends DCLogic {
+  state = { listo: false, propuestas: [], pickerOpen: false, cot: null, cotCargando: false, cotErr: null };
+
+  componentDidMount() {
+    this.dead = false;
+    const enlazar = () => { if (!M()) return false; this.setState({ listo: true, propuestas: leerBorrador() }); return true; };
+    if (!enlazar()) this._poll = setInterval(() => { if (enlazar()) clearInterval(this._poll); }, 80);
+  }
+  componentWillUnmount() { this.dead = true; clearInterval(this._poll); }
+
+  /* Pide algo a js/cotizador.js (que habla con /api/cotizador) y espera su respuesta. */
+  pedir(evento, detalle) {
+    const pid = Math.random().toString(36).slice(2);
+    return new Promise(resolve => {
+      const fin = e => { if (!e.detail || e.detail.pid !== pid) return; window.removeEventListener(evento + '-resultado', fin); clearTimeout(t); resolve(e.detail); };
+      const t = setTimeout(() => { window.removeEventListener(evento + '-resultado', fin); resolve({ ok: false, mensaje: 'No hubo respuesta. Revisa tu conexión e intenta de nuevo.' }); }, 30000);
+      window.addEventListener(evento + '-resultado', fin);
+      window.dispatchEvent(new CustomEvent(evento, { detail: Object.assign({ pid }, detalle) }));
+    });
+  }
+  async cargarCotizaciones() {
+    if (this.state.cotCargando) return;
+    this.setState({ cotCargando: true, cotErr: null });
+    const r = await this.pedir('ads:comparador-cotizaciones', {});
+    if (this.dead) return;
+    this.setState(r.ok ? { cotCargando: false, cot: r.cotizaciones || [] } : { cotCargando: false, cotErr: r.mensaje || 'No pudimos traer tus cotizaciones.' });
+  }
+  cambiar(propuestas) { guardarBorrador(propuestas); this.setState({ propuestas }); }
+  agregar(p) {
+    const ps = this.state.propuestas;
+    if (!p || ps.length >= M().MAX_PROPUESTAS) return;
+    this.cambiar(ps.concat(Object.assign({ crudo: {} }, p)));
+    this.setState({ pickerOpen: false });
+  }
+  /* Cambia el valor de un campo de la propuesta i. crudo guarda lo escrito tal cual (los números se leen aparte). */
+  poner(i, cambios, crudo) {
+    const ps = this.state.propuestas.map((p, j) => j !== i ? p : Object.assign({}, p, {
+      valores: Object.assign({}, p.valores, cambios), crudo: Object.assign({}, p.crudo, crudo || {})
+    }));
+    this.cambiar(ps);
+  }
+  celda(c, p, i, mejor) {
+    const C = M(), v = p.valores || {}, crudo = p.crudo || {}, id = c.id, manual = p.origen === 'manual';
+    const base = { fijo: false, esTexto: false, esArea: false, esNumero: false, esOpcion: false, conOtro: false, esEstado: false, conPlazo: false,
+      conMoneda: false, conUnidad: false, soloAnios: false, mejor, bg: mejor ? 'var(--ads-best)' : 'transparent', ink: 'var(--ads-ink)', aria: c.label + ', propuesta ' + (i + 1),
+      texto: '', valor: '', ph: '', opciones: [], estados: [], otro: '', estado: '', plazo: '', plazoPh: '', unidadPlazo: 'años', moneda: v.moneda || 'COP' };
+    const fijo = () => {
+      const t = C.mostrar(id, v);
+      return Object.assign(base, { fijo: true, texto: t || '—', ink: t === C.PENDIENTE || t === 'Pendiente de cálculo' ? 'var(--ads-muted)' : 'var(--ads-ink)' });
+    };
+    if (c.tipo === 'calculado' || (!manual && id !== 'notas')) return fijo();
+    if (c.tipo === 'texto') return Object.assign(base, c.largo ? { esArea: true } : { esTexto: true }, { valor: v[id] || '', ph: c.ej || '',
+      set: e => this.poner(i, { [id]: e.target.value }) });
+    if (c.tipo === 'numero') return Object.assign(base, { esNumero: true, conMoneda: !!c.moneda, valor: crudo[id] != null ? crudo[id] : '', ph: c.ej || '',
+      set: e => { const t = e.target.value.replace(/[^\d.,]/g, ''); this.poner(i, { [id]: C.leerNumero(t) }, { [id]: t }); },
+      setMoneda: e => this.poner(i, { moneda: e.target.value }) });
+    if (c.tipo === 'opcion') {
+      const val = v[id] || '';
+      return Object.assign(base, { esOpcion: true, valor: val, opciones: c.opciones, conOtro: val === 'Otro' || val === 'Otra', otro: v[id + '_otro'] || '',
+        set: e => this.poner(i, { [id]: e.target.value || null }), setOtro: e => this.poner(i, { [id + '_otro']: e.target.value }) });
+    }
+    const g = v[id] || {};
+    if (c.tipo === 'garantia') {
+      return Object.assign(base, { esEstado: true, estados: C.OPCIONES_GARANTIA.filter(o => o !== C.PENDIENTE), estado: g.estado && g.estado !== C.PENDIENTE ? g.estado : '',
+        conPlazo: g.estado === 'Sí', conUnidad: true, plazo: crudo[id + '_plazo'] || '', plazoPh: 'Plazo', unidadPlazo: g.unidad || 'años',
+        setEstado: e => this.poner(i, { [id]: Object.assign({}, g, { estado: e.target.value || null }) }),
+        setPlazo: e => { const t = e.target.value.replace(/\D/g, ''); this.poner(i, { [id]: Object.assign({}, g, { plazo: t ? Number(t) : null }) }, { [id + '_plazo']: t }); },
+        setUnidad: e => this.poner(i, { [id]: Object.assign({}, g, { unidad: e.target.value }) }) });
+    }
+    if (c.tipo === 'servicio') {
+      const conAnios = !!c.duracion && (g.estado === 'Sí, incluido' || g.estado === 'Opcional con costo');
+      return Object.assign(base, { esEstado: true, estados: C.OPCIONES_SERVICIO.filter(o => o !== C.PENDIENTE), estado: g.estado && g.estado !== C.PENDIENTE ? g.estado : '',
+        conPlazo: conAnios, soloAnios: conAnios, plazo: crudo[id + '_anios'] || '', plazoPh: 'Ej.: 1',
+        setEstado: e => this.poner(i, { [id]: Object.assign({}, g, { estado: e.target.value || null }) }),
+        setPlazo: e => { const t = e.target.value.replace(/\D/g, ''); this.poner(i, { [id]: Object.assign({}, g, { anios: t ? Number(t) : null }) }, { [id + '_anios']: t }); } });
+    }
+    return fijo();
+  }
+  renderVals() {
+    const s = this.state, C = M();
+    const themeAttr = this.props.theme === 'light' ? 'light' : 'dark';
+    const goBack = () => { if (this.props.onBack) this.props.onBack(); };
+    if (!s.listo || !C) return { cargando: true, listo: false, themeAttr, goBack };
+    const ps = s.propuestas, n = ps.length, lleno = n >= C.MAX_PROPUESTAS, best = C.mejores(ps);
+    const filas = [];
+    C.SECCIONES.forEach(sec => {
+      filas.push({ esSeccion: true, esCampo: false, titulo: sec.titulo, celdas: [] });
+      sec.campos.forEach(c => filas.push({
+        esSeccion: false, esCampo: true, titulo: '', label: c.label,
+        hayUnidad: !!c.unidad && c.tipo !== 'calculado' && !c.moneda, unidad: c.unidad || '',
+        hayAyuda: !!c.ayuda, ayuda: c.ayuda || '',
+        celdas: ps.map((p, i) => this.celda(c, p, i, !!(best[c.id] && best[c.id].has(i))))
+      }));
+    });
+    const cot = s.cot || [];
+    return {
+      cargando: false, listo: true, themeAttr, goBack,
+      lleno, addOpacity: lleno ? 0.45 : 1, contador: n + ' de ' + C.MAX_PROPUESTAS + ' propuestas',
+      hayPropuestas: n > 0, vacio: n === 0 && !s.pickerOpen,
+      addManual: () => this.agregar(C.propuestaManual()),
+      togglePicker: () => { const abrir = !s.pickerOpen; this.setState({ pickerOpen: abrir }); if (abrir && !s.cot) this.cargarCotizaciones(); },
+      pickerOpen: s.pickerOpen, cotCargando: s.cotCargando, cotHayErr: !!s.cotErr, cotErr: s.cotErr || '', recargar: () => this.cargarCotizaciones(),
+      cotVacio: !!s.cot && cot.length === 0,
+      cotLista: cot.map(q => ({
+        nombre: q.nombre || 'Sin nombre',
+        sub: [SEGMENTO_TXT[q.segmento] || '', q.ciudad || '', q.created_at ? new Date(q.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '', q.conectado_red === false ? 'Aislado' : ''].filter(Boolean).join(' · '),
+        cifras: (q.potencia_kwp != null ? nf(q.potencia_kwp, 1) + ' kWp' : '') + (q.inversion_total_cop != null ? ' · $' + nf(Math.round(q.inversion_total_cop / 1e5) / 10, 1) + ' M' : ''),
+        pick: () => this.agregar(C.propuestaDesdeCotizacion(q))
+      })),
+      limpiar: () => this.cambiar([]),
+      gridCols: 'minmax(150px,220px) repeat(' + Math.max(1, n) + ', minmax(190px,1fr))', minW: (170 + 200 * Math.max(1, n)) + 'px',
+      cols: ps.map((p, i) => ({
+        titulo: 'Propuesta ' + (i + 1),
+        origen: p.origen === 'cotizador' ? 'Del cotizador · ' + ((p.cotizacion && p.cotizacion.nombre) || '') : 'Manual',
+        quitarLabel: 'Quitar la propuesta ' + (i + 1),
+        quitar: () => this.cambiar(ps.filter((_, j) => j !== i))
+      })),
+      filas
+    };
+  }
+}
+</script>
+</body>
+</html>

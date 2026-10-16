@@ -1,11 +1,17 @@
-// Tests de POST /api/cotizador (lib/cotizador.js) con Supabase y Cloudflare Turnstile simulados.
+// Tests de POST /api/cotizador (lib/cotizador.js) con Supabase simulado. Solo para aliados con sesión (16 oct 2026).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import cotizador from '../../api/cotizador.js';
-import { MENSAJE_ALIADO, MENSAJE_CAPTCHA, MENSAJE_LIMITE, huellaCotizador, validarSimulacion } from '../../lib/cotizador.js';
+import { MENSAJE_ALIADO, MENSAJE_LIMITE, MENSAJE_SOLO_ALIADOS, huellaCotizador, mensajeNombreRepetido, validarSimulacion } from '../../lib/cotizador.js';
 
-const ENTORNO = { SUPABASE_SECRET_KEY: 'clave-servidor', TURNSTILE_SECRET_KEY: 'secreto-turnstile', VERCEL_ENV: 'preview' };
+const ENTORNO = { SUPABASE_SECRET_KEY: 'clave-servidor', VERCEL_ENV: 'preview' };
 const ID = '7b1c2d3e-4f50-4a61-8b72-9c8d7e6f5a40';
+const ALIADOS = {
+  'u-1': { id: 'u-1', codigo_aliado: 'FIJJPL7K4MQ9TX', estado: 'activo', rol: 'aliado' },
+  'u-2': { id: 'u-2', codigo_aliado: 'FIADMIN', estado: 'activo', rol: 'admin' },
+  'u-3': { id: 'u-3', codigo_aliado: 'FISUSP', estado: 'suspendido', rol: 'aliado' }
+};
+const TOKENS = { bueno: 'u-1', admin: 'u-2', suspendido: 'u-3' };
 
 function respuesta() {
   return { statusCode: 0, cuerpo: null, headers: {},
@@ -15,6 +21,8 @@ function supabaseFalso(rpc = {}) {
   const llamadas = [];
   return {
     llamadas,
+    auth: { getUser: async (t) => (TOKENS[t] ? { data: { user: { id: TOKENS[t] } }, error: null } : { data: null, error: { message: 'jwt' } }) },
+    from: () => ({ select: () => ({ eq: (_c, id) => ({ maybeSingle: async () => ({ data: ALIADOS[id] || null, error: null }) }) }) }),
     rpc: async (nombre, args) => {
       llamadas.push({ nombre, args });
       const r = rpc[nombre];
@@ -22,48 +30,70 @@ function supabaseFalso(rpc = {}) {
     }
   };
 }
-const captchaOk = async () => ({ json: async () => ({ success: true }) });
-const captchaMal = async () => ({ json: async () => ({ success: false }) });
-const pedido = (cuerpo, ip = '190.0.0.1') => ({ method: 'POST', headers: { 'x-forwarded-for': ip }, body: cuerpo });
+const pedido = (cuerpo, token = 'bueno') => ({ method: 'POST', headers: token ? { authorization: 'Bearer ' + token } : {}, body: cuerpo });
 const INDUSTRIAL = {
-  accion: 'simular', captcha: 'tk', segmento: 'industrial', unidad: 'cop', valor: '10.000.000', aislado: false, bateria: 'none', autoriza: true,
+  accion: 'simular', segmento: 'industrial', unidad: 'cop', valor: '10.000.000', aislado: false, bateria: 'none', autoriza: true,
   datos: { empresa: ' Plásticos  del Caribe ', contacto: 'Ana Pérez', subsector: 'Plásticos', telefono: '+573001234567', correo: ' Ana+Prueba@Empresa.test ', ciudad: 'Barranquilla|Atlántico', nombre: 'no se guarda' }
 };
 const RESIDENCIAL = {
-  accion: 'simular', captcha: 'tk', segmento: 'residencial', unidad: 'kwh', valor: '450', aislado: true, bateria: 'autonomia', autoriza: true,
+  accion: 'simular', segmento: 'residencial', unidad: 'kwh', valor: '450', aislado: true, bateria: 'autonomia', autoriza: true,
   datos: { nombre: 'Juan Gómez', telefono: '+573001234567', correo: 'juan@correo.test', ciudad: 'Medellín|Antioquia', empresa: 'no se guarda' }
 };
-const ok = { cotizador_intento: { data: true, error: null }, cotizador_registrar_simulacion: { data: ID, error: null } };
+const intentoOk = { cotizador_intento: { data: true, error: null } };
+const ok = { ...intentoOk, cotizador_guardar_simulacion: { data: ID, error: null } };
+const llamada = (sb, nombre) => sb.llamadas.find((l) => l.nombre === nombre);
 
-test('simular: guarda los datos y los resultados recalculados en el servidor', async () => {
+test('sin sesión, con sesión vencida, de admin o de una cuenta no activa: no se usa', async () => {
+  for (const [token, status] of [[null, 401], ['vencido', 401], ['suspendido', 403], ['admin', 403]]) {
+    const sb = supabaseFalso(ok);
+    const res = respuesta();
+    await cotizador(pedido(INDUSTRIAL, token), res, { supabase: sb, entorno: ENTORNO });
+    assert.equal(res.statusCode, status, String(token));
+    assert.ok(!llamada(sb, 'cotizador_guardar_simulacion'));
+  }
+  const res = respuesta();
+  await cotizador(pedido(INDUSTRIAL, 'admin'), res, { supabase: supabaseFalso(ok), entorno: ENTORNO });
+  assert.equal(res.cuerpo.error, MENSAJE_SOLO_ALIADOS);
+});
+
+test('simular: guarda a nombre del aliado de la sesión, con los resultados recalculados en el servidor', async () => {
   const sb = supabaseFalso(ok);
   const res = respuesta();
-  await cotizador(pedido({ ...INDUSTRIAL, potencia_kwp: 99999 }), res, { supabase: sb, entorno: ENTORNO, fetch: captchaOk });
+  await cotizador(pedido({ ...INDUSTRIAL, potencia_kwp: 99999, aliado_id: 'u-9' }), res, { supabase: sb, entorno: ENTORNO });
   assert.equal(res.statusCode, 201);
   assert.deepEqual(res.cuerpo, { id: ID });
-  const { args } = sb.llamadas.find((l) => l.nombre === 'cotizador_registrar_simulacion');
+  const { args } = llamada(sb, 'cotizador_guardar_simulacion');
+  assert.equal(args.p_aliado, 'u-1', 'el aliado sale de la sesión, nunca del cuerpo');
   assert.equal(args.p_segmento, 'industrial');
+  assert.equal(args.p_id, null, 'sin id: cotización nueva');
   const f = args.p_fila;
   assert.equal(f.empresa, 'Plásticos del Caribe');
   assert.equal(f.correo, 'ana+prueba@empresa.test');
   assert.equal(f.nombre, undefined, 'el residencial no aplica a una empresa');
   assert.deepEqual([f.ciudad, f.departamento, f.region], ['Barranquilla', 'Atlántico', 'Costa']);
   assert.equal(f.potencia_kwp, 110.7, 'la potencia la calcula el servidor, no la manda el navegador');
-  assert.equal(f.conectado_red, true);
-  assert.equal(f.almacenamiento, 'none');
-  assert.ok(!('aliado_id' in f) && !('codigo_aliado' in f), 'el cotizador no guarda al aliado');
+  assert.ok(!('aliado_id' in f), 'el aliado va aparte, no en la fila');
 });
 
-test('simular: residencial aislado', async () => {
+test('simular: con id actualiza la misma cotización; un id inválido se ignora', async () => {
   const sb = supabaseFalso(ok);
-  const res = respuesta();
-  await cotizador(pedido(RESIDENCIAL), res, { supabase: sb, entorno: ENTORNO, fetch: captchaOk });
-  assert.equal(res.statusCode, 201);
-  const f = sb.llamadas.find((l) => l.nombre === 'cotizador_registrar_simulacion').args.p_fila;
+  await cotizador(pedido({ ...RESIDENCIAL, id: ID }), respuesta(), { supabase: sb, entorno: ENTORNO });
+  await cotizador(pedido({ ...RESIDENCIAL, id: 'no-es-uuid' }), respuesta(), { supabase: sb, entorno: ENTORNO });
+  const ids = sb.llamadas.filter((l) => l.nombre === 'cotizador_guardar_simulacion').map((l) => l.args.p_id);
+  assert.deepEqual(ids, [ID, null]);
+  const f = llamada(sb, 'cotizador_guardar_simulacion').args.p_fila;
   assert.equal(f.nombre, 'Juan Gómez');
-  assert.equal(f.empresa, undefined);
   assert.equal(f.conectado_red, false);
   assert.equal(f.ahorro_anual_cop, null);
+});
+
+test('simular: nombre repetido → 409 con el mensaje para agregar un número', async () => {
+  const sb = supabaseFalso({ ...intentoOk, cotizador_guardar_simulacion: { data: null, error: { message: 'nombre_repetido: ya tienes una cotización con ese nombre' } } });
+  const res = respuesta();
+  await cotizador(pedido(INDUSTRIAL), res, { supabase: sb, entorno: ENTORNO });
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.cuerpo.error, mensajeNombreRepetido('Plásticos del Caribe'));
+  assert.match(res.cuerpo.error, /«Plásticos del Caribe 2»/);
 });
 
 test('simular: validación con mensajes para la persona', () => {
@@ -82,87 +112,61 @@ test('simular: validación con mensajes para la persona', () => {
   assert.equal(caso({}), null);
 });
 
-test('simular: captcha y límite por conexión', async () => {
-  let res = respuesta();
-  await cotizador(pedido(INDUSTRIAL), res, { supabase: supabaseFalso(ok), entorno: ENTORNO, fetch: captchaMal });
-  assert.deepEqual([res.statusCode, res.cuerpo.error], [403, MENSAJE_CAPTCHA]);
-
+test('límite de intentos por aliado (huella HMAC del id)', async () => {
   const sb = supabaseFalso({ ...ok, cotizador_intento: { data: false, error: null } });
-  res = respuesta();
-  await cotizador(pedido(INDUSTRIAL, '200.1.2.3'), res, { supabase: sb, entorno: ENTORNO, fetch: captchaOk });
+  const res = respuesta();
+  await cotizador(pedido(INDUSTRIAL), res, { supabase: sb, entorno: ENTORNO });
   assert.deepEqual([res.statusCode, res.cuerpo.error], [429, MENSAJE_LIMITE]);
   const huella = sb.llamadas[0].args.p_huella;
-  assert.equal(huella, huellaCotizador('200.1.2.3', ENTORNO.SUPABASE_SECRET_KEY));
-  assert.ok(!huella.includes('200.1.2.3'), 'la IP no se guarda');
-  assert.ok(!sb.llamadas.some((l) => l.nombre === 'cotizador_registrar_simulacion'));
-});
-
-test('propuesta: la pone en la cola y responde aunque Clientify no esté configurado', async () => {
-  const sb = supabaseFalso({ cotizador_intento: { data: true, error: null }, cotizador_solicitar_propuesta: { data: { estado: 'pendiente' }, error: null } });
-  const res = respuesta();
-  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID }), res, { supabase: sb, entorno: ENTORNO });
-  assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.cuerpo, { ok: true, clientify: 'pendiente' });
-  assert.deepEqual(sb.llamadas.find((l) => l.nombre === 'cotizador_solicitar_propuesta').args, { p_segmento: 'industrial', p_id: ID, p_referente: null });
-});
-
-const colaOk = { cotizador_intento: { data: true, error: null }, cotizador_solicitar_propuesta: { data: { estado: 'pendiente' }, error: null } };
-
-test('paso 2: avisa si el correo es de un aliado', async () => {
-  const sb = supabaseFalso({ cotizador_intento: { data: true, error: null },
-    cotizador_correo_es_aliado: ({ p_correo }) => ({ data: p_correo === 'aliado@correo.test', error: null }) });
-  let res = respuesta();
-  await cotizador(pedido({ accion: 'correo', correo: ' Aliado@Correo.test ' }), res, { supabase: sb, entorno: ENTORNO });
-  assert.deepEqual([res.statusCode, res.cuerpo], [200, { aliado: true }]);
-  res = respuesta();
-  await cotizador(pedido({ accion: 'correo', correo: 'empresa@correo.test' }), res, { supabase: sb, entorno: ENTORNO });
-  assert.deepEqual(res.cuerpo, { aliado: false });
-  res = respuesta();
-  await cotizador(pedido({ accion: 'correo', correo: 'no-es-correo' }), res, { supabase: sb, entorno: ENTORNO });
-  assert.equal(res.statusCode, 422);
-  assert.equal(sb.llamadas.filter((l) => l.nombre === 'cotizador_intento').length, 3, 'cada revisión cuenta como intento');
+  assert.equal(huella, huellaCotizador('u-1', ENTORNO.SUPABASE_SECRET_KEY));
+  assert.ok(!huella.includes('u-1'));
+  assert.ok(!llamada(sb, 'cotizador_guardar_simulacion'));
 });
 
 test('simular: no guarda si el correo es de un aliado', async () => {
   const sb = supabaseFalso({ ...ok, cotizador_correo_es_aliado: { data: true, error: null } });
   const res = respuesta();
-  await cotizador(pedido(INDUSTRIAL), res, { supabase: sb, entorno: ENTORNO, fetch: captchaOk });
+  await cotizador(pedido(INDUSTRIAL), res, { supabase: sb, entorno: ENTORNO });
   assert.equal(res.statusCode, 422);
   assert.equal(res.cuerpo.error, MENSAJE_ALIADO);
-  assert.ok(!sb.llamadas.some((l) => l.nombre === 'cotizador_registrar_simulacion'));
+  assert.ok(!llamada(sb, 'cotizador_guardar_simulacion'));
 });
 
-test('propuesta sin sesión: el correo de quien refiere da el ID_aliado; uno desconocido se ignora', async () => {
-  const sb = supabaseFalso({ ...colaOk,
-    cotizador_codigo_referente: ({ p_correo }) => ({ data: p_correo === 'aliado@correo.test' ? 'EMABCD2345XY' : null, error: null }) });
-  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: ' Aliado@Correo.test ' }), respuesta(), { supabase: sb, entorno: ENTORNO });
-  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: 'otro@correo.test' }), respuesta(), { supabase: sb, entorno: ENTORNO });
-  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: 'no-es-correo' }), respuesta(), { supabase: sb, entorno: ENTORNO });
-  const referentes = sb.llamadas.filter((l) => l.nombre === 'cotizador_solicitar_propuesta').map((l) => l.args.p_referente);
-  assert.deepEqual(referentes, ['EMABCD2345XY', null, null]);
-  assert.equal(sb.llamadas.filter((l) => l.nombre === 'cotizador_codigo_referente').length, 2, 'un correo inválido ni se consulta');
-});
-
-test('propuesta con sesión: usa el aliado de la sesión e ignora el correo escrito; una sesión vencida no falla', async () => {
-  const aliados = { 'u-1': { id: 'u-1', codigo_aliado: 'FIJJPL7K4MQ9TX', estado: 'activo', rol: 'aliado' } };
-  const sb = supabaseFalso({ ...colaOk, cotizador_codigo_referente: { data: 'OTRO', error: null } });
-  sb.auth = { getUser: async (t) => (t === 'bueno' ? { data: { user: { id: 'u-1' } }, error: null } : { data: null, error: { message: 'jwt' } }) };
-  sb.from = () => ({ select: () => ({ eq: (_c, id) => ({ maybeSingle: async () => ({ data: aliados[id] || null, error: null }) }) }) });
-  const conToken = (t, cuerpo) => ({ ...pedido(cuerpo), headers: { 'x-forwarded-for': '190.0.0.1', authorization: 'Bearer ' + t } });
+test('paso 2: avisa si el correo es de un aliado', async () => {
+  const sb = supabaseFalso({ ...intentoOk, cotizador_correo_es_aliado: ({ p_correo }) => ({ data: p_correo === 'aliado@correo.test', error: null }) });
   let res = respuesta();
-  await cotizador(conToken('bueno', { accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: 'aliado@correo.test' }), res, { supabase: sb, entorno: ENTORNO });
-  assert.equal(res.statusCode, 200);
+  await cotizador(pedido({ accion: 'correo', correo: ' Aliado@Correo.test ' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.deepEqual([res.statusCode, res.cuerpo], [200, { aliado: true }]);
   res = respuesta();
-  await cotizador(conToken('vencido', { accion: 'propuesta', segmento: 'industrial', id: ID }), res, { supabase: sb, entorno: ENTORNO });
+  await cotizador(pedido({ accion: 'correo', correo: 'no-es-correo' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.equal(res.statusCode, 422);
+});
+
+test('paso 2: el nombre no se repite entre las cotizaciones del aliado', async () => {
+  const sb = supabaseFalso({ ...intentoOk, cotizador_nombre_disponible: ({ p_nombre }) => ({ data: p_nombre !== 'Plásticos del Caribe', error: null }) });
+  let res = respuesta();
+  await cotizador(pedido({ accion: 'nombre', nombre: ' Plásticos  del Caribe ', id: ID }), res, { supabase: sb, entorno: ENTORNO });
+  assert.deepEqual(res.cuerpo, { disponible: false, mensaje: mensajeNombreRepetido('Plásticos del Caribe') });
+  assert.deepEqual(llamada(sb, 'cotizador_nombre_disponible').args, { p_aliado: 'u-1', p_nombre: 'Plásticos del Caribe', p_excluir: ID });
+  res = respuesta();
+  await cotizador(pedido({ accion: 'nombre', nombre: 'Plásticos del Caribe 2' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.deepEqual(res.cuerpo, { disponible: true });
+  res = respuesta();
+  await cotizador(pedido({ accion: 'nombre', nombre: 'x' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.equal(res.statusCode, 422);
+});
+
+test('propuesta: la pone en la cola, devuelve los puntos y responde aunque Clientify no esté configurado', async () => {
+  const sb = supabaseFalso({ ...intentoOk, cotizador_solicitar_propuesta: { data: { estado: 'pendiente', puntos: 5 }, error: null } });
+  const res = respuesta();
+  await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID, correo_referente: 'ignorado@correo.test' }), res, { supabase: sb, entorno: ENTORNO });
   assert.equal(res.statusCode, 200);
-  const referentes = sb.llamadas.filter((l) => l.nombre === 'cotizador_solicitar_propuesta').map((l) => l.args.p_referente);
-  assert.deepEqual(referentes, ['FIJJPL7K4MQ9TX', null]);
-  assert.ok(!sb.llamadas.some((l) => l.nombre === 'cotizador_codigo_referente'), 'con sesión no se usa el correo escrito');
+  assert.deepEqual(res.cuerpo, { ok: true, clientify: 'pendiente', puntos: 5 });
+  assert.deepEqual(llamada(sb, 'cotizador_solicitar_propuesta').args, { p_aliado: 'u-1', p_segmento: 'industrial', p_id: ID });
 });
 
 test('propuesta: simulación vencida o datos inválidos', async () => {
-  const sb = supabaseFalso({ cotizador_intento: { data: true, error: null },
-    cotizador_solicitar_propuesta: { data: null, error: { message: 'simulacion_inexistente: la simulación no existe o ya venció' } } });
+  const sb = supabaseFalso({ ...intentoOk, cotizador_solicitar_propuesta: { data: null, error: { message: 'simulacion_inexistente: la simulación no existe o ya venció' } } });
   let res = respuesta();
   await cotizador(pedido({ accion: 'propuesta', segmento: 'industrial', id: ID }), res, { supabase: sb, entorno: ENTORNO });
   assert.equal(res.statusCode, 404);
@@ -177,8 +181,39 @@ test('propuesta: simulación vencida o datos inválidos', async () => {
   assert.equal(res.statusCode, 405);
 });
 
-test('captcha: en Production sin clave secreta el cotizador no guarda (503)', async () => {
+const RESPUESTAS = {
+  necesidad: { o: 'factura' }, resultado: { o: ['ahorro'] }, criterios: { o: ['precio', 'otro'], otro: ' Marca  local ' },
+  autoridad: { o: 'gerencia' }, pendientes: { o: ['visita', 'numeros'] }, cuando: { o: '1_3' }, competencia: { o: 'no_se' }
+};
+
+test('meddpicc: valida y guarda las respuestas con la cotización', async () => {
+  const sb = supabaseFalso(intentoOk);
   const res = respuesta();
-  await cotizador(pedido(INDUSTRIAL), res, { supabase: supabaseFalso(ok), entorno: { SUPABASE_SECRET_KEY: 'k', VERCEL_ENV: 'production' } });
-  assert.equal(res.statusCode, 503);
+  await cotizador(pedido({ accion: 'meddpicc', segmento: 'comercial', id: ID, respuestas: RESPUESTAS }), res, { supabase: sb, entorno: ENTORNO });
+  assert.equal(res.statusCode, 200);
+  const { args } = llamada(sb, 'cotizador_guardar_meddpicc');
+  assert.equal(args.p_aliado, 'u-1');
+  assert.equal(args.p_respuestas.v, 1);
+  assert.deepEqual(args.p_respuestas.respuestas.criterios, { o: ['precio', 'otro'], otro: 'Marca local' });
+  assert.deepEqual(args.p_respuestas.respuestas.necesidad, { o: ['factura'] });
+});
+
+test('meddpicc: incompleta o inválida → 422 sin guardar', async () => {
+  const sb = supabaseFalso(intentoOk);
+  for (const r of [{ ...RESPUESTAS, cuando: undefined }, { ...RESPUESTAS, autoridad: { o: 'gerencia' } }]) {
+    const res = respuesta();
+    const segmento = r.cuando ? 'residencial' : 'industrial'; // en residencial «Gerencia general» no existe
+    await cotizador(pedido({ accion: 'meddpicc', segmento, id: ID, respuestas: r }), res, { supabase: sb, entorno: ENTORNO });
+    assert.equal(res.statusCode, 422);
+  }
+  assert.ok(!llamada(sb, 'cotizador_guardar_meddpicc'));
+});
+
+test('mis_cotizaciones: solo las del aliado de la sesión; no cuenta como intento', async () => {
+  const lista = [{ id: ID, segmento: 'industrial', nombre: 'Plásticos del Caribe', potencia_kwp: 110.7 }];
+  const sb = supabaseFalso({ cotizador_mis_cotizaciones: ({ p_aliado }) => ({ data: p_aliado === 'u-1' ? lista : [], error: null }) });
+  const res = respuesta();
+  await cotizador(pedido({ accion: 'mis_cotizaciones', aliado: 'u-9' }), res, { supabase: sb, entorno: ENTORNO });
+  assert.deepEqual(res.cuerpo, { cotizaciones: lista });
+  assert.ok(!llamada(sb, 'cotizador_intento'));
 });
